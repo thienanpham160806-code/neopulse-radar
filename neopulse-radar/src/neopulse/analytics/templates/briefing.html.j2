@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NeoPulse Radar · Bản tin phiên {{ v.trading_date }}</title>
+<style>
+:root{--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;--bg:#f8fafc;--card:#fff;--up:#15803d;--down:#b91c1c;--accent:#1d4ed8}
+*{box-sizing:border-box}body{margin:0;font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--bg)}
+main{max-width:1060px;margin:0 auto;padding:24px 16px 64px}
+h1{font-size:24px;margin:0 0 2px}h2{font-size:16px;margin:0 0 10px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.sub{color:var(--muted);font-size:13px}
+.banner{background:#fef3c7;border:1px solid #f59e0b;color:#78350f;padding:10px 14px;border-radius:8px;margin:14px 0;font-weight:600}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));margin:14px 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:14px 0}
+.grid .card{margin:0}
+.kpi{font-size:26px;font-weight:700;line-height:1.2}.kpi small{font-size:13px;font-weight:500;color:var(--muted)}
+.up{color:var(--up)}.down{color:var(--down)}
+table{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums}
+th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right}th:first-child,td:first-child{text-align:left}
+th{color:var(--muted);font-weight:600}
+.bar{height:8px;background:linear-gradient(90deg,#fecaca,#e2e8f0 50%,#bbf7d0);border-radius:4px;position:relative}
+.bar i{position:absolute;top:-3px;width:3px;height:14px;background:var(--ink);border-radius:2px}
+.tag{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600}
+.CAO{background:#fee2e2;color:#991b1b}.TB{background:#fef3c7;color:#92400e}.THAP{background:#e2e8f0;color:#334155}
+.two{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+ul{margin:0;padding-left:18px}li{margin:4px 0}
+footer{color:var(--muted);font-size:12.5px;margin-top:24px;border-top:1px solid var(--line);padding-top:12px}
+</style>
+</head>
+<body><main>
+<h1>NeoPulse Radar · Bản tin phiên {{ v.trading_date }}</h1>
+<div class="sub">Chỉ số theo dõi: {{ v.index_code }} · Nguồn dữ liệu: {{ "MÔ PHỎNG" if v.is_simulated else "NEO API (VPBankS)" }} ·
+Dữ liệu cập nhật lần cuối: {{ v.last_update.strftime("%H:%M:%S %d/%m/%Y") if v.last_update else "—" }} (giờ Việt Nam) · Lập lúc {{ generated }}</div>
+{% if v.is_simulated %}<div class="banner">DỮ LIỆU MÔ PHỎNG — mọi con số dưới đây do bộ giả lập sinh ra để trình diễn, không phản ánh thị trường thật.</div>{% endif %}
+{% if v.status == "no_data" %}<div class="card">{{ v.status_message }}</div>{% else %}
+
+<div class="grid">
+  <div class="card"><h2>Điểm nhịp thị trường</h2>
+    <div class="kpi">{{ v.pulse.score|num(1) }}<small> /100</small></div><div>{{ v.pulse.label }}</div></div>
+  <div class="card"><h2>{{ v.index_code }}</h2>
+    <div class="kpi {{ 'up' if v.index_row.pct_change >= 0 else 'down' }}">{{ v.index_row.value|num }}</div>
+    <div>{{ v.index_row.change|signed }} ({{ v.index_row.pct_change|signed }}%)</div></div>
+  <div class="card"><h2>Độ rộng</h2>
+    <div class="kpi"><span class="up">{{ v.index_row.advances|num(0) }}</span> / <span class="down">{{ v.index_row.declines|num(0) }}</span></div>
+    <div>trần {{ v.index_row.n_ceiling|num(0) }} · sàn {{ v.index_row.n_floor|num(0) }}</div></div>
+  <div class="card"><h2>Khối ngoại (rổ)</h2>
+    <div class="kpi {{ 'up' if v.foreign_summary.net_val >= 0 else 'down' }}">{{ v.foreign_summary.net_val|money }}</div>
+    <div>{{ v.foreign_summary.n_net_buy }} mã mua ròng · {{ v.foreign_summary.n_net_sell }} mã bán ròng</div></div>
+</div>
+
+<div class="card"><h2>Nhận định (sinh từ số liệu, không phải khuyến nghị)</h2>
+<ul>{% for s in summary %}<li>{{ s }}</li>{% endfor %}</ul></div>
+
+<div class="two">
+<div class="card"><h2>{{ v.index_code }} trong phiên</h2>{{ index_svg|safe }}<div class="sub">Đường đứt: giá tham chiếu.</div></div>
+<div class="card"><h2>Điểm nhịp trong phiên</h2>{{ pulse_svg|safe }}<div class="sub">Đường đứt: mức trung tính 50. Không gồm thành phần thanh khoản.</div></div>
+</div>
+
+<div class="card"><h2>Phân rã điểm nhịp</h2>
+<table><tr><th>Thành phần</th><th>Trọng số</th><th>Giá trị [-1, 1]</th><th style="width:40%">Vị trí</th></tr>
+{% for c in comps %}<tr><td>{{ c.name }}</td><td>{{ (c.weight*100)|num(0) }}%</td><td>{{ c.value|signed if c.value is not none else "thiếu dữ liệu" }}</td>
+<td><div class="bar"><i style="left:calc({{ c.pct|round(1) }}% - 1px)"></i></div></td></tr>{% endfor %}</table>
+{% if v.sensitivity %}<div class="sub">Độ nhạy: xáo trộn trọng số ±50% cho điểm trong khoảng {{ v.sensitivity.p05|num(1) }}–{{ v.sensitivity.p95|num(1) }};
+nhãn trạng thái giữ nguyên trong {{ (v.sensitivity.label_stability*100)|num(0) }}% số lần thử.</div>{% endif %}
+</div>
+
+<div class="two">
+<div class="card"><h2>Xếp hạng đa yếu tố (đầu bảng)</h2>
+<table><tr><th>Mã</th><th>Điểm</th><th>%</th><th>OBI₃</th><th>NN ròng/tổng</th><th>Spread (bps)</th></tr>
+{% for r in top_rank %}<tr><td>{{ r.symbol }}</td><td>{{ r.score|signed }}</td><td class="{{ 'up' if r.pct_change >= 0 else 'down' }}">{{ r.pct_change|signed }}</td>
+<td>{{ r.obi3|signed }}</td><td>{{ r.net_ratio|signed }}</td><td>{{ r.spread_bps|num(1) }}</td></tr>{% endfor %}</table></div>
+<div class="card"><h2>Thanh khoản yếu nhất trong rổ</h2>
+<table><tr><th>Mã</th><th>Điểm TK</th><th>Spread (bps)</th><th>Độ sâu 3 mức</th><th>Trượt giá 500tr (bps)</th></tr>
+{% for r in illiquid %}<tr><td>{{ r.symbol }}</td><td>{{ r.liq_score|num(1) }}</td><td>{{ r.spread_bps|num(1) }}</td><td>{{ r.depth_value|money }}</td><td>{{ r.slippage_bps|num(1) }}</td></tr>{% endfor %}</table></div>
+</div>
+
+<div class="two">
+<div class="card"><h2>Khối ngoại mua ròng mạnh nhất</h2>
+<table><tr><th>Mã</th><th>Ròng</th><th>Ròng/tổng</th><th>Tỷ trọng NN</th><th>Room đã dùng</th></tr>
+{% for r in f_buy %}<tr><td>{{ r.symbol }}</td><td class="up">{{ r.net_val|money }}</td><td>{{ r.net_ratio|signed }}</td><td>{{ (r.participation*100)|num(1) }}%</td><td>{{ (r.room_used*100)|num(1) }}%</td></tr>{% endfor %}</table></div>
+<div class="card"><h2>Khối ngoại bán ròng mạnh nhất</h2>
+<table><tr><th>Mã</th><th>Ròng</th><th>Ròng/tổng</th><th>Tỷ trọng NN</th><th>Room đã dùng</th></tr>
+{% for r in f_sell %}<tr><td>{{ r.symbol }}</td><td class="down">{{ r.net_val|money }}</td><td>{{ r.net_ratio|signed }}</td><td>{{ (r.participation*100)|num(1) }}%</td><td>{{ (r.room_used*100)|num(1) }}%</td></tr>{% endfor %}</table></div>
+</div>
+
+{% if v.basis_state and v.basis_state.symbol %}
+<div class="card"><h2>Phái sinh · {{ v.basis_state.symbol }}</h2>{{ basis_svg|safe }}
+<div>Basis {{ v.basis_state.basis|signed }} điểm ({{ v.basis_state.basis_pct|signed }}%) — {{ v.basis_state.label }};
+còn {{ v.basis_state.dtm|num(0) }} ngày tới đáo hạn; lệch so với giá trị hợp lý (chi phí lưu giữ) {{ v.basis_state.mispricing|signed }} điểm.</div></div>
+{% endif %}
+
+<div class="card"><h2>Cảnh báo đáng chú ý ({{ v.alerts|length }} trong phiên)</h2>
+{% if alerts %}<table><tr><th>Giờ</th><th>Mã</th><th>Mức</th><th style="text-align:left">Nội dung</th></tr>
+{% for a in alerts %}<tr><td>{{ a.ts.strftime("%H:%M") }}</td><td>{{ a.symbol }}</td>
+<td><span class="tag {{ 'CAO' if a.severity == 'CAO' else ('TB' if a.severity == 'TRUNG BÌNH' else 'THAP') }}">{{ a.severity }}</span></td>
+<td style="text-align:left">{{ a.message }}</td></tr>{% endfor %}</table>{% else %}Không có cảnh báo nào trong phiên.{% endif %}</div>
+{% endif %}
+
+<footer>
+<b>Phương pháp.</b> Điểm nhịp = 50 + 50·Σwᵢcᵢ trên 5 thành phần (độ rộng, động lượng chỉ số, sổ lệnh, khối ngoại, thanh khoản).
+OBI₃ = (ΣKL mua − ΣKL bán)/(tổng) trên 3 mức giá. Cảnh báo dùng z-score bền vững (median/MAD), ngưỡng 3,5.
+Chi tiết: docs/methodology.md.<br>
+<b>Giới hạn.</b> Chỉ thấy 3 mức giá tốt nhất; cổ phiếu không có dấu thời gian sự kiện nên dùng thời điểm nhận; điểm nhịp mô tả hiện trạng,
+không dự báo. <b>Đây là công cụ phân tích học thuật, không phải khuyến nghị đầu tư.</b>
+</footer>
+</main></body></html>
