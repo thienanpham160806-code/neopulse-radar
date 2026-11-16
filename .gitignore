@@ -1,0 +1,32 @@
+# Bí mật
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+# Dữ liệu sinh ra khi chạy
+data/*
+!data/.gitkeep
+raw_dump/
+out/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+!data_sample/*.sqlite
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+build/
+dist/
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+.streamlit/secrets.toml
