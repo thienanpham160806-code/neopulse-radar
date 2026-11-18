@@ -86,8 +86,9 @@ export function Dashboard({ initial, requestedDate, requestedIndex, initialTab }
     }
   }, [requestedDate, requestedIndex]);
 
+  const isSnapshot = Boolean(loaded.payload.meta.snapshot_at);
   useEffect(() => {
-    if (requestedDate) return; // phiên lịch sử không đổi
+    if (requestedDate || isSnapshot) return; // phiên lịch sử và snapshot tĩnh không đổi: không poll
     const tick = () => {
       if (document.visibilityState === "visible") void refresh();
     };
@@ -97,7 +98,7 @@ export function Dashboard({ initial, requestedDate, requestedIndex, initialTab }
       clearInterval(id);
       document.removeEventListener("visibilitychange", tick);
     };
-  }, [refresh, requestedDate]);
+  }, [refresh, requestedDate, isSnapshot]);
 
   const { payload: p, index } = loaded;
   const meta = p.meta;
@@ -115,7 +116,7 @@ export function Dashboard({ initial, requestedDate, requestedIndex, initialTab }
   const empty = meta.data_status.state === "error" || !p.pulse;
   return (
     <>
-      <StatusBar meta={meta} nowMs={now} origin={loaded.origin} notice={loaded.notice} pollError={pollError} />
+      <StatusBar meta={meta} nowMs={now} notice={loaded.notice} pollError={pollError} />
       <header className="mx-auto flex max-w-7xl flex-wrap items-end justify-between gap-3 px-4 pb-2 pt-4">
         <div>
           <h1 className="text-xl font-bold sm:text-2xl">📡 NeoPulse Radar</h1>

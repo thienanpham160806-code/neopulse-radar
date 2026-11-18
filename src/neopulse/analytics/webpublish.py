@@ -1,4 +1,7 @@
-"""Đẩy JSON web lên Vercel Blob (HTTP PUT) theo chu kỳ; chỉ ĐỌC SQLite nên chạy song song với bộ ghi.
+"""TÙY CHỌN, TỐN HẠN MỨC: đẩy JSON web lên Vercel Blob (HTTP PUT) theo chu kỳ; chỉ ĐỌC SQLite.
+
+Gói Hobby chỉ có 2.000 thao tác nâng cao mỗi tháng: đẩy mỗi 20 giây (vài tệp mỗi lần) sẽ hết sau 2-3 phiên.
+Cách khuyên dùng là snapshot tĩnh: `neopulse publish-static --deploy` (xem analytics/webstatic.py).
 
 Giao thức lấy từ mã nguồn SDK chính thức `@vercel/blob` 2.9.0 (không sao chép mã):
   PUT https://vercel.com/api/blob/?pathname=<đường dẫn>

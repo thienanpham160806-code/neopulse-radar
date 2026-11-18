@@ -35,9 +35,15 @@
 | NaN/inf -> null, kiểu numpy -> Python | pytest + `allow_nan=False` | JSON hợp lệ nghiêm ngặt |
 | Nhãn MÔ PHỎNG và trạng thái | pytest, vitest | `is_simulated`, `source_label`="MÔ PHỎNG", web luôn hiện nhãn |
 | Không bí mật, không sổ lệnh thô trong JSON | pytest, vitest (quét chuỗi) | không có password/secret/token/bid1/ask1... |
-| Trạng thái fresh/stale/error/closed; ngoài giờ không phải lỗi | pytest + vitest (29 ca) | ngưỡng xanh <60 s, cam <5 phút, đỏ; "phiên đã kết thúc" |
+| Trạng thái fresh/stale/error/closed; ngoài giờ không phải lỗi | pytest + vitest (40 ca) | ngưỡng xanh <60 s, cam <5 phút, đỏ; "phiên đã kết thúc" |
 | SQLite mở chỉ đọc | pytest | thử `DELETE` báo `OperationalError`; thiếu CSDL ném `FileNotFoundError` |
-| `publish --dry-run` không gọi mạng | pytest (chặn `httpx.Client.put`) | ghi `latest.json`, `index.json` cục bộ |
+| `publish-static` sinh đúng tệp (latest, sessions, index) với `snapshot_at/kind/label`, `snapshot_realtime=false` | `tests/test_webstatic.py` | cuối phiên khi phiên đã đóng, giữa phiên khi đang mở |
+| JSON snapshot không bí mật, không sổ lệnh thô, không NaN; không sửa CSDL nguồn | pytest | quét chuỗi, `parse_constant`, so mtime/size |
+| `--deploy` chạy `vercel --prod --yes` trong `web/`, in URL alias; lỗi báo rõ | pytest (runner giả) | thiếu vercel / thư mục sai / mã thoát khác 0 |
+| Dữ liệu thật không vào git | pytest (`git check-ignore`, `git ls-files`) | `web/public/data/**` bị ignore; `web/public/sample/**` được theo dõi và đều `is_simulated` |
+| Trạng thái snapshot: cuối phiên không bao giờ đỏ, giữa phiên cam, MÔ PHỎNG/lỗi giữ nguyên | vitest (`snapshot.test.ts`) | 11 ca |
+| Quyết định truy cập: chưa mật khẩu chặn `/data/*`; có mật khẩu chặn trang/API/dữ liệu | vitest + `curl` trên bản build | 403 / 401 / 200 |
+| `publish --dry-run` (Blob, tùy chọn) không gọi mạng | pytest (chặn `httpx.Client.put`) | ghi `latest.json`, `index.json` cục bộ |
 | Blob: ghi đè cùng đường dẫn, header đúng giao thức | pytest (MockTransport) | `x-allow-overwrite=1`, `x-add-random-suffix=0` |
 | Mạng rớt: thử lại lùi dần, không crash, log không lộ token | pytest | chờ 1 s, 2 s...; `failures>0` nhưng vòng lặp vẫn chạy đủ chu kỳ |
 | CSDL thiếu: đẩy trạng thái `error` để web hiện rõ | pytest | `latest.json` có `data_status.state="error"` |

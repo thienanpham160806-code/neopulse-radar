@@ -9,7 +9,8 @@
   validate   báo cáo kiểm chứng tín hiệu + chất lượng dữ liệu
   export     xuất dữ liệu một phiên ra CSV/Parquet
   export-web xuất JSON chỉ báo tổng hợp cho giao diện web (chỉ đọc SQLite)
-  publish    đẩy JSON web lên Vercel Blob theo chu kỳ (--dry-run để thử cục bộ)
+  publish-static  xuất snapshot tĩnh vào web/public/data/ (+ --deploy lên Vercel) - cách khuyên dùng
+  publish    TÙY CHỌN, tốn hạn mức: đẩy JSON lên Vercel Blob theo chu kỳ (--dry-run để thử cục bộ)
 """
 from __future__ import annotations
 
@@ -235,6 +236,28 @@ def cmd_export_web(args, s: Settings) -> int:
     return 0 if entries else 1
 
 
+def cmd_publish_static(args, s: Settings) -> int:
+    from .analytics import webstatic as ws
+    src = args.source or (s.live_source if s.is_live else "sim")
+    codes = [c.strip().upper() for c in args.indexes.split(",")] if args.indexes else [args.index.upper()]
+    date = None if args.date in (None, "", "latest", "moi-nhat") else args.date
+    try:
+        res = ws.publish_static(s.db_path, src, trading_date=date, index_codes=codes, out_dir=args.out,
+                                all_dates=args.all_dates, with_validation=not args.no_validation,
+                                order_value=args.order_value_mn * 1e6, deploy=args.deploy, web_dir=args.web_dir)
+    except ws.StaticPublishError as e:
+        print(f"LỖI: {e}")
+        return 1
+    for e in res.entries:
+        print(f"{res.out_dir / e['path']}  (phiên {e['trading_date']}, {e['index_code']}, {e.get('snapshot_kind')})")
+    print(f"Đã ghi snapshot{' MÔ PHỎNG' if src == 'sim' else ''} vào {res.out_dir} ({len(res.entries)} tệp phiên + latest + index).")
+    if args.deploy:
+        print(f"Đã triển khai: {res.url or '(không đọc được URL từ đầu ra vercel)'}")
+    else:
+        print("Chưa triển khai. Thêm --deploy (hoặc chạy `vercel --prod` trong web/) để đưa lên Vercel.")
+    return 0
+
+
 def cmd_publish(args, s: Settings) -> int:
     from .analytics import webpublish as wp
     src = args.source or (s.live_source if s.is_live else "sim")
@@ -306,7 +329,19 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--no-validation", action="store_true", help="bỏ khối kiểm chứng (nhanh hơn)")
     sp.add_argument("--order-value-mn", type=float, default=500.0, help="lệnh giả định đo trượt giá (triệu đồng)")
     sp.set_defaults(fn=cmd_export_web)
-    sp = sub.add_parser("publish", help="đẩy JSON lên Vercel Blob theo chu kỳ (chạy song song với record)")
+    sp = sub.add_parser("publish-static", help="xuất snapshot tĩnh vào web/public/data/ và tùy chọn --deploy lên Vercel (khuyên dùng)")
+    sp.add_argument("--source", choices=["neo", "ssi", "sim"], help="mặc định: nguồn thật đang cấu hình, hoặc sim")
+    sp.add_argument("--date", default="latest", help="phiên YYYY-MM-DD hoặc 'latest' (mặc định)")
+    sp.add_argument("--index", default="VN30")
+    sp.add_argument("--indexes", help="nhiều chỉ số, cách nhau dấu phẩy (VD VN30,VNINDEX)")
+    sp.add_argument("--out", default="web/public/data", help="thư mục ghi JSON (đã .gitignore)")
+    sp.add_argument("--web-dir", default="web")
+    sp.add_argument("--all-dates", action="store_true", help="xuất mọi phiên đã lưu")
+    sp.add_argument("--no-validation", action="store_true")
+    sp.add_argument("--order-value-mn", type=float, default=500.0)
+    sp.add_argument("--deploy", action="store_true", help="chạy `vercel --prod --yes` trong web/ và in URL")
+    sp.set_defaults(fn=cmd_publish_static)
+    sp = sub.add_parser("publish", help="TÙY CHỌN, tốn hạn mức: đẩy JSON lên Vercel Blob theo chu kỳ (Hobby chỉ 2.000 thao tác/tháng)")
     sp.add_argument("--source", choices=["neo", "ssi", "sim"], help="mặc định: nguồn thật đang cấu hình, hoặc sim")
     sp.add_argument("--index", default="VN30")
     sp.add_argument("--indexes")

@@ -38,3 +38,5 @@ web/.env*
 !web/.env.example
 .vercel/
 *.tsbuildinfo
+# Snapshot web THẬT (SSI/NEO): KHÔNG bao giờ vào git. Chỉ web/public/sample/ (mô phỏng) được commit.
+web/public/data/

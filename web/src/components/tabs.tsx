@@ -471,7 +471,7 @@ export function Method() {
     <div className="grid grid-cols-1 gap-3">
       <Card title="Chuỗi xử lý">
         <p className="text-sm leading-relaxed">
-          SSI FastConnect hoặc NEO API (REST + WebSocket) → chuẩn hóa &amp; kiểm tra chất lượng → SQLite (trên máy tác giả) → chỉ báo tài chính bằng Python → JSON tổng hợp → trang web này.
+          SSI FastConnect hoặc NEO API (REST + WebSocket) → chuẩn hóa &amp; kiểm tra chất lượng → SQLite (trên máy tác giả) → chỉ báo tài chính bằng Python → snapshot JSON tổng hợp (<code>neopulse publish-static</code>) → trang web này.
           Web <b>chỉ hiển thị</b>; không có công thức tài chính nào chạy ở trình duyệt.
         </p>
       </Card>
@@ -499,7 +499,7 @@ export function Method() {
       </Card>
       <Card title="Giới hạn cần biết khi đọc số">
         <ul className="list-disc space-y-1.5 pl-5 text-sm leading-relaxed">
-          <li><b>Không phải tick-by-tick.</b> Dữ liệu qua máy ghi → đẩy lên web mỗi ~20 giây → cache CDN; độ trễ từ nửa phút tới khoảng 1–2 phút. Thanh trạng thái luôn cho thấy tuổi dữ liệu.</li>
+          <li><b>Không phải thời gian thực.</b> Web hiển thị <i>snapshot tĩnh</i> do tác giả xuất từ máy ghi dữ liệu rồi triển khai; số liệu cố định tại thời điểm snapshot (thanh trạng thái ghi rõ giờ snapshot và &ldquo;cách đây&rdquo;). Snapshot cuối phiên không bị coi là &ldquo;cũ&rdquo;.</li>
           <li><b>Chỉ 3 mức giá tốt nhất</b>: OBI và độ sâu bỏ sót lệnh ở xa và lệnh ẩn; trượt giá là cận dưới.</li>
           <li><b>Thời điểm dùng là lúc nhận</b>, không phải dấu thời gian sự kiện → độ trễ mạng lẫn vào chuỗi.</li>
           <li><b>Rổ theo dõi hữu hạn</b> (mặc định VN30): khối ngoại và sổ lệnh là của rổ, không phải toàn thị trường; độ rộng lấy từ số của sàn.</li>

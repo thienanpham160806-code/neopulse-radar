@@ -290,8 +290,19 @@ def build_validation_block(db: Storage, source: str, freq: str = "1min") -> dict
 
 
 # --------------------------------------------------------------------------- lắp ráp
+def snapshot_meta(trading_date: str | None, now: datetime) -> dict:
+    """Nhãn snapshot tĩnh: 'cuối phiên' khi phiên đã đóng (hoặc là phiên của ngày trước), ngược lại 'giữa phiên'.
+    Snapshot KHÔNG phải thời gian thực: số liệu dừng ở thời điểm `snapshot_at`."""
+    today = to_vn(now).date().isoformat()
+    eod = (trading_date is not None and trading_date < today) or session_phase(now) == "closed"
+    label = "Snapshot cuối phiên" if eod else f"Snapshot giữa phiên (dừng lúc {to_vn(now).strftime('%H:%M')})"
+    return {"snapshot_at": iso_vn(now), "snapshot_kind": "end_of_session" if eod else "intraday",
+            "snapshot_label": label, "snapshot_realtime": False}
+
+
 def build_payload(db: Storage, source: str, trading_date: str | None = None, index_code: str = "VN30", *,
-                  order_value: float = 500e6, extras: dict | None = None, now: datetime | None = None) -> dict:
+                  order_value: float = 500e6, extras: dict | None = None, now: datetime | None = None,
+                  snapshot: bool = False) -> dict:
     """Dựng toàn bộ JSON của một (nguồn, phiên, chỉ số). Không bao giờ ném lỗi tính toán: lỗi -> data_status=error."""
     now = now or now_vn()
     try:
@@ -299,6 +310,8 @@ def build_payload(db: Storage, source: str, trading_date: str | None = None, ind
     except Exception as e:  # noqa: BLE001 - một phiên lỗi không được làm sập vòng publish
         return error_payload(source, f"Lỗi khi tính chỉ báo: {type(e).__name__}", trading_date, index_code, now)
     meta = _meta(v, db, now, order_value)
+    if snapshot:
+        meta.update(snapshot_meta(v.trading_date, now))
     if v.status == "no_data":
         return {"meta": meta}
     payload = {
@@ -353,15 +366,17 @@ def index_entry(payload: dict, path: str) -> dict | None:
     m = payload["meta"]
     if not m.get("trading_date"):
         return None
-    return {"source": m["source"], "is_simulated": m["is_simulated"], "trading_date": m["trading_date"],
+    return {"snapshot_kind": m.get("snapshot_kind"), "source": m["source"], "is_simulated": m["is_simulated"], "trading_date": m["trading_date"],
             "index_code": m["index_code"], "path": path, "generated_at": m["generated_at"],
             "pulse_score": (payload.get("pulse") or {}).get("score"), "n_symbols": m["n_symbols_computed"]}
 
 
 def export_to_dir(db: Storage, source: str, out_dir: str | Path, *, trading_date: str | None = None,
                   index_codes: list[str] | None = None, all_dates: bool = False, with_validation: bool = True,
-                  order_value: float = 500e6) -> list[dict]:
-    """Ghi latest*.json, sessions/*.json và index.json. Trả danh sách mục index đã ghi."""
+                  order_value: float = 500e6, snapshot: bool = False) -> list[dict]:
+    """Ghi latest*.json, sessions/*.json và index.json. Trả danh sách mục index đã ghi.
+
+    `snapshot=True` gắn meta.snapshot_at/snapshot_kind/snapshot_label (chế độ web tĩnh, không phải thời gian thực)."""
     out = Path(out_dir)
     (out / "sessions").mkdir(parents=True, exist_ok=True)
     dates = db.trading_dates(source)
@@ -375,7 +390,7 @@ def export_to_dir(db: Storage, source: str, out_dir: str | Path, *, trading_date
     entries: list[dict] = []
     for day in targets:
         for code in codes:
-            payload = build_payload(db, source, day, code, order_value=order_value, extras=extras)
+            payload = build_payload(db, source, day, code, order_value=order_value, extras=extras, snapshot=snapshot)
             rel = session_filename(source, day, code)
             (out / rel).write_text(dumps(payload), encoding="utf-8")
             if day == targets[-1]:

@@ -30,6 +30,11 @@ export interface Meta {
   available_dates: string[];
   order_value_vnd: Num;
   disclaimer: string;
+  /** chỉ có ở chế độ web tĩnh (`neopulse publish-static`): dữ liệu KHÔNG phải thời gian thực */
+  snapshot_at?: string;
+  snapshot_kind?: "end_of_session" | "intraday";
+  snapshot_label?: string;
+  snapshot_realtime?: boolean;
 }
 
 export interface PulseComponent {

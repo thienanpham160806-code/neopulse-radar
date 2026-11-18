@@ -1,87 +1,96 @@
-# Kiến trúc triển khai web (Vercel)
+# Kiến trúc triển khai web (Vercel) — chế độ SNAPSHOT TĨNH
 
 ## Sơ đồ
 
 ```
-MÁY CỦA TÁC GIẢ (giữ khóa SSI/NEO)                          VERCEL
-┌────────────────────────────────────────────────┐        ┌───────────────────────────────┐
-│ neopulse record ──► SQLite (WAL)               │        │  Vercel Blob (JSON, public)   │
-│                        │ đọc, mode=ro          │  PUT   │   latest.json  (ghi đè 20 s)  │
-│ neopulse publish ◄─────┘                       ├───────►│   sessions/…json · index.json │
-│   build_view → webexport (JSON) → HTTP PUT     │        └──────────────┬────────────────┘
-└────────────────────────────────────────────────┘                       │ fetch, revalidate 15 s
-                                                          ┌──────────────▼────────────────┐
-                                                          │  web/ Next.js (App Router)     │
-                                                          │  middleware mật khẩu · 8 tab   │
-                                                          └──────────────┬────────────────┘
-                                                                         ▼  trình duyệt / điện thoại
+MÁY CỦA TÁC GIẢ (giữ khóa SSI/NEO)                                   VERCEL
+┌───────────────────────────────────────────────┐              ┌──────────────────────────────────┐
+│ neopulse record ──► SQLite (WAL)              │              │  web/ Next.js (App Router)        │
+│                        │ đọc, mode=ro         │   vercel     │   public/data/*.json  (tĩnh)      │
+│ neopulse publish-static ◄┘                    ├──  --prod ──►│   middleware mật khẩu · 8 tab     │
+│   build_view → webexport → web/public/data/   │  (chủ động)  └───────────────┬──────────────────┘
+└───────────────────────────────────────────────┘                              ▼ trình duyệt / điện thoại
 ```
 
-Luồng một chu kỳ: `record` ghi SQLite → `publish` mở SQLite **chỉ đọc**, gọi `build_view` (cùng hàm Streamlit dùng) → `analytics/webexport.py` biến kết quả thành JSON → `PUT` lên Vercel Blob → web đọc JSON phía máy chủ rồi dựng giao diện. Mọi công thức nằm ở Python; web chỉ hiển thị (không có công thức tài chính nào bằng JavaScript).
+Luồng: `record` ghi SQLite trong phiên → **sau phiên** (hoặc khi muốn chụp giữa phiên) chạy `neopulse publish-static --source ssi --deploy` → lệnh mở SQLite **chỉ đọc**, gọi `build_view` (cùng hàm Streamlit dùng), ghi JSON vào `web/public/data/` rồi `vercel --prod` trong `web/`. Web đọc các tệp tĩnh đó phía máy chủ. Mọi công thức nằm ở Python; web chỉ hiển thị.
 
-## Vì sao thiết kế như vậy
+## Vì sao snapshot tĩnh (thay cho đẩy liên tục lên Vercel Blob)
 
-| Câu hỏi | Trả lời |
+| Lý do | Giải thích |
 |---|---|
-| Vì sao không đưa Streamlit lên Vercel? | Vercel chạy hàm serverless ngắn hạn, không giữ tiến trình dài. Streamlit cần một tiến trình Python sống lâu và kết nối WebSocket hai chiều tới trình duyệt; không chạy được trên mô hình này. |
-| Vì sao bộ ghi phải ở máy tác giả? | Bộ ghi giữ kết nối WebSocket SSI nhiều giờ liên tục và giữ khóa API. Vercel không giữ được kết nối dài; đặt khóa lên đám mây cũng mở rộng bề mặt rò rỉ. Khóa chỉ nằm trong `.env` trên máy tác giả. |
-| Vì sao không đưa SQLite lên Vercel? | Hệ tệp của hàm serverless chỉ đọc/tạm thời; SQLite ghi bền vững không có chỗ lưu. |
-| Vì sao chọn Vercel Blob? | Cùng hệ sinh thái Vercel, không cần dựng cơ sở dữ liệu hay máy chủ; chỉ cần một HTTP `PUT` có token và một URL đọc cố định. Mô hình "đẩy JSON tĩnh" tách hẳn nguồn dữ liệu khỏi web: web sập không ảnh hưởng bộ ghi, bộ ghi dừng thì web chỉ thấy dữ liệu cũ đi và báo rõ. |
-| Vì sao gửi chỉ báo tổng hợp, không gửi bảng giá thô? | Giảm dung lượng, giảm rủi ro tái phân phối dữ liệu thị trường của nhà cung cấp, và đúng mục tiêu sản phẩm (diễn giải, không phải bảng giá). |
+| **Hạn mức gói Hobby** | Vercel Blob Hobby chỉ có 2.000 thao tác nâng cao mỗi tháng. Đẩy `latest.json` mỗi 20 giây (~1.000 lần/phiên, chưa tính tệp phiên) hết hạn mức sau 2–3 phiên. Snapshot tĩnh tốn **0** thao tác Blob; mỗi lần triển khai chỉ là một deployment. |
+| **Bảo mật dữ liệu SSI** | Dữ liệu thật chỉ rời máy tác giả khi tác giả chủ động chạy `--deploy`. Không có URL Blob công khai chứa dữ liệu thị trường; tệp `public/data/` bị `.gitignore` nên không bao giờ vào git; khi chưa đặt `SITE_PASSWORD`, `/data/*` bị chặn (HTTP 403) và trang khóa dữ liệu thật. |
+| **Độ trễ trung thực** | Đồ án phân tích cuối phiên chứ không phải bảng giá thời gian thực. Thay vì ra vẻ gần-thời-gian-thực với độ trễ 0,5–1,5 phút khó kiểm soát (CDN Blob cache tối thiểu 60 s), web nói thẳng: **snapshot, không phải thời gian thực**, kèm giờ chụp. |
+| Đơn giản | Không cần token ghi trên đám mây, không có vòng lặp mạng có thể rớt giữa phiên. |
+
+Vì sao không đưa Streamlit lên Vercel: Vercel chạy hàm serverless ngắn hạn, không giữ tiến trình Python sống lâu và WebSocket hai chiều; SQLite không có chỗ lưu bền. Bộ ghi cũng phải ở máy tác giả vì giữ kết nối WebSocket SSI nhiều giờ và giữ khóa API.
+
+## Quy trình
+
+```bash
+neopulse publish-static --source ssi                     # ghi web/public/data/ (chưa triển khai)
+neopulse publish-static --source ssi --deploy            # ghi + `vercel --prod` trong web/ + in URL
+neopulse publish-static --source ssi --date 2026-11-19 --indexes VN30,VNINDEX --deploy
+neopulse publish-static --source ssi --all-dates         # mọi phiên đã lưu (để chọn lại phiên cũ trên web)
+```
+
+`web/public/data/` gồm `latest.json`, `latest_<CHỈ SỐ>.json`, `sessions/<nguồn>_<ngày>_<chỉ số>.json`, `index.json`. Mỗi tệp có `meta.snapshot_at`, `meta.snapshot_kind` (`end_of_session` | `intraday`), `meta.snapshot_label` ("Snapshot cuối phiên" / "Snapshot giữa phiên (dừng lúc HH:MM)") và `meta.snapshot_realtime = false`.
+
+Nhiều phiên: chạy `--all-dates` một lần, hoặc chạy từng ngày (`index.json` được gộp, không mất phiên cũ). Dữ liệu cũ trong `public/data/` vẫn nằm đó cho tới khi bạn xóa.
 
 ## Hợp đồng dữ liệu (`schema_version = 1`)
 
-`latest.json` · `latest_<CHỈ SỐ>.json` · `sessions/<nguồn>_<ngày>_<chỉ số>.json` · `index.json` (danh sách phiên đã xuất).
-
 | Khối | Nội dung |
 |---|---|
-| `meta` | nguồn, `is_simulated`, `generated_at` (+07:00), `last_update`, `trading_date`, `data_status`, số mã tính/bị loại, số phiên, các ngày có dữ liệu, dòng cảnh báo miễn trừ trách nhiệm |
+| `meta` | nguồn, `is_simulated`, `generated_at`, `last_update`, `snapshot_*`, `trading_date`, `data_status`, số mã tính/loại, số phiên, các ngày có dữ liệu, dòng miễn trừ trách nhiệm |
 | `pulse` | điểm 0–100, nhãn, thành phần và trọng số, độ nhạy ±50%, chuỗi theo phút, câu nhận định dựng từ số liệu |
 | `index`, `breadth` | chỉ số đang xem + chuỗi; độ rộng của sàn và độ rộng tự tính trên rổ |
 | `ranking`, `alerts` | xếp hạng đa yếu tố; cảnh báo (CAO/TRUNG BÌNH/THẤP) |
 | `book` | theo mã: OBI₃, spread, độ sâu, trượt giá ước lượng, điểm thanh khoản; chuỗi giá giữa/OBI₃ theo phút cho 20 mã giá trị lớn nhất |
 | `foreign`, `futures` | khối ngoại theo mã; basis HĐTL |
-| `validation` | IC trong/ngoài mẫu, IC theo phiên, chất lượng dữ liệu (tính thưa, mỗi ~10 phút) |
+| `validation` | IC trong/ngoài mẫu, IC theo phiên, chất lượng dữ liệu |
 
-`data_status.state` ∈ `fresh` · `stale` · `error` · `closed`. `closed` (ngoài giờ giao dịch, nghỉ trưa, phiên lịch sử) **không phải lỗi**; web hiển thị "phiên đã kết thúc". Web tự tính lại độ tươi từ `last_update` và đồng hồ trình duyệt/máy chủ (xanh < 60 s, cam < 5 phút, đỏ còn lại) vì JSON chỉ là ảnh chụp tại `generated_at`.
+NaN/∞ → `null` ở bước xuất (`allow_nan=False`). Chỉ có chỉ báo tổng hợp, không có bảng giá/sổ lệnh thô.
 
-NaN/∞ được đổi thành `null` ở bước xuất; JSON được ghi với `allow_nan=False`.
+## Trạng thái hiển thị của snapshot
 
-## Giới hạn (nói thẳng)
+Thanh trạng thái luôn hiện: nguồn · "Snapshot lúc HH:MM:SS (giờ VN)" · "cách đây X" · "Không phải thời gian thực" · số mã tính/loại.
 
-- **Độ trễ không phải tick-by-tick.** Chuỗi trễ cộng dồn: bộ ghi gom lô ≤ 5 s + chu kỳ `publish` 20 s + cache CDN của Vercel Blob (đặt `x-cache-control-max-age` = 60 s, **mức tối thiểu** Vercel cho phép) + `revalidate` 15 s của web. Ước tính trung thực: **nửa phút đến ~1,5 phút** từ khi tin về máy tới khi hiện trên màn hình. Con số thực đo được sẽ ghi ở mục "Đo độ trễ" bên dưới sau lần chạy thật.
-- Blob URL **công khai**: ai biết đường dẫn đều đọc được JSON, mật khẩu chỉ bảo vệ trang web. Vì vậy chỉ xuất chỉ báo tổng hợp; muốn khóa hẳn cần chuyển sang Blob riêng tư (cần đưa token đọc lên Vercel).
-- Web chỉ phản ánh những gì `publish` đã đẩy; máy tác giả tắt hoặc mất mạng thì dữ liệu cũ đi (đỏ), không có dữ liệu "tự bịa".
+| Trường hợp | Chấm | Ghi chú |
+|---|---|---|
+| Snapshot **cuối phiên** | xanh dương | Không bao giờ đỏ chỉ vì cũ (dữ liệu vốn đứng yên). |
+| Snapshot **giữa phiên** | cam | Nhắc rằng thị trường có thể đã thay đổi sau lúc chụp. |
+| Dữ liệu **MÔ PHỎNG** | tím | Nhãn MÔ PHỎNG luôn nổi bật. |
+| Lỗi (không có dữ liệu, JSON hỏng) | đỏ | Hiện lý do. |
+
+Không có `meta.snapshot_at` (chế độ Blob tùy chọn) thì web dùng logic thời gian thực cũ: xanh < 60 s, cam < 5 phút, đỏ còn lại; ngoài giờ giao dịch là "phiên đã kết thúc".
 
 ## Bảo mật
 
-- Khóa SSI/NEO và `BLOB_READ_WRITE_TOKEN` chỉ ở `.env` trên máy tác giả. Trên Vercel chỉ đặt `BLOB_READ_URL` (địa chỉ đọc) và `SITE_PASSWORD`.
-- `publish` mở SQLite với `mode=ro` + `PRAGMA query_only`: không thể ghi, nên chạy song song với `record` an toàn.
-- Log che token; thông báo lỗi Blob không chứa token.
-- Middleware yêu cầu mật khẩu (`SITE_PASSWORD`, cookie `httpOnly`); nếu không đặt, trang chỉ cho xem khi dữ liệu là **mô phỏng**.
+- Khóa SSI/NEO chỉ ở `.env` trên máy tác giả; Vercel chỉ có `SITE_PASSWORD`.
+- `public/data/` nằm trong `.gitignore` (chỉ `public/sample/` — mô phỏng — được commit); `web/.vercelignore` bảo đảm `vercel --prod` vẫn tải thư mục này lên (Vercel CLI mặc định bỏ các tệp trong `.gitignore`). Kiểm thử tự động xác nhận `git check-ignore` đúng và không có tệp `public/data` nào được theo dõi.
+- Middleware: đã đặt `SITE_PASSWORD` → mọi trang/API/`/data/*` cần cookie `httpOnly` (lưu băm, không phải mật khẩu); chưa đặt → `/data/*` trả 403 và trang chỉ hiện dữ liệu mô phỏng.
+- `publish-static` mở SQLite với `mode=ro`: không thể ghi, chạy song song với `record` an toàn.
+
+**Trước khi `--deploy` dữ liệu thật:** (1) `SITE_PASSWORD` đã đặt trên Vercel; (2) cân nhắc điều khoản của SSI về việc tái phân phối dữ liệu; (3) mở URL sau khi triển khai để chắc chắn bị hỏi mật khẩu.
+
+## Tùy chọn: đẩy liên tục lên Vercel Blob (`neopulse publish`)
+
+Vẫn còn trong mã nguồn nhưng **không bắt buộc và tốn hạn mức** (Hobby: 2.000 thao tác/tháng). Cần `BLOB_READ_WRITE_TOKEN`/`BLOB_PREFIX` trong `.env` (máy ghi) và `BLOB_READ_URL` trên Vercel; khi `BLOB_READ_URL` được đặt, web ưu tiên đọc Blob rồi mới tới snapshot tĩnh. Giới hạn đã biết: CDN Blob cache tối thiểu 60 s ⇒ độ trễ ước tính nửa phút đến ~1,5 phút (chưa đo thật); URL Blob công khai nên mật khẩu chỉ khóa trang, không khóa tệp JSON.
 
 ## Triển khai hiện tại
 
-- Dự án Vercel `neopulse-radar` (gói Hobby), bản production dùng dữ liệu **MÔ PHỎNG** đi kèm mã nguồn: https://neopulse-radar.vercel.app
-- Chưa tạo Blob store và chưa đặt `SITE_PASSWORD`/`BLOB_READ_URL`; khi chưa có mật khẩu, trang tự khóa dữ liệu thật (chỉ xem được dữ liệu mô phỏng).
-- Đã kiểm tra bản production: mở được; nhãn MÔ PHỎNG hiện; 8 tab không lỗi console; không tràn ngang ở 390 px. Kiểm tra cục bộ (build production): chưa mật khẩu → `/` vào thẳng (dữ liệu mô phỏng); đặt `SITE_PASSWORD` → `/` chuyển 307 sang `/login`, `/api/data` trả 401, sai mật khẩu bị trả về `/login?error=1`, đúng mật khẩu cấp cookie `httpOnly`.
+- Dự án Vercel `neopulse-radar` (gói Hobby): https://neopulse-radar.vercel.app — hiện là snapshot **MÔ PHỎNG** sinh bằng `publish-static --deploy`.
+- Chưa đặt `SITE_PASSWORD`, chưa có snapshot dữ liệu thật; đã kiểm tra: `/` mở được và hiện "Snapshot cuối phiên", `/data/latest.json` trả 403.
 
 ## Chạy khi có dữ liệu thật
 
-Chuẩn bị một lần: tạo Blob store trên Vercel, đặt `BLOB_READ_WRITE_TOKEN` và `BLOB_PREFIX=neopulse` trong `.env` (máy ghi), đặt `BLOB_READ_URL`, `SITE_PASSWORD` trên Vercel (xem `web/README.md`).
+Trước phiên (≈ 8:45): `neopulse check` báo `Kết nối REST SSI: OK`; `git status` không liệt kê `.env`; `neopulse publish-static --source ssi` chạy được (nếu chưa có dữ liệu sẽ báo lỗi rõ, không tạo JSON rỗng).
 
-Trước phiên (≈ 8:45):
-- [ ] `neopulse check` báo `Kết nối REST SSI: OK`; `git status` không liệt kê `.env`.
-- [ ] `neopulse export-web --source ssi --no-validation --out out/web_try` chạy được (kể cả khi chưa có dữ liệu: ra JSON trạng thái `error` rõ ràng, không crash).
-- [ ] `neopulse publish --source ssi --dry-run --until 00:00` ghi được `out/web/latest.json`.
+Trong phiên: `neopulse record --until 15:05` (không cần chạy gì thêm).
 
-Trong phiên, **hai cửa sổ terminal**:
-
-```bash
-neopulse --log-level INFO record --until 15:05            # cửa sổ 1: ghi dữ liệu
-neopulse --log-level INFO publish --every 20 --until 15:05   # cửa sổ 2: đẩy lên web
-```
-
-Kiểm tra trên điện thoại: mở URL production → nhập mật khẩu → thanh trạng thái hiện *SSI FastConnect (dữ liệu thật)*, chấm xanh, "cách đây" < 60–90 s; bật chế độ máy bay 30 giây rồi bật lại để thấy chấm chuyển cam/đỏ rồi xanh lại; sau 15:05 thanh trạng thái chuyển "phiên đã kết thúc".
-
-Cuối phiên `publish` tự ghi thêm `sessions/…json` và cập nhật `index.json` để chọn lại phiên cũ trên web.
+Sau phiên:
+1. `neopulse validate --source ssi` (kiểm tra số phiên, chất lượng dữ liệu).
+2. `vercel env ls` trong `web/` xác nhận có `SITE_PASSWORD` (production).
+3. `neopulse publish-static --source ssi --deploy`.
+4. Mở URL trên điện thoại → nhập mật khẩu → thanh trạng thái phải ghi *SSI FastConnect (dữ liệu thật)* và *Snapshot cuối phiên*.

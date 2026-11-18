@@ -6,8 +6,9 @@ import type { Payload, SessionIndex } from "./types";
 export interface Loaded {
   payload: Payload;
   index: SessionIndex;
-  /** blob = dữ liệu do `neopulse publish` đẩy lên; sample = dữ liệu MÔ PHỎNG đi kèm mã nguồn */
-  origin: "blob" | "sample";
+  /** static = snapshot tĩnh trong public/data (`neopulse publish-static`); blob = tùy chọn (`neopulse publish`);
+   *  sample = dữ liệu MÔ PHỎNG đi kèm mã nguồn */
+  origin: "static" | "blob" | "sample";
   notice: string | null;
 }
 
@@ -25,9 +26,21 @@ async function fetchJson(base: string, rel: string): Promise<unknown> {
   return res.json();
 }
 
-async function readSample(rel: string): Promise<unknown> {
-  const text = await fs.readFile(path.join(process.cwd(), "public", "sample", rel), "utf-8");
-  return JSON.parse(text);
+const publicDir = (sub: "data" | "sample") => path.join(process.cwd(), "public", sub);
+
+async function readFrom(sub: "data" | "sample", rel: string): Promise<unknown> {
+  return JSON.parse(await fs.readFile(path.join(publicDir(sub), rel), "utf-8"));
+}
+const readSample = (rel: string) => readFrom("sample", rel);
+const readStatic = (rel: string) => readFrom("data", rel);
+
+async function hasStatic(): Promise<boolean> {
+  try {
+    await fs.access(path.join(publicDir("data"), "latest.json"));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function loadFrom(
@@ -50,25 +63,36 @@ async function loadFrom(
   return { payload: parsePayload(await read(rel)), index };
 }
 
-/** Đọc dữ liệu cho trang. Không cấu hình Blob -> dữ liệu mẫu MÔ PHỎNG; Blob lỗi -> báo rõ và rơi về mẫu. */
+/**
+ * Đọc dữ liệu cho trang. Thứ tự ưu tiên:
+ *  1. BLOB_READ_URL (tùy chọn, tốn hạn mức) nếu được đặt;
+ *  2. snapshot tĩnh `public/data/` (do `neopulse publish-static` sinh, không vào git);
+ *  3. dữ liệu MẪU MÔ PHỎNG `public/sample/` (kèm thông báo rõ).
+ * Lỗi ở bước trên được báo rõ rồi rơi xuống bước dưới.
+ */
 export async function loadData(date?: string | null, code?: string | null): Promise<Loaded> {
+  let notice: string | null = null;
   const base = blobBase();
   if (base) {
     try {
-      const r = await loadFrom((rel) => fetchJson(base, rel), date, code);
-      return { ...r, origin: "blob", notice: null };
+      return { ...(await loadFrom((rel) => fetchJson(base, rel), date, code)), origin: "blob", notice: null };
     } catch (e) {
-      const why = e instanceof Error ? e.message : "lỗi không xác định";
-      const r = await loadFrom(readSample, date, code);
-      return {
-        ...r,
-        origin: "sample",
-        notice: `Không đọc được dữ liệu trực tiếp (${why}). Đang hiển thị dữ liệu MẪU MÔ PHỎNG đi kèm.`,
-      };
+      notice = `Không đọc được Blob (${e instanceof Error ? e.message : "lỗi không xác định"}).`;
+    }
+  }
+  if (await hasStatic()) {
+    try {
+      return { ...(await loadFrom(readStatic, date, code)), origin: "static", notice };
+    } catch (e) {
+      notice = `${notice ?? ""} Không đọc được snapshot tĩnh (${e instanceof Error ? e.message : "lỗi không xác định"}).`.trim();
     }
   }
   const r = await loadFrom(readSample, date, code);
-  return { ...r, origin: "sample", notice: "Chưa cấu hình BLOB_READ_URL: đang hiển thị dữ liệu MẪU MÔ PHỎNG đi kèm mã nguồn." };
+  return {
+    ...r,
+    origin: "sample",
+    notice: `${notice ? notice + " " : ""}Chưa có snapshot dữ liệu thật (public/data trống): đang hiển thị dữ liệu MẪU MÔ PHỎNG đi kèm mã nguồn.`,
+  };
 }
 
 /** Nếu chưa đặt SITE_PASSWORD, chỉ cho phép dữ liệu mô phỏng. */

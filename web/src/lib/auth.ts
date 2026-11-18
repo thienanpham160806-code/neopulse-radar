@@ -30,3 +30,17 @@ export async function isAuthorized(cookie: string | undefined): Promise<boolean>
   if (!cookie) return false;
   return safeEqual(cookie, await cookieValue(pw));
 }
+
+export type Decision = "next" | "login" | "unauthorized" | "forbidden";
+
+/**
+ * Quyết định truy cập (hàm thuần để kiểm thử). Quy tắc:
+ *  - đã đặt SITE_PASSWORD: mọi đường dẫn cần cookie hợp lệ (API/dữ liệu -> 401, trang -> chuyển tới /login);
+ *  - chưa đặt: /data/* (snapshot THẬT) bị chặn hẳn để không ai tải thẳng được JSON; trang chỉ cho xem dữ liệu mô phỏng.
+ */
+export function decide(pathname: string, hasPassword: boolean, authorized: boolean): Decision {
+  const isData = pathname.startsWith("/data/");
+  if (!hasPassword) return isData ? "forbidden" : "next";
+  if (authorized) return "next";
+  return pathname.startsWith("/api/") || isData ? "unauthorized" : "login";
+}

@@ -7,7 +7,7 @@ Web **chỉ hiển thị** chỉ báo do Python tính (`neopulse export-web`). K
 ```bash
 cd web
 npm install
-npm run dev          # http://localhost:3000  (dùng web/public/sample/*.json, có nhãn MÔ PHỎNG)
+npm run dev          # http://localhost:3000  (dùng public/data nếu có, không thì public/sample có nhãn MÔ PHỎNG)
 npm run lint && npm test && npm run build
 ```
 
@@ -20,31 +20,29 @@ for d in 2026-11-16 2026-11-17 2026-11-18; do
 done
 ```
 
+## Dữ liệu thật: snapshot tĩnh
+
+```bash
+neopulse publish-static --source ssi --deploy     # chạy ở thư mục gốc repo: ghi web/public/data/ rồi vercel --prod
+```
+
+Web đọc theo thứ tự: `BLOB_READ_URL` (tùy chọn) → `web/public/data/` (snapshot thật, **bị .gitignore**) → `web/public/sample/` (mô phỏng, được commit). Mọi tệp thật chỉ rời máy khi bạn chạy `--deploy`. Không phải thời gian thực.
+
 ## Biến môi trường (trên Vercel)
 
 | Biến | Ý nghĩa |
 |---|---|
-| `BLOB_READ_URL` | Địa chỉ đọc thư mục Blob chứa JSON, không có `/` cuối, VD `https://<storeid>.public.blob.vercel-storage.com/neopulse`. Không đặt ⇒ dùng dữ liệu mẫu MÔ PHỎNG. |
-| `SITE_PASSWORD` | Mật khẩu trang. Không đặt ⇒ chỉ xem được dữ liệu MÔ PHỎNG (dữ liệu thật bị khóa). |
+| `SITE_PASSWORD` | Mật khẩu trang. **Bắt buộc khi dữ liệu là thật.** Không đặt ⇒ chỉ xem được dữ liệu MÔ PHỎNG và `/data/*` trả 403. |
+| `BLOB_READ_URL` | *Tùy chọn, tốn hạn mức*: địa chỉ đọc Blob nếu dùng `neopulse publish`. Bỏ trống = snapshot tĩnh. |
 
-**Không** đặt khóa SSI/NEO hay `BLOB_READ_WRITE_TOKEN` trên Vercel; các khóa đó chỉ nằm trong `.env` trên máy ghi dữ liệu.
-
-## Triển khai
-
-Dự án Vercel `neopulse-radar`, Root Directory = `web` (khi triển khai từ Git); từ máy: `cd web && vercel --prod`. Đặt biến:
-
-```bash
-vercel env add SITE_PASSWORD production      # tự nhập mật khẩu khi được hỏi
-vercel env add BLOB_READ_URL production
-vercel --prod
-```
+**Không** đặt khóa SSI/NEO hay `BLOB_READ_WRITE_TOKEN` trên Vercel.
 
 ## Cấu trúc
 
 ```
 src/app/            page.tsx (đọc dữ liệu phía máy chủ) · api/data (làm mới) · api/login · login/
 src/middleware.ts   chặn khi đã đặt SITE_PASSWORD mà chưa có cookie httpOnly hợp lệ
-src/lib/            types (hợp đồng JSON) · status (tươi/cũ) · parse · data (Blob/mẫu) · auth · format
+src/lib/            types (hợp đồng JSON) · status (tươi/cũ/snapshot) · parse · data (Blob tùy chọn/tĩnh/mẫu) · auth (quyết định truy cập) · format
 src/components/     StatusBar · Dashboard (bộ lọc, 8 tab) · tabs · ui
 tests/              vitest: trạng thái tươi/cũ, phân tích JSON, cổng dữ liệu, xác thực, định dạng
 ```
