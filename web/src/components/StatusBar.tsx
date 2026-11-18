@@ -1,0 +1,66 @@
+"use client";
+
+import { clock, dmy } from "@/lib/format";
+import { formatAge, freshness, type Level } from "@/lib/status";
+import type { Meta } from "@/lib/types";
+
+const DOT: Record<Level, string> = {
+  green: "bg-up",
+  amber: "bg-warn",
+  red: "bg-down",
+  error: "bg-down",
+  closed: "bg-muted",
+  sim: "bg-sim",
+};
+
+/** Thanh trạng thái luôn hiện: nguồn · giờ cập nhật · tuổi dữ liệu · số mã tính/loại. */
+export function StatusBar({ meta, nowMs, origin, notice, pollError }: { meta: Meta; nowMs: number; origin: "blob" | "sample"; notice: string | null; pollError: string | null }) {
+  const f = freshness(meta, nowMs);
+  const excluded = meta.n_symbols_excluded;
+  return (
+    <div className="sticky top-0 z-30 border-b border-line bg-surface/95 backdrop-blur">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2 text-xs sm:text-sm" role="status" aria-live="polite">
+        <span className="flex items-center gap-2 font-semibold">
+          <span className={`inline-block h-2.5 w-2.5 rounded-full ${DOT[f.level]}`} aria-hidden />
+          {f.label}
+        </span>
+        <span>
+          <span className="text-muted">Nguồn: </span>
+          <b className={meta.is_simulated ? "text-sim" : ""}>{meta.source_label}</b>
+        </span>
+        <span className="tnum">
+          <span className="text-muted">Cập nhật: </span>
+          {clock(meta.last_update)} · {dmy(meta.trading_date)} <span className="text-muted">(giờ VN)</span>
+        </span>
+        {f.ageSeconds !== null ? (
+          <span className="tnum">
+            <span className="text-muted">Cách đây: </span>
+            {formatAge(f.ageSeconds)}
+          </span>
+        ) : null}
+        <span className="tnum">
+          <span className="text-muted">Mã tính / loại: </span>
+          {meta.n_symbols_computed} / {excluded}
+        </span>
+        <span className="tnum hidden sm:inline">
+          <span className="text-muted">Số phiên đã lưu: </span>
+          {meta.n_sessions}
+        </span>
+      </div>
+      {meta.is_simulated ? (
+        <div className="bg-sim/15 px-4 py-1.5 text-center text-xs font-semibold text-sim sm:text-sm">
+          DỮ LIỆU MÔ PHỎNG — mọi con số do bộ giả lập sinh ra để trình diễn, không phản ánh thị trường thật.
+        </div>
+      ) : null}
+      {f.level === "red" || f.level === "error" ? (
+        <div role="alert" className="bg-down/15 px-4 py-1.5 text-center text-xs text-down sm:text-sm">{f.detail}</div>
+      ) : f.level === "closed" && !meta.is_simulated ? (
+        <div className="bg-surface2 px-4 py-1.5 text-center text-xs text-muted sm:text-sm">{f.detail}</div>
+      ) : f.level === "amber" ? (
+        <div className="bg-warn/15 px-4 py-1.5 text-center text-xs text-warn sm:text-sm">{f.detail}</div>
+      ) : null}
+      {notice && origin === "sample" ? <div className="bg-surface2 px-4 py-1.5 text-center text-xs text-muted sm:text-sm">{notice}</div> : null}
+      {pollError ? <div role="alert" className="bg-warn/15 px-4 py-1.5 text-center text-xs text-warn sm:text-sm">Không làm mới được: {pollError}. Đang giữ bản dữ liệu gần nhất.</div> : null}
+    </div>
+  );
+}

@@ -1,0 +1,102 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-2: #eef1f5;
+  --line: #d9dee6;
+  --fg: #0f172a;
+  --muted: #5b6676;
+  --accent: #1d4ed8;
+  --up: #15803d;
+  --down: #b91c1c;
+  --warn: #b45309;
+  --sim: #7c3aed;
+  --ceil: #a21caf;
+  --floor: #0e7490;
+}
+:root:not([data-theme="light"]) {
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0b1220;
+    --surface: #131c2e;
+    --surface-2: #1b2740;
+    --line: #2a3855;
+    --fg: #e6ebf5;
+    --muted: #9aa7bd;
+    --accent: #6ea0ff;
+    --up: #4ade80;
+    --down: #f87171;
+    --warn: #fbbf24;
+    --sim: #c4a5ff;
+    --ceil: #e879f9;
+    --floor: #22d3ee;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0b1220;
+  --surface: #131c2e;
+  --surface-2: #1b2740;
+  --line: #2a3855;
+  --fg: #e6ebf5;
+  --muted: #9aa7bd;
+  --accent: #6ea0ff;
+  --up: #4ade80;
+  --down: #f87171;
+  --warn: #fbbf24;
+  --sim: #c4a5ff;
+  --ceil: #e879f9;
+  --floor: #22d3ee;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface2: var(--surface-2);
+  --color-line: var(--line);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-up: var(--up);
+  --color-down: var(--down);
+  --color-warn: var(--warn);
+  --color-sim: var(--sim);
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+html {
+  background: var(--bg);
+  color: var(--fg);
+}
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  -webkit-text-size-adjust: 100%;
+}
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+.recharts-text,
+.recharts-cartesian-axis-tick-value {
+  fill: var(--muted);
+  font-size: 11px;
+}
+.recharts-cartesian-grid line {
+  stroke: var(--line);
+}
+.scroll-x {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
