@@ -52,3 +52,13 @@ SSI tách mỗi loại tin thành chủ đề riêng, mỗi tin chỉ mang một
 7. Quyền dữ liệu thời gian thực của tài khoản/khóa cá nhân (tài liệu không nói rõ điều kiện, phí).
 
 Mọi khung tin không nhận diện được đi vào kênh `unknown` và được ghi vào `raw_dump/unknown_messages.jsonl` để hiệu chỉnh.
+
+## Quan sát trên dữ liệu thật (18/11/2026, ngoài giờ giao dịch)
+
+Đã kiểm chứng bằng cuộc gọi REST thật (chỉ dữ liệu thị trường) và một lần đăng ký WebSocket ngắn:
+
+- `GET /api/v3/data/securitiesByBoard?index=VN30` trả mảng trần 30 phần tử ⇒ tên tham số `index` đúng. `?board=HOSE|HNX|UPCOM` cũng chạy: HOSE 926, HNX 421, UPCOM 846 bản ghi; `board` khác (DER, HNXDER...) trả HTTP 400.
+- Trường mỗi bản ghi: `symbol`, `board`, `lotSize`, `listedShare`, `icbCode`, `stockType`, `maturityDate`, `cwUnderlyingSymbol`... `stockType` phân biệt được loại chứng khoán: HOSE gồm `Stock` 410, `CW Product` 461, `ETF Product` 21, `Investment Fund` 3, `None` 31; HNX gồm `Stock` 299, `Bond` 104, `Future` 14, `None` 4; UPCOM gồm `Stock` 808, `None` 38. (Bản ghi `None` chưa rõ bản chất.)
+- HĐTL nằm trong bản ghi của sàn HNX với `stockType=Future`, và mã là mã nội bộ chứ không phải dạng `VN30F2612`: `41I1GB000` (VN30, đáo hạn 19/11/2026), `41I1GC000` (VN30, 17/12/2026), `41I1H3000` (03/2027), `41I1H6000` (06/2027). Mã `VN30F...` có phải chủ đề streaming hợp lệ không CHƯA biết; máy chủ trả "Subscribed to N topic(s)" cho mọi chủ đề (kể cả mã chưa kiểm chứng), nên xác nhận ack **không** chứng minh chủ đề tồn tại. Chỉ biết có dữ liệu hay không khi chạy trong phiên.
+- Token: `expiresAt` cho thời hạn ~899 giây (~15 phút), không phải vài giờ ⇒ luồng WebSocket phải nối lại gần 15 phút một lần (`SsiStream` đã chủ động nối lại khi còn dưới 120 giây).
+- Windows: console mặc định cp1252 làm `neopulse check` lỗi `UnicodeEncodeError`; đã ép stdout/stderr UTF-8 trong `cli.main`.
