@@ -29,6 +29,7 @@ class Ingestor:
         self._last_sig: dict[str, tuple] = {}
         self._last_cumvol: dict[tuple[str, str], float] = {}
         self._last_index_sig: dict[str, tuple] = {}
+        self._pending: dict[tuple[str, str], int] = {}  # (mã, ts) -> vị trí trong lô đang chờ ghi
         self.n_quotes = self.n_index = self.n_rejected = self.n_duplicates = self.n_unknown = 0
         self._raw_dir = Path(raw_dump_dir) if raw_dump_dir else None
         self._raw_left = raw_dump_limit
@@ -77,6 +78,13 @@ class Ingestor:
                 return False
             self._last_cumvol[key] = row["total_volume"]
         self._last_sig[row["symbol"]] = sig
+        # Nhiều khung tin của cùng một mã có thể tới trong cùng một mili-giây (nguồn SSI tách trade/quote/room):
+        # khóa duy nhất (mã, ts) sẽ bỏ bản ghi đến sau, nên bản đến sau - luôn là trạng thái đầy đủ hơn - thay bản trước.
+        slot = self._pending.get((row["symbol"], row["ts"]))
+        if slot is not None:
+            self._quotes[slot] = row
+            return True
+        self._pending[(row["symbol"], row["ts"])] = len(self._quotes)
         self._quotes.append(row)
         self.n_quotes += 1
         return True
@@ -114,6 +122,7 @@ class Ingestor:
 
     # ----------------------------------------------------------------- ghi
     def flush(self) -> None:
+        self._pending.clear()
         if self._quotes:
             self.db.insert_quotes(self._quotes)
             self._quotes = []

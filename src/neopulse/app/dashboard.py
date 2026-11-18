@@ -1,6 +1,6 @@
 """Bảng điều khiển NeoPulse Radar.  Chạy:  streamlit run src/neopulse/app/dashboard.py
 
-Lớp giao diện CHỈ đọc SQLite và gọi `build_view`; không tự tính chỉ báo, không gọi NEO API trực tiếp
+Lớp giao diện CHỈ đọc SQLite và gọi `build_view`; không tự tính chỉ báo, không gọi API nguồn trực tiếp
 (việc đó thuộc bộ ghi). Nhờ vậy mất kết nối API không làm treo giao diện - chỉ làm dữ liệu "cũ đi".
 """
 from __future__ import annotations
@@ -23,7 +23,7 @@ from neopulse.finance.microstructure import add_book_metrics, make_bars, walk_bo
 from neopulse.finance.pulse import COMPONENT_NAMES, WEIGHTS
 
 st.set_page_config(page_title="NeoPulse Radar", page_icon="📡", layout="wide")
-SOURCE_LABEL = {"neo": "NEO API (dữ liệu thật)", "sim": "Mô phỏng"}
+SOURCE_LABEL = {"neo": "NEO API (dữ liệu thật)", "ssi": "SSI FastConnect (dữ liệu thật)", "sim": "Mô phỏng"}
 UP, DOWN, NEUTRAL = "#15803d", "#b91c1c", "#64748b"
 LUNCH_BREAK = [dict(bounds=[11.5, 13], pattern="hour")]  # ẩn giờ nghỉ trưa trên trục thời gian
 
@@ -68,7 +68,7 @@ def header(v: SessionView, settings) -> None:
     with left:
         st.title("📡 NeoPulse Radar")
         st.caption("**Mục tiêu:** trả lời nhanh *thị trường đang ở trạng thái nào, áp lực mua/bán nằm ở đâu và có gì bất "
-                   "thường* từ dữ liệu NEO API (VPBankS). **Người dùng:** nhà đầu tư cá nhân và chuyên viên phân tích "
+                   "thường* từ dữ liệu thị trường thật (NEO API của VPBankS hoặc SSI FastConnect). **Người dùng:** nhà đầu tư cá nhân và chuyên viên phân tích "
                    "cần theo dõi nội phiên. Công cụ phân tích học thuật — không phải khuyến nghị đầu tư.")
     with right:
         icon = {"ok": "🟢", "stale": "🟠", "no_data": "🔴"}[v.status]
@@ -348,7 +348,7 @@ def tab_validation(path: str, v: SessionView, freq: str, stamp: str) -> None:
 def tab_method() -> None:
     st.markdown("""
 ### Chuỗi xử lý
-`NEO API (REST + WebSocket)` → `chuẩn hóa & kiểm tra chất lượng` → `SQLite` → `chỉ báo tài chính` → `cảnh báo / xếp hạng / kiểm chứng` → `giao diện này`
+`NEO API hoặc SSI FastConnect (REST + WebSocket)` → `chuẩn hóa & kiểm tra chất lượng` → `SQLite` → `chỉ báo tài chính` → `cảnh báo / xếp hạng / kiểm chứng` → `giao diện này`
 
 ### Công thức chính
 | Chỉ báo | Công thức | Ý nghĩa |
@@ -369,7 +369,7 @@ def tab_method() -> None:
 - **Trọng số điểm nhịp là lựa chọn thiết kế**, không phải ước lượng; xem độ nhạy ở tab Tổng quan.
 - **Điểm nhịp mô tả hiện trạng, không dự báo.** Kiểm chứng IC cho biết mức liên hệ thống kê trong dữ liệu đã thu, chưa trừ chi phí giao dịch.
 - **Phiên định kỳ (ATO/ATC)**: giá mức 1 không phải giá giới hạn → chỉ báo sổ lệnh để trống.
-- Sản phẩm **không đặt lệnh**; các endpoint giao dịch của NEO API bị chặn trong mã nguồn.
+- Sản phẩm **không đặt lệnh**; các endpoint giao dịch/tài khoản của NEO API và SSI bị chặn trong mã nguồn.
 
 **Đây là công cụ phân tích học thuật, không phải khuyến nghị đầu tư.** Chi tiết và tài liệu tham khảo: `docs/methodology.md`.
 """)
@@ -401,7 +401,9 @@ def main() -> None:
             st.caption("Hoặc chạy bộ ghi dữ liệu thật: `neopulse record`")
             st.title("📡 NeoPulse Radar")
             st.stop()
-        default = "neo" if "neo" in sources and settings.is_live else sources[-1] if "neo" not in sources else sources[0]
+        live = settings.live_source if settings.is_live else None
+        real = [x for x in sources if x in ("neo", "ssi")]
+        default = live if live in sources else (real[0] if real else sources[-1])
         source = st.radio("Nguồn dữ liệu", sources, index=sources.index(default), format_func=lambda s: SOURCE_LABEL.get(s, s))
         dates = db.trading_dates(source)
         day = st.selectbox("Phiên giao dịch", dates[::-1])
@@ -410,7 +412,7 @@ def main() -> None:
         symbols = st.multiselect("Giới hạn mã (để trống = cả rổ)", db.symbols("stock", source))
         freq = st.select_slider("Độ dài thanh", ["1min", "2min", "5min"], value="1min")
         order_value = st.number_input("Lệnh giả định để đo trượt giá (triệu đồng)", 50, 20_000, 500, 50) * 1e6
-        auto = st.toggle("Tự làm mới mỗi 20 giây", value=(source == "neo"))
+        auto = st.toggle("Tự làm mới mỗi 20 giây", value=(source in ("neo", "ssi")))
         if st.button("Làm mới ngay"):
             st.cache_data.clear()
         st.divider()

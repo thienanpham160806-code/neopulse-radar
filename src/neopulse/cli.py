@@ -28,9 +28,26 @@ def _source(args, settings: Settings, db) -> str:
     if getattr(args, "source", None):
         return args.source
     srcs = db.sources()
-    if settings.is_live and "neo" in srcs:
-        return "neo"
-    return "neo" if ("neo" in srcs and "sim" not in srcs) else "sim"
+    if settings.is_live and settings.live_source in srcs:
+        return settings.live_source
+    real = [x for x in ("neo", "ssi") if x in srcs]
+    return real[0] if (real and "sim" not in srcs) else "sim"
+
+
+def _check_ssi(s: Settings) -> int:
+    from .ssi.client import SsiApiError, SsiClient
+    if not s.has_ssi_credentials:
+        print("\nLỖI: thiếu SSI_API_KEY/SSI_API_SECRET trong .env (tạo tại https://developers.ssi.com.vn).")
+        return 2
+    try:
+        with SsiClient(s) as c:
+            c.login()
+            members = c.securities_by_index(s.universe_index)
+            print(f"\nKết nối REST SSI: OK. Rổ {s.universe_index}: {len(members)} mã. Số request đã gửi: {c.request_count}")
+        return 0
+    except SsiApiError as e:
+        print(f"\nLỖI SSI API: {e}")
+        return 1
 
 
 def cmd_check(args, s: Settings) -> int:
@@ -39,8 +56,10 @@ def cmd_check(args, s: Settings) -> int:
     print("Cấu hình (bí mật đã che):")
     print(json.dumps(s.redacted(), ensure_ascii=False, indent=2))
     if not s.is_live:
-        print("\nNEOPULSE_MODE=sim -> không gọi NEO API. Đặt NEOPULSE_MODE=live và điền .env để kiểm tra kết nối.")
+        print("\nNEOPULSE_MODE=sim -> không gọi API thật. Đặt NEOPULSE_MODE=live và điền .env để kiểm tra kết nối.")
         return 0
+    if s.source == "ssi":
+        return _check_ssi(s)
     if not s.has_neo_credentials:
         print("\nLỖI: thiếu NEO_USERNAME/NEO_PASSWORD (hoặc NEO_ACCESS_TOKEN) trong .env.")
         return 2
@@ -76,6 +95,14 @@ def cmd_record(args, s: Settings) -> int:
     if not s.is_live:
         print("Bộ ghi cần NEOPULSE_MODE=live. (Dùng `neopulse simulate` nếu chỉ muốn chạy thử.)")
         return 2
+    if s.source == "ssi":
+        from .data.recorder_ssi import record_ssi
+        if not s.has_ssi_credentials:
+            print("Thiếu SSI_API_KEY/SSI_API_SECRET trong .env.")
+            return 2
+        res = asyncio.run(record_ssi(s, until=_parse_until(args.until)))
+        print("Kết thúc ghi (SSI):", json.dumps(res, ensure_ascii=False))
+        return 0
     if not s.has_neo_credentials:
         print("Thiếu thông tin đăng nhập NEO API trong .env.")
         return 2
@@ -86,6 +113,9 @@ def cmd_record(args, s: Settings) -> int:
 
 def cmd_poll(args, s: Settings) -> int:
     from .data.recorder import poll
+    if s.source == "ssi":
+        print("SSI không có endpoint REST giá/sổ lệnh thời gian thực nên không có chế độ polling; dùng `neopulse record`.")
+        return 2
     if not (s.is_live and s.has_neo_credentials):
         print("Polling cần NEOPULSE_MODE=live và thông tin đăng nhập trong .env.")
         return 2
@@ -191,7 +221,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub = p.add_subparsers(dest="cmd", required=True)
 
     def common(sp):
-        sp.add_argument("--source", choices=["neo", "sim"], help="nguồn dữ liệu (mặc định: tự chọn)")
+        sp.add_argument("--source", choices=["neo", "ssi", "sim"], help="nguồn dữ liệu (mặc định: tự chọn)")
         sp.add_argument("--date", help="phiên YYYY-MM-DD (mặc định: phiên mới nhất)")
         sp.add_argument("--index", default="VN30")
 
@@ -220,7 +250,7 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--out")
     sp.set_defaults(fn=cmd_briefing)
     sp = sub.add_parser("validate")
-    sp.add_argument("--source", choices=["neo", "sim"])
+    sp.add_argument("--source", choices=["neo", "ssi", "sim"])
     sp.add_argument("--freq", default="1min")
     sp.add_argument("--out")
     sp.set_defaults(fn=cmd_validate)

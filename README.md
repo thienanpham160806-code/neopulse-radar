@@ -63,7 +63,7 @@ neopulse simulate --sessions 6 --reset     # sinh 6 phiên dữ liệu MÔ PHỎ
 streamlit run src/neopulse/app/dashboard.py
 neopulse briefing                          # xuất out/briefing_sim_<ngày>.html
 neopulse validate                          # báo cáo kiểm chứng
-pytest                                     # 94 kiểm thử tự động
+pytest                                     # kiểm thử tự động
 ```
 
 Dữ liệu mô phỏng luôn mang `source='sim'` và giao diện luôn hiện nhãn **MÔ PHỎNG**.
@@ -89,6 +89,25 @@ Dữ liệu mô phỏng luôn mang `source='sim'` và giao diện luôn hiện n
 
 Danh sách việc cần xác nhận ở lần chạy thật đầu tiên: [`docs/live_checklist.md`](docs/live_checklist.md).
 
+## 5b. Chạy với SSI FastConnect (thay cho NEO API)
+
+NEO API đòi đăng ký IP với VPBankS nên khó lấy; SSI cho tự tạo khóa API trên cổng nhà phát triển. Cùng một sản phẩm, chỉ đổi nguồn:
+
+1. Đăng nhập https://developers.ssi.com.vn bằng tài khoản SSI → *Quản lý API Key* → *Tạo Key mới*. Lưu **API Secret ngay** (chỉ hiện một lần).
+2. Trong `.env`:
+
+   ```ini
+   NEOPULSE_MODE=live
+   NEOPULSE_SOURCE=ssi
+   SSI_API_KEY=<api key>
+   SSI_API_SECRET=<api secret>
+   NEOPULSE_FUTURES=VN30F2612        # tùy chọn, mã HĐTL đang giao dịch
+   ```
+
+3. `neopulse check` → `neopulse record` (cùng lệnh như NEO; dữ liệu ghi với `source='ssi'`) → dashboard chọn nguồn *SSI FastConnect* → `neopulse validate --source ssi`.
+
+Chỉ dùng phần **dữ liệu thị trường**: token không kèm OTP và mã nguồn chặn cứng `/api/v3/trading`, `/api/v3/account`. Khung tin SSI được `ssi/adapter.py` đổi về cùng lược đồ thô với NEO nên toàn bộ phần phía sau dùng nguyên. Khác biệt và điểm chưa kiểm chứng: [`docs/ssi_notes.md`](docs/ssi_notes.md).
+
 ### Biến môi trường
 
 | Biến | Bắt buộc | Ý nghĩa |
@@ -103,7 +122,10 @@ Danh sách việc cần xác nhận ở lần chạy thật đầu tiên: [`docs
 | `NEOPULSE_DB_PATH` | – | Tệp SQLite |
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | – | Gửi cảnh báo mức CAO |
 | `LLM_API_KEY`, `LLM_MODEL` | – | Diễn giải bằng mô hình ngôn ngữ (có kiểm tra số liệu) |
-| `SSI_CONSUMER_ID`, `SSI_CONSUMER_SECRET` | – | Điểm cắm SSI FastConnect (chưa triển khai) |
+| `NEOPULSE_SOURCE` | – | Nguồn dữ liệu thật khi `live`: `neo` (mặc định) hoặc `ssi` |
+| `SSI_API_KEY`, `SSI_API_SECRET` | ssi | Khóa tạo tại developers.ssi.com.vn (tên cũ `SSI_CONSUMER_*` vẫn được đọc) |
+| `SSI_API_URL`, `SSI_STREAM_URL`, `SSI_MAX_RPS`, `SSI_PRICE_SCALE` | – | Địa chỉ dịch vụ SSI; giới hạn tần suất (mặc định 5); hệ số giá nếu luồng SSI gửi theo nghìn đồng |
+| `NEOPULSE_FUTURES` | – | Mã HĐTL cần theo dõi khi dùng SSI, VD `VN30F2612` (ngày đáo hạn tự suy: thứ Năm thứ ba của tháng) |
 
 ## 6. Dữ liệu NEO API được dùng
 
@@ -133,13 +155,14 @@ Hơn 30 trường có ý nghĩa tài chính được khai thác (giá 3 mức, k
 
 ## 8. Kiểm thử và kiểm chứng
 
-- `pytest` — 94 kiểm thử: chuẩn hóa dữ liệu bẩn, công thức với giá trị tính tay, không nhìn trước tương lai, giới hạn tần suất, đăng nhập lại khi 401, thử lại khi 5xx, chặn endpoint giao dịch, WebSocket rớt/treo/sai token, khử lặp, tin đến muộn, che bí mật trong log.
+- `pytest` — hơn 100 kiểm thử: chuẩn hóa dữ liệu bẩn, công thức với giá trị tính tay, không nhìn trước tương lai, giới hạn tần suất, đăng nhập lại khi 401, thử lại khi 5xx, chặn endpoint giao dịch, WebSocket rớt/treo/sai token, khử lặp, tin đến muộn, che bí mật trong log.
 - `neopulse validate` — IC trong mẫu/ngoài mẫu (tách theo thời gian), IC từng phiên, chất lượng dữ liệu, độ thu hồi cảnh báo trên sự kiện cài sẵn.
 - Kế hoạch và các tình huống lỗi đã thử: [`docs/test_plan.md`](docs/test_plan.md).
 
 ## 9. Giới hạn đã biết
 
-- **Chưa chạy với NEO API thật.** Lớp kết nối được viết theo tài liệu v1.0.0 và kiểm thử bằng máy chủ giả; cần xác nhận lại ở lần chạy thật đầu tiên (xem `docs/live_checklist.md`). Mọi hình/số minh họa hiện có đều là mô phỏng.
+- **Chưa chạy với NEO API hay SSI thật.** Lớp kết nối được viết theo tài liệu v1.0.0 và kiểm thử bằng máy chủ giả; cần xác nhận lại ở lần chạy thật đầu tiên (xem `docs/live_checklist.md`). Mọi hình/số minh họa hiện có đều là mô phỏng.
+- SSI: giao thức streaming lấy từ mã nguồn SDK chính thức, tài liệu web không mô tả; xem các điểm chưa kiểm chứng ở `docs/ssi_notes.md`.
 - Tài liệu không mô tả phong bì của thông điệp WebSocket → bộ phân loại suy kênh từ tập trường; thông điệp lạ được ghi vào `raw_dump/` để hiệu chỉnh.
 - `stockInfo` không có dấu thời gian sự kiện → dùng thời điểm nhận (giờ VN); độ trễ mạng lẫn vào chuỗi.
 - Chỉ có 3 mức giá: OBI/độ sâu là xấp xỉ; trượt giá là cận dưới.
@@ -162,13 +185,13 @@ neopulse-radar/
 ├── README.md · requirements.txt · pyproject.toml · .env.example · Makefile
 ├── src/neopulse/
 │   ├── neo_api/     client.py  ws.py  ratelimit.py  errors.py  sim.py
-│   ├── data/        normalize.py  ingest.py  storage.py  recorder.py
+│   ├── data/        normalize.py  ingest.py  storage.py  recorder.py  recorder_ssi.py
 │   ├── finance/     microstructure.py  breadth.py  foreign.py  basis.py  pulse.py
 │   ├── analytics/   anomaly.py  alerts.py  ranking.py  validation.py  view.py  briefing.py  explain.py  notify.py
 │   ├── app/         dashboard.py
-│   ├── providers/   ssi.py (điểm cắm)
+│   ├── ssi/         client.py  ws.py  adapter.py   (nguồn SSI FastConnect v3)
 │   └── cli.py  config.py  timeutil.py  logging_setup.py
-├── tests/           94 kiểm thử
+├── tests/           kiểm thử tự động (NEO, SSI, tài chính, dữ liệu)
 ├── data_sample/     dữ liệu MÔ PHỎNG mẫu
 ├── docs/            kiến trúc, phương pháp, từ điển dữ liệu, kế hoạch thử, checklist chạy thật
 └── report/          dàn ý báo cáo theo khung của đề

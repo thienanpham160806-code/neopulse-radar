@@ -30,7 +30,7 @@ footer{color:var(--muted);font-size:12.5px;margin-top:24px;border-top:1px solid 
 </head>
 <body><main>
 <h1>NeoPulse Radar · Bản tin phiên {{ v.trading_date }}</h1>
-<div class="sub">Chỉ số theo dõi: {{ v.index_code }} · Nguồn dữ liệu: {{ "MÔ PHỎNG" if v.is_simulated else "NEO API (VPBankS)" }} ·
+<div class="sub">Chỉ số theo dõi: {{ v.index_code }} · Nguồn dữ liệu: {{ "MÔ PHỎNG" if v.is_simulated else ("SSI FastConnect" if v.source == "ssi" else "NEO API (VPBankS)") }} ·
 Dữ liệu cập nhật lần cuối: {{ v.last_update.strftime("%H:%M:%S %d/%m/%Y") if v.last_update else "—" }} (giờ Việt Nam) · Lập lúc {{ generated }}</div>
 {% if v.is_simulated %}<div class="banner">DỮ LIỆU MÔ PHỎNG — mọi con số dưới đây do bộ giả lập sinh ra để trình diễn, không phản ánh thị trường thật.</div>{% endif %}
 {% if v.status == "no_data" %}<div class="card">{{ v.status_message }}</div>{% else %}

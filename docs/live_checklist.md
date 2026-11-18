@@ -34,3 +34,15 @@ Lớp kết nối được viết theo tài liệu và kiểm thử bằng máy 
 - [ ] `git grep -nE "eyJ[A-Za-z0-9_-]{10,}|116C[0-9]{6}"` không ra kết quả nào.
 - [ ] Ảnh chụp/video không lộ số tài khoản, token, IP.
 - [ ] Cập nhật mục *Giới hạn đã biết* trong README: bỏ dòng "chưa chạy với NEO API thật" **chỉ khi** đã chạy thật, và ghi số phiên đã thu.
+
+## Nếu dùng nguồn SSI (`NEOPULSE_SOURCE=ssi`)
+
+Các điểm dưới đây CHƯA được kiểm chứng trên luồng thật (xem `docs/ssi_notes.md`); xác nhận ở lần chạy đầu và ghi vào báo cáo:
+
+- [ ] `neopulse check` in `Kết nối REST SSI: OK` và số mã của rổ VN30 (nếu 0 mã: kiểm tra tham số `index` của `securitiesByBoard`).
+- [ ] `neopulse record` → dòng `SSI WebSocket đã kết nối; đăng ký N chủ đề`; sau 1–2 phút `tin` tăng, `lạ 0`. Nếu `lạ > 0`: xem `raw_dump/unknown_messages.jsonl` và chỉnh `ssi/adapter.py`.
+- [ ] Giá có đơn vị đồng (VD 31250)? Nếu thấy 31.25 thì đặt `SSI_PRICE_SCALE=1000`.
+- [ ] So 3–5 mã với bảng giá iBoard: giá khớp, mức mua/bán, khối lượng lũy kế, room ngoại.
+- [ ] Số mức giá trong `quote.*` (bids/asks) là bao nhiêu? Hệ thống chỉ dùng 3 mức đầu.
+- [ ] Chỉ số: `advances/declines` và `indexValue` khớp bảng giá (ý nghĩa trường chỉ số được SDK suy từ chữ viết tắt).
+- [ ] HĐTL: điền `NEOPULSE_FUTURES`; tab *Phái sinh* có dữ liệu.
