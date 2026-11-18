@@ -19,6 +19,17 @@ Dàn ý dưới đây chỉ ra **lấy nội dung ở đâu trong repo**. Phần
 | 10 | Kết luận | giá trị tạo ra; bài học kỹ thuật/tài chính | — |
 | PL | Phụ lục | từ điển dữ liệu, công thức chi tiết, kết quả `pytest`, hướng dẫn cài đặt, đường dẫn mã/video | `docs/` |
 
+## Phần "Triển khai sản phẩm" (đề cho tự chọn nền tảng triển khai)
+
+Nội dung nên viết (lấy từ `docs/web_architecture.md`):
+- **Kiến trúc:** máy tác giả (`record` → SQLite → `neopulse publish`) → Vercel Blob (JSON) → web Next.js trên Vercel. Mọi chỉ báo do Python tính (`build_view`), web chỉ hiển thị.
+- **Vì sao không đưa Streamlit lên Vercel:** Vercel chạy hàm serverless ngắn hạn, không giữ tiến trình Python sống lâu và WebSocket hai chiều; SQLite không có chỗ lưu bền. Streamlit vẫn dùng khi chạy cục bộ.
+- **Vì sao bộ ghi ở máy tác giả:** giữ kết nối WebSocket SSI nhiều giờ và giữ khóa API; khóa không bao giờ lên đám mây.
+- **Giới hạn độ trễ (phải nói thẳng):** không tick-by-tick. Gom lô ≤ 5 s + chu kỳ publish 20 s + cache CDN Blob tối thiểu 60 s + revalidate web 15 s ⇒ ước tính nửa phút đến ~1,5 phút. *Điền số đo thực sau lần chạy thật.*
+- **Trạng thái dữ liệu minh bạch:** nguồn, giờ cập nhật, "cách đây X giây", chấm xanh/cam/đỏ, số mã tính/loại, nhãn MÔ PHỎNG, "phiên đã kết thúc" ngoài giờ.
+- **Bảo mật:** khóa SSI và `BLOB_READ_WRITE_TOKEN` chỉ ở `.env` máy ghi; Vercel chỉ có `BLOB_READ_URL`, `SITE_PASSWORD`; mật khẩu bằng cookie httpOnly (lưu băm); không đặt mật khẩu thì dữ liệu thật bị khóa; chỉ xuất chỉ báo tổng hợp, không xuất bảng giá/sổ lệnh thô. *Lưu ý trung thực:* URL Blob công khai nên mật khẩu chỉ bảo vệ trang web, không bảo vệ tệp JSON.
+- **Ảnh minh họa:** `docs/img/web_*_sim.png` (dữ liệu MÔ PHỎNG — phải ghi rõ trong chú thích); thay bằng ảnh dữ liệu thật khi đã thu.
+
 ## Việc phải có trước khi viết phần 4, 6, 7
 
 - [ ] ≥ 5 phiên dữ liệu **thật** (ưu tiên 10) — theo `docs/live_checklist.md`.

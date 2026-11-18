@@ -185,7 +185,7 @@ export function Dashboard({ initial, requestedDate, requestedIndex, initialTab }
         </div>
       </nav>
 
-      <main className="mx-auto max-w-7xl px-4 py-4">
+      <main className="mx-auto min-w-0 max-w-7xl px-4 py-4">
         {empty && tab !== "Phương pháp & giới hạn" ? (
           <Empty>
             <p className="mb-1 font-medium text-fg">Chưa có dữ liệu để hiển thị</p>

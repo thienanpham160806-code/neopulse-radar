@@ -108,6 +108,25 @@ NEO API đòi đăng ký IP với VPBankS nên khó lấy; SSI cho tự tạo kh
 
 Chỉ dùng phần **dữ liệu thị trường**: token không kèm OTP và mã nguồn chặn cứng `/api/v3/trading`, `/api/v3/account`. Khung tin SSI được `ssi/adapter.py` đổi về cùng lược đồ thô với NEO nên toàn bộ phần phía sau dùng nguyên. Khác biệt và điểm chưa kiểm chứng: [`docs/ssi_notes.md`](docs/ssi_notes.md).
 
+## 5c. Triển khai web (Vercel)
+
+Streamlit không chạy được trên Vercel (không giữ được tiến trình dài), nên phần trình diễn công khai là một ứng dụng Next.js trong [`web/`](web/README.md). Bộ ghi vẫn chạy trên máy tác giả (giữ khóa SSI/NEO); chỉ chỉ báo đã tổng hợp được đẩy lên Vercel Blob dạng JSON.
+
+```
+record ──► SQLite ──(chỉ đọc)──► neopulse publish ──PUT──► Vercel Blob ──► web (Next.js) ──► trình duyệt
+```
+
+```bash
+neopulse export-web --source ssi --out out/web         # xuất JSON cục bộ (chỉ đọc SQLite)
+neopulse publish --every 20 --until 15:05              # đẩy lên Blob mỗi 20 giây (chạy song song với `record`)
+neopulse publish --dry-run --until 00:00               # thử cục bộ, không gọi mạng
+```
+
+`.env` (máy ghi): `BLOB_READ_WRITE_TOKEN`, `BLOB_PREFIX`. Vercel: `BLOB_READ_URL`, `SITE_PASSWORD` (không đặt khóa SSI). Web hiển thị trạng thái dữ liệu (nguồn, giờ cập nhật, tươi/cũ/lỗi), nhãn MÔ PHỎNG, và độ trễ **không phải tick-by-tick** (khoảng nửa phút đến ~1,5 phút). Chi tiết: [`docs/web_architecture.md`](docs/web_architecture.md).
+
+![Bản web — tổng quan (dữ liệu MÔ PHỎNG)](docs/img/web_desktop_overview_sim.png)
+*Ảnh chụp bản web với dữ liệu mô phỏng (có nhãn).*
+
 ### Biến môi trường
 
 | Biến | Bắt buộc | Ý nghĩa |
@@ -125,6 +144,7 @@ Chỉ dùng phần **dữ liệu thị trường**: token không kèm OTP và m�
 | `NEOPULSE_SOURCE` | – | Nguồn dữ liệu thật khi `live`: `neo` (mặc định) hoặc `ssi` |
 | `SSI_API_KEY`, `SSI_API_SECRET` | ssi | Khóa tạo tại developers.ssi.com.vn (tên cũ `SSI_CONSUMER_*` vẫn được đọc) |
 | `SSI_API_URL`, `SSI_STREAM_URL`, `SSI_MAX_RPS`, `SSI_PRICE_SCALE` | – | Địa chỉ dịch vụ SSI; giới hạn tần suất (mặc định 5); hệ số giá nếu luồng SSI gửi theo nghìn đồng |
+| `BLOB_READ_WRITE_TOKEN`, `BLOB_PREFIX` | publish | Token ghi Vercel Blob và tiền tố đường dẫn cho `neopulse publish` (chỉ máy ghi giữ; không đưa lên Vercel) |
 | `NEOPULSE_FUTURES` | – | Mã HĐTL cần theo dõi khi dùng SSI, VD `VN30F2612` (ngày đáo hạn tự suy: thứ Năm thứ ba của tháng) |
 
 ## 6. Dữ liệu NEO API được dùng
@@ -190,8 +210,10 @@ neopulse-radar/
 │   ├── analytics/   anomaly.py  alerts.py  ranking.py  validation.py  view.py  briefing.py  explain.py  notify.py
 │   ├── app/         dashboard.py
 │   ├── ssi/         client.py  ws.py  adapter.py   (nguồn SSI FastConnect v3)
+│   │                (analytics/webexport.py · webpublish.py: xuất JSON và đẩy Vercel Blob)
 │   └── cli.py  config.py  timeutil.py  logging_setup.py
-├── tests/           kiểm thử tự động (NEO, SSI, tài chính, dữ liệu)
+├── web/             giao diện web Next.js triển khai trên Vercel (chỉ hiển thị JSON do Python xuất)
+├── tests/           kiểm thử tự động (NEO, SSI, tài chính, dữ liệu, xuất web)
 ├── data_sample/     dữ liệu MÔ PHỎNG mẫu
 ├── docs/            kiến trúc, phương pháp, từ điển dữ liệu, kế hoạch thử, checklist chạy thật
 └── report/          dàn ý báo cáo theo khung của đề

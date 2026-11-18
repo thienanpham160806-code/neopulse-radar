@@ -36,7 +36,7 @@ export function Overview({ p, f }: { p: Payload; f: Filters }) {
   const pulse = p.pulse, ix = p.index?.row, fs = p.foreign?.summary, al = p.alerts;
   const top = (al?.items ?? []).filter((a) => sevOk(a.severity, f.minSev) && symOk(a.symbol, f.sym)).slice(0, 5);
   return (
-    <div className="grid gap-3">
+    <div className="grid grid-cols-1 gap-3">
       <div className="grid gap-3 lg:grid-cols-5">
         <Card title="Điểm nhịp thị trường" className="lg:col-span-2">
           {pulse && pulse.score !== null ? (
@@ -160,7 +160,7 @@ export function Book({ p, f }: { p: Payload; f: Filters }) {
     </th>
   );
   return (
-    <div className="grid gap-3">
+    <div className="grid grid-cols-1 gap-3">
       <Card title="Bản đồ áp lực sổ lệnh">
         {tree.length ? (
           <div className="h-72 w-full" role="img" aria-label="Bản đồ nhiệt áp lực sổ lệnh theo mã">
@@ -250,7 +250,7 @@ export function Foreign({ p, f }: { p: Payload; f: Filters }) {
   const bar = [...bars.slice(0, 8), ...bars.slice(-8)].filter((r, i, a) => a.findIndex((x) => x.symbol === r.symbol) === i);
   const scatter = rows.filter((r) => r.participation !== null && r.net_ratio !== null).map((r) => ({ x: r.participation as number, y: r.net_ratio as number, z: r.total_value ?? 1, s: r.symbol }));
   return (
-    <div className="grid gap-3">
+    <div className="grid grid-cols-1 gap-3">
       <div className="grid gap-3 lg:grid-cols-2">
         <Card title="Mua/bán ròng theo mã (mạnh nhất hai phía)">
           <div className="h-[28rem] w-full" role="img" aria-label="Biểu đồ khối ngoại mua bán ròng theo mã">
@@ -312,7 +312,7 @@ export function Futures({ p }: { p: Payload }) {
   }
   const s = fu.state;
   return (
-    <div className="grid gap-3">
+    <div className="grid grid-cols-1 gap-3">
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat label={s.symbol ?? "HĐTL"} value={num(fu.future ?? null, 1)} sub={`cơ sở ${num(fu.spot ?? null, 2)}`} />
         <Stat label="Basis" value={`${signed(s.basis)} điểm`} sub={pct(s.basis_pct)} tone={signTone(s.basis)} />
@@ -345,7 +345,7 @@ export function Alerts({ p, f }: { p: Payload; f: Filters }) {
   if (!al || al.total === 0) return <Empty>Không có cảnh báo nào trong phiên.</Empty>;
   const items = al.items.filter((a) => sevOk(a.severity, f.minSev) && symOk(a.symbol, f.sym) && (!rule || a.rule === rule));
   return (
-    <div className="grid gap-3">
+    <div className="grid grid-cols-1 gap-3">
       <div className="grid grid-cols-3 gap-3">
         {SEV_ORDER.map((s) => <Stat key={s} label={s} value={al.by_severity[s] ?? 0} tone={s === "CAO" ? "text-down" : s === "TRUNG BÌNH" ? "text-warn" : "text-muted"} />)}
       </div>
@@ -407,7 +407,7 @@ export function Validation({ p }: { p: Payload }) {
   const cols = v.ic.table.length ? Object.keys(v.ic.table[0]) : [];
   const dq = v.data_quality;
   return (
-    <div className="grid gap-3">
+    <div className="grid grid-cols-1 gap-3">
       {v.simulated_signals_are_planted ? (
         <div role="note" className="rounded-xl border border-sim/40 bg-sim/10 p-3 text-sm text-sim">
           Trên dữ liệu MÔ PHỎNG, tín hiệu sổ lệnh được <b>cài sẵn</b> vào cơ chế sinh giá. Kết quả dưới đây chỉ xác nhận đường ống tính toán chạy đúng — <b>không</b> phải bằng chứng về thị trường thật.
@@ -422,7 +422,7 @@ export function Validation({ p }: { p: Payload }) {
               <thead><tr>{cols.map((c) => <Th key={c} right={false}>{c}</Th>)}</tr></thead>
               <tbody>
                 {v.ic.table.map((r, i) => (
-                  <tr key={i} className="border-t border-line">{cols.map((c) => <Td key={c} right={false}>{typeof r[c] === "number" ? num(r[c] as number, 4) : String(r[c] ?? dash)}</Td>)}</tr>
+                  <tr key={i} className="border-t border-line">{cols.map((c) => <Td key={c} right={false}>{typeof r[c] === "number" ? num(r[c] as number, Number.isInteger(r[c]) ? 0 : 4) : String(r[c] ?? dash)}</Td>)}</tr>
                 ))}
               </tbody>
             </table>
@@ -468,7 +468,7 @@ export function Validation({ p }: { p: Payload }) {
 /* ------------------------------------------------------------------ Phương pháp */
 export function Method() {
   return (
-    <div className="grid gap-3">
+    <div className="grid grid-cols-1 gap-3">
       <Card title="Chuỗi xử lý">
         <p className="text-sm leading-relaxed">
           SSI FastConnect hoặc NEO API (REST + WebSocket) → chuẩn hóa &amp; kiểm tra chất lượng → SQLite (trên máy tác giả) → chỉ báo tài chính bằng Python → JSON tổng hợp → trang web này.

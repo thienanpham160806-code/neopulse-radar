@@ -8,7 +8,7 @@ export const TOOLTIP_STYLE = {
 
 export function Card({ title, children, className = "", action }: { title?: ReactNode; children: ReactNode; className?: string; action?: ReactNode }) {
   return (
-    <section className={`rounded-xl border border-line bg-surface p-3 sm:p-4 ${className}`}>
+    <section className={`min-w-0 rounded-xl border border-line bg-surface p-3 sm:p-4 ${className}`}>
       {title || action ? (
         <div className="mb-2 flex items-center justify-between gap-2">
           {title ? <h2 className="text-sm font-semibold">{title}</h2> : <span />}

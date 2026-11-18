@@ -27,6 +27,23 @@
 | Lỗi khi tính | Hộp lỗi nêu loại lỗi; các phần khác vẫn dùng được | — |
 | Dữ liệu mô phỏng | Băng vàng trên mọi trang, nhãn trong bản tin và tin Telegram | nguồn *Mô phỏng* |
 
+## 2b. Kiểm thử bản web (`web/`, Python + vitest)
+
+| Ca | Kiểm bằng | Kỳ vọng |
+|---|---|---|
+| Schema JSON đủ khối, `schema_version`=1, thời gian có +07:00 | `tests/test_webexport.py` | meta, pulse, index, breadth, ranking, alerts, book, foreign, futures, validation |
+| NaN/inf -> null, kiểu numpy -> Python | pytest + `allow_nan=False` | JSON hợp lệ nghiêm ngặt |
+| Nhãn MÔ PHỎNG và trạng thái | pytest, vitest | `is_simulated`, `source_label`="MÔ PHỎNG", web luôn hiện nhãn |
+| Không bí mật, không sổ lệnh thô trong JSON | pytest, vitest (quét chuỗi) | không có password/secret/token/bid1/ask1... |
+| Trạng thái fresh/stale/error/closed; ngoài giờ không phải lỗi | pytest + vitest (29 ca) | ngưỡng xanh <60 s, cam <5 phút, đỏ; "phiên đã kết thúc" |
+| SQLite mở chỉ đọc | pytest | thử `DELETE` báo `OperationalError`; thiếu CSDL ném `FileNotFoundError` |
+| `publish --dry-run` không gọi mạng | pytest (chặn `httpx.Client.put`) | ghi `latest.json`, `index.json` cục bộ |
+| Blob: ghi đè cùng đường dẫn, header đúng giao thức | pytest (MockTransport) | `x-allow-overwrite=1`, `x-add-random-suffix=0` |
+| Mạng rớt: thử lại lùi dần, không crash, log không lộ token | pytest | chờ 1 s, 2 s...; `failures>0` nhưng vòng lặp vẫn chạy đủ chu kỳ |
+| CSDL thiếu: đẩy trạng thái `error` để web hiện rõ | pytest | `latest.json` có `data_status.state="error"` |
+| Cổng dữ liệu thật khi chưa đặt `SITE_PASSWORD`; cookie là băm | vitest + thử `curl` | 307 -> /login, API 401, sai mật khẩu 303 ?error=1, đúng mật khẩu đặt cookie httpOnly |
+| Bố cục di động 390 px, không tràn ngang, 8 tab, sáng/tối | puppeteer chụp từng tab | `scrollWidth` = 390; ảnh trong `docs/img/web_*_sim.png` |
+
 ## 3. Kiểm chứng với dữ liệu thật — **việc còn phải làm**
 
 | Việc | Bằng chứng đưa vào báo cáo |

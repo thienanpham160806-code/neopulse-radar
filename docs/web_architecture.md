@@ -60,6 +60,12 @@ NaN/∞ được đổi thành `null` ở bước xuất; JSON được ghi vớ
 - Log che token; thông báo lỗi Blob không chứa token.
 - Middleware yêu cầu mật khẩu (`SITE_PASSWORD`, cookie `httpOnly`); nếu không đặt, trang chỉ cho xem khi dữ liệu là **mô phỏng**.
 
+## Triển khai hiện tại
+
+- Dự án Vercel `neopulse-radar` (gói Hobby), bản production dùng dữ liệu **MÔ PHỎNG** đi kèm mã nguồn: https://neopulse-radar.vercel.app
+- Chưa tạo Blob store và chưa đặt `SITE_PASSWORD`/`BLOB_READ_URL`; khi chưa có mật khẩu, trang tự khóa dữ liệu thật (chỉ xem được dữ liệu mô phỏng).
+- Đã kiểm tra bản production: mở được; nhãn MÔ PHỎNG hiện; 8 tab không lỗi console; không tràn ngang ở 390 px. Kiểm tra cục bộ (build production): chưa mật khẩu → `/` vào thẳng (dữ liệu mô phỏng); đặt `SITE_PASSWORD` → `/` chuyển 307 sang `/login`, `/api/data` trả 401, sai mật khẩu bị trả về `/login?error=1`, đúng mật khẩu cấp cookie `httpOnly`.
+
 ## Chạy khi có dữ liệu thật
 
 Chuẩn bị một lần: tạo Blob store trên Vercel, đặt `BLOB_READ_WRITE_TOKEN` và `BLOB_PREFIX=neopulse` trong `.env` (máy ghi), đặt `BLOB_READ_URL`, `SITE_PASSWORD` trên Vercel (xem `web/README.md`).
