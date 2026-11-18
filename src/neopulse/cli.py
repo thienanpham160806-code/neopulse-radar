@@ -8,6 +8,8 @@
   briefing   xuất bản tin HTML của một phiên
   validate   báo cáo kiểm chứng tín hiệu + chất lượng dữ liệu
   export     xuất dữ liệu một phiên ra CSV/Parquet
+  export-web xuất JSON chỉ báo tổng hợp cho giao diện web (chỉ đọc SQLite)
+  publish    đẩy JSON web lên Vercel Blob theo chu kỳ (--dry-run để thử cục bộ)
 """
 from __future__ import annotations
 
@@ -214,6 +216,43 @@ def cmd_export(args, s: Settings) -> int:
     return 0
 
 
+def cmd_export_web(args, s: Settings) -> int:
+    from pathlib import Path
+
+    from .analytics import webexport as wx
+    try:
+        db = wx.ReadOnlyStorage(s.db_path)
+    except FileNotFoundError as e:
+        print(e)
+        return 1
+    src = _source(args, s, db)
+    codes = [c.strip().upper() for c in args.indexes.split(",")] if args.indexes else [args.index.upper()]
+    entries = wx.export_to_dir(db, src, args.out, trading_date=args.date, index_codes=codes, all_dates=args.all_dates,
+                               with_validation=not args.no_validation, order_value=args.order_value_mn * 1e6)
+    for e in entries:
+        print(f"{Path(args.out) / e['path']}  (phiên {e['trading_date']}, {e['index_code']}, điểm nhịp {e['pulse_score']})")
+    print(f"Đã xuất {len(entries)} tệp JSON{' MÔ PHỎNG' if src == 'sim' else ''} vào {args.out} (latest.json, sessions/, index.json).")
+    return 0 if entries else 1
+
+
+def cmd_publish(args, s: Settings) -> int:
+    from .analytics import webpublish as wp
+    src = args.source or (s.live_source if s.is_live else "sim")
+    codes = [c.strip().upper() for c in args.indexes.split(",")] if args.indexes else [args.index.upper()]
+    try:
+        stats = wp.run_publish(s, source=src, every=args.every, until=_parse_until(args.until), index_codes=codes,
+                               work_dir=args.out, dry_run=args.dry_run)
+    except wp.BlobPutError as e:
+        print(f"LỖI: {e}")
+        return 2
+    except KeyboardInterrupt:
+        print("Đã dừng publish.")
+        return 0
+    print(f"Kết thúc publish: {stats.cycles} chu kỳ, {stats.uploads} tệp đã đẩy, {stats.failures} lỗi"
+          + (" (dry-run: chỉ ghi cục bộ)" if args.dry_run else ""))
+    return 0 if stats.failures == 0 or stats.uploads else 1
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="neopulse", description="NeoPulse Radar - radar nhịp thị trường trên NEO API")
     p.add_argument("--log-level", default="INFO")
@@ -259,6 +298,23 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--format", choices=["csv", "parquet"], default="csv")
     sp.add_argument("--out-dir", default="out")
     sp.set_defaults(fn=cmd_export)
+    sp = sub.add_parser("export-web", help="xuất JSON cho giao diện web (chỉ đọc SQLite)")
+    common(sp)
+    sp.add_argument("--indexes", help="nhiều chỉ số, cách nhau dấu phẩy (VD VN30,VNINDEX); chỉ số đầu là latest.json")
+    sp.add_argument("--out", default="out/web")
+    sp.add_argument("--all-dates", action="store_true", help="xuất mọi phiên đã lưu")
+    sp.add_argument("--no-validation", action="store_true", help="bỏ khối kiểm chứng (nhanh hơn)")
+    sp.add_argument("--order-value-mn", type=float, default=500.0, help="lệnh giả định đo trượt giá (triệu đồng)")
+    sp.set_defaults(fn=cmd_export_web)
+    sp = sub.add_parser("publish", help="đẩy JSON lên Vercel Blob theo chu kỳ (chạy song song với record)")
+    sp.add_argument("--source", choices=["neo", "ssi", "sim"], help="mặc định: nguồn thật đang cấu hình, hoặc sim")
+    sp.add_argument("--index", default="VN30")
+    sp.add_argument("--indexes")
+    sp.add_argument("--every", type=float, default=20.0, help="giây giữa hai lần đẩy")
+    sp.add_argument("--until", default="15:05", help="giờ dừng HH:MM (giờ VN)")
+    sp.add_argument("--out", default="out/web", help="thư mục làm việc cục bộ")
+    sp.add_argument("--dry-run", action="store_true", help="chỉ ghi cục bộ, không gọi mạng")
+    sp.set_defaults(fn=cmd_publish)
     return p
 
 

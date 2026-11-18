@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 
 SECRET_FIELDS = {
     "neo_password", "neo_access_token", "ssi_api_secret",
-    "telegram_bot_token", "llm_api_key",
+    "telegram_bot_token", "llm_api_key", "blob_read_write_token",
 }
 
 
@@ -49,6 +49,8 @@ class Settings:
     telegram_chat_id: str = ""
     llm_api_key: str = ""
     llm_model: str = ""
+    blob_read_write_token: str = ""  # token ghi Vercel Blob cho `neopulse publish` (chỉ máy ghi dữ liệu giữ)
+    blob_prefix: str = ""  # tiền tố đường dẫn trong store, VD "neopulse"
 
     @property
     def is_live(self) -> bool:
@@ -129,4 +131,6 @@ def load_settings(env_file: str | os.PathLike | None = None) -> Settings:
         telegram_chat_id=g("TELEGRAM_CHAT_ID", "").strip(),
         llm_api_key=g("LLM_API_KEY", "").strip(),
         llm_model=g("LLM_MODEL", "").strip(),
+        blob_read_write_token=g("BLOB_READ_WRITE_TOKEN", "").strip(),
+        blob_prefix=g("BLOB_PREFIX", "").strip().strip("/"),
     )

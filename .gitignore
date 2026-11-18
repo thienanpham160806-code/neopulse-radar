@@ -30,3 +30,11 @@ dist/
 .idea/
 .DS_Store
 .streamlit/secrets.toml
+# Web (Next.js / Vercel)
+web/node_modules/
+web/.next/
+web/out/
+web/.env*
+!web/.env.example
+.vercel/
+*.tsbuildinfo
