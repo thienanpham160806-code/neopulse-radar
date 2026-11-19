@@ -182,9 +182,13 @@ def basis_snapshot(db, source: str, day: str, as_of: str | None = None) -> dict 
     args = (day, source, as_of) if as_of else (day, source)
     f = pd.read_sql_query("SELECT ts, trading_date, symbol, last, maturity_date FROM quotes WHERE trading_date=? "
                           f"AND source=? AND instrument='future'{cond} ORDER BY ts DESC LIMIT 1", db._con, params=args)
+    if f.empty:
+        return None
+    # chỉ số VN30 gần nhất KHÔNG muộn hơn tick HĐTL (hai luồng cập nhật độc lập; ghép lùi như basis_series)
     s = pd.read_sql_query("SELECT ts, value FROM index_ticks WHERE trading_date=? AND index_code='VN30' AND source=? "
-                          f"AND pct_change IS NOT NULL{cond} ORDER BY ts DESC LIMIT 1", db._con, params=args)
-    if f.empty or s.empty:
+                          "AND pct_change IS NOT NULL AND ts<=? ORDER BY ts DESC LIMIT 1", db._con,
+                          params=(day, source, f["ts"].iloc[0]))
+    if s.empty:
         return None
     for d in (f, s):
         d["ts"] = pd.to_datetime(d["ts"], format="ISO8601")
@@ -196,8 +200,18 @@ def basis_snapshot(db, source: str, day: str, as_of: str | None = None) -> dict 
             "dtm": _r(r["dtm"], 0)}
 
 
+MAX_ALERTS_PER_PULSE = 10
+
+
+def alert_key(a: dict) -> tuple:
+    return (a["t"], a["s"], a["rule"])
+
+
 def pulse_payload(v, sent_alerts: set[tuple]) -> dict:
-    """Điểm nhịp + thành phần, top 5 tăng/giảm trong rổ, cảnh báo CHƯA gửi. `sent_alerts` được cập nhật tại chỗ."""
+    """Điểm nhịp + thành phần, top 5 tăng/giảm trong rổ, tối đa 10 cảnh báo CHƯA gửi (cũ trước).
+
+    KHÔNG đánh dấu đã gửi ở đây: chỉ đánh dấu sau khi Ably nhận gói (LiveRelay.run), để mạng lỗi hay đợt > 10 cảnh báo
+    không làm mất cảnh báo - phần còn lại đi ở pulse sau."""
     p = v.pulse
     comps = [{"k": c["key"], "n": c["name"], "w": c["weight"], "v": c["value"]} for c in wx._pulse(v)["components"]]
     lat = v.latest.dropna(subset=["pct_change"]) if len(v.latest) else v.latest
@@ -206,16 +220,15 @@ def pulse_payload(v, sent_alerts: set[tuple]) -> dict:
             return []
         rows = lat.sort_values("pct_change", ascending=asc).head(5)
         return [{"s": r.symbol, "pct": _r(r.pct_change), "last": _r(r.last, 0)} for r in rows.itertuples()]
-    new = []
+    pending = []
     if len(v.alerts):
         for r in v.alerts.sort_values("ts").itertuples():
-            key = (str(r.ts), r.symbol, r.rule)
-            if key not in sent_alerts:
-                sent_alerts.add(key)
-                new.append({"t": r.ts.isoformat(timespec="seconds"), "s": r.symbol, "rule": r.rule,
-                            "sev": r.severity, "msg": r.message})
+            a = {"t": r.ts.isoformat(timespec="seconds"), "s": r.symbol, "rule": r.rule, "sev": r.severity, "msg": r.message}
+            if alert_key(a) not in sent_alerts:
+                pending.append(a)
     return {"score": _r(p.score, 1) if p else None, "label": p.label if p else "Không đủ dữ liệu", "comps": comps,
-            "up": movers(False), "down": movers(True), "alerts": new[-10:], "n_alerts": int(len(v.alerts)),
+            "up": movers(False), "down": movers(True), "alerts": pending[:MAX_ALERTS_PER_PULSE],
+            "n_alerts": int(len(v.alerts)), "n_pending": len(pending),
             "index_code": v.index_code}
 
 
@@ -346,8 +359,8 @@ class LiveRelay:
                     self.stats.skipped_unchanged += 1
                 if t0 >= next_pulse:
                     pl = self.build_pulse(db, day, as_of)
-                    if pl:
-                        self.send("pulse", pl)
+                    if pl and self.send("pulse", pl):
+                        self._sent_alerts.update(alert_key(a) for a in pl["alerts"])  # chỉ khi Ably đã nhận
                     # nhịp pulse = 8 x thời gian build_view thật, kẹp 10-30 giây (x3 khi giãn nhịp)
                     self.stats.pulse_every_s = min(30.0, max(10.0, 8 * self.stats.build_view_s)) * (3 if f > 1 else 1)
                     next_pulse = t0 + self.stats.pulse_every_s

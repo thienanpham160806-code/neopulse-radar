@@ -201,3 +201,54 @@ def test_replay_first_loop_has_ticks_and_no_false_gap(db_path, tmp_path):
     r.run(max_loops=1)
     names = [n for n, _ in pub.msgs]
     assert "tick" in names and all(d.get("event") != "data_gap" for n, d in pub.msgs if n == "status")
+
+
+def _view_with_alerts(n):
+    """SessionView giả có n cảnh báo CAO khác nhau."""
+    import pandas as pd
+
+    from neopulse.analytics.view import SessionView
+    from neopulse.finance.pulse import combine
+    v = SessionView("sim", "2026-11-13", "VN30", status="ok")
+    v.pulse = combine({"breadth": 0.1, "momentum": 0.1, "book": 0.0, "foreign": 0.0})
+    ts = pd.Timestamp("2026-11-13T10:00:00+07:00")
+    v.alerts = pd.DataFrame({"ts": [ts + pd.Timedelta(minutes=i) for i in range(n)], "symbol": [f"M{i:02d}" for i in range(n)],
+                             "rule": "volume_spike", "severity": "CAO", "message": "m", "value": 5.0, "threshold": 3.5})
+    return v
+
+
+def test_cx003_alerts_beyond_10_are_sent_in_next_pulse_not_lost():
+    v = _view_with_alerts(12)
+    sent = set()
+    p1 = lr.pulse_payload(v, sent)
+    assert len(p1["alerts"]) == 10 and p1["n_pending"] == 12 and not sent       # dựng gói không đánh dấu
+    sent.update(lr.alert_key(a) for a in p1["alerts"])                          # Ably đã nhận gói 1
+    p2 = lr.pulse_payload(v, sent)
+    assert [a["s"] for a in p2["alerts"]] == ["M10", "M11"]                     # 2 cảnh báo còn lại không bị mất
+
+
+def test_cx003_failed_send_keeps_alerts_for_retry(db_path, tmp_path):
+    pub = Mem(ok=False)
+    r, c = make(db_path, tmp_path, pub, speed=600.0)
+    r.run(max_loops=200)
+    assert not r._sent_alerts                                                   # gửi lỗi -> không cảnh báo nào bị coi đã gửi
+    pub.ok = True
+    r2 = r
+    r2._next_send_ok = 0.0
+    r2.run(max_loops=200)
+    assert r2._sent_alerts                                                      # mạng có lại -> cảnh báo được gửi
+    keys = [lr.alert_key(a) for n, d in pub.msgs if n == "pulse" for a in d["alerts"]]
+    assert keys
+
+
+def test_cx004_basis_pairs_index_tick_not_later_than_future(tmp_path):
+    d = Storage(tmp_path / "b.sqlite")
+    rows = [{"ts": f"2026-11-19T10:00:0{s}.000+07:00", "trading_date": "2026-11-19", "index_code": "VN30", "source": "sim",
+             "value": 1800.0, "pct_change": 0.1} for s in (0, 5)]
+    d.insert_index(rows)
+    d.insert_quotes([{"ts": "2026-11-19T10:00:02.000+07:00", "trading_date": "2026-11-19", "symbol": "41I1GC000",
+                      "instrument": "future", "source": "sim", "last": 1805.0, "maturity_date": "2026-12-17"}])
+    d.close()
+    from neopulse.analytics.webexport import ReadOnlyStorage
+    b = lr.basis_snapshot(ReadOnlyStorage(tmp_path / "b.sqlite"), "sim", "2026-11-19")
+    assert b is not None and b["b"] == 5.0 and b["s"] == 1800.0
