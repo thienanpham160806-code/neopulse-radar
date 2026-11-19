@@ -140,3 +140,44 @@ html {
 .flash-up { animation: flash-up 500ms ease-out; }
 .flash-down { animation: flash-down 500ms ease-out; }
 .flash-flat { animation: flash-flat 500ms ease-out; }
+
+/* ---------- Bản xem trước 3 hướng giao diện (chỉ đổi token; quy ước màu bảng giá giữ nguyên) ---------- */
+[data-skin="terminal"] {
+  color-scheme: dark;
+  --bg: #080c11;
+  --surface: #0d141c;
+  --surface-2: #142030;
+  --line: #1e2d3e;
+  --fg: #e8eef5;
+  --muted: #8b9bb0;
+  --accent: #6cb6ff;
+  --on-accent: #04101c;
+  --up: #3fdc85;
+  --down: #ff6b6b;
+  --refc: #f2c94c;
+  --ceil: #d58cff;
+  --floor: #3fd6e6;
+  --warn: #f2a33a;
+  --sim: #b9a3ff;
+}
+[data-skin="news"] {
+  color-scheme: light;
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --surface-2: #eef2f7;
+  --line: #d6dde6;
+  --fg: #0f172a;
+  --muted: #4b5563;
+  --accent: #1d4ed8;
+  --on-accent: #ffffff;
+  --up: #15803d;
+  --down: #b91c1c;
+  --refc: #a16207;
+  --ceil: #7e22ce;
+  --floor: #0e7490;
+  --warn: #b45309;
+  --sim: #6d28d9;
+}
+[data-skin="app"] {
+  --bg: color-mix(in srgb, var(--surface-2) 70%, var(--surface));
+}
