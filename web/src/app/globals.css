@@ -140,3 +140,10 @@ html {
 .flash-up { animation: flash-up 500ms ease-out; }
 .flash-down { animation: flash-down 500ms ease-out; }
 .flash-flat { animation: flash-flat 500ms ease-out; }
+
+/* Kim đồng hồ điểm nhịp quét từ 0 tới điểm khi tải (một lần); tắt theo quy tắc reduced-motion ở trên */
+@keyframes gauge-sweep {
+  from { transform: rotate(var(--sweep, 0deg)); }
+  to { transform: rotate(0deg); }
+}
+.gauge-needle { animation: gauge-sweep 900ms cubic-bezier(0.16, 1, 0.3, 1) both; }

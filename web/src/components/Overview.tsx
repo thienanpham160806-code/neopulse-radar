@@ -1,18 +1,20 @@
 "use client";
 
 /**
- * Tổng quan theo hướng B "Bản tin" (đã chọn 19/11/2026): tiêu đề trả lời "khỏe hay yếu", câu dẫn, Hình 1 có chú thích,
- * các mục kể chuyện; cột phụ (desktop) có bảng chỉ số + cảnh báo. Trên điện thoại (ghép C): dải chỉ số và cảnh báo lên đầu.
- * Mọi số do Python tính; ở đây chỉ chọn số trực tiếp (nếu có, đúng nguồn/chỉ số) hay số snapshot để hiển thị.
+ * Tổng quan theo hướng B "Bản tin", ghép mobile kiểu C. Mở đầu bằng đồng hồ điểm nhịp + luận giải bằng lời thường
+ * ("Hôm nay nghĩa là gì?"), sau đó mới tới biểu đồ, ngành và chi tiết. Mọi số do Python tính; web chỉ chọn câu
+ * diễn giải theo dấu/độ lớn và hiển thị.
  */
 import dynamic from "next/dynamic";
 import { isNum, priceTone, TONE_CLASS, TONE_MARK } from "@/lib/fmt";
 import { hm, num, ratioPct, signed } from "@/lib/format";
 import { mergeSeries, type LiveState } from "@/lib/live";
+import { componentMeaning, GLOSSARY, RULE_PLAIN, scoreMeaning } from "@/lib/plain";
 import type { AlertItem, Num, Payload, Severity } from "@/lib/types";
+import { Gauge, Guide, Term } from "./Explain";
 import { SectorCard } from "./SectorCard";
 import { type Filters } from "./tabs";
-import { Change, Note, ScoreScale, SevTag, SignedMoney } from "./ui";
+import { Change, Note, SevTag, SignedMoney } from "./ui";
 
 // Recharts tải lười: không chặn lần vẽ đầu (Lighthouse TBT)
 const IndexChart = dynamic(() => import("./IndexChart"), {
@@ -25,17 +27,19 @@ interface Ix { code: string; v: Num; ch: Num; pct: Num; adv: Num; dec: Num; nc: 
 
 function IndexList({ rows, compact = false }: { rows: Ix[]; compact?: boolean }) {
   return (
-    <dl className={compact ? "grid grid-cols-2 gap-x-4 gap-y-2" : "divide-y divide-line"}>
+    <dl className={compact ? "grid grid-cols-2 gap-x-4 gap-y-3" : "divide-y divide-line"}>
       {rows.map((x) => {
         const dir = (x.ch ?? 0) > 0 ? "up" : (x.ch ?? 0) < 0 ? "down" : "flat";
         return (
-          <div key={x.code} className={compact ? "" : "flex items-baseline justify-between py-2"}>
+          <div key={x.code} className={compact ? "rounded-lg bg-surface p-3" : "flex items-baseline justify-between py-2"}>
             <dt className="text-sm font-semibold">{x.code}</dt>
             <dd className={compact ? "" : "text-right"}>
               <span key={`${x.v}`} className={`tnum rounded px-0.5 text-lg font-semibold ${TONE_CLASS[priceTone(x.ch)]} flash-${dir}`}>{num(x.v)}</span>
               <br /><Change value={x.pct} className="text-sm" />
-              {!compact && isNum(x.adv) ? (
-                <span className="tnum ml-2 text-xs text-muted"><span className="text-up">▲{num(x.adv, 0)}</span> <span className="text-refc">■{num(x.nc, 0)}</span> <span className="text-down">▼{num(x.dec, 0)}</span></span>
+              {isNum(x.adv) ? (
+                <span className="tnum ml-2 text-xs text-muted" title="số mã tăng / đứng giá / giảm">
+                  <span className="text-up">▲{num(x.adv, 0)}</span> <span className="text-refc">■{num(x.nc, 0)}</span> <span className="text-down">▼{num(x.dec, 0)}</span>
+                </span>
               ) : null}
             </dd>
           </div>
@@ -45,15 +49,22 @@ function IndexList({ rows, compact = false }: { rows: Ix[]; compact?: boolean })
   );
 }
 
+/** Cảnh báo bằng lời thường; số thống kê (z, RVOL, ngưỡng) mở trong phần chi tiết. */
 function AlertList({ items, limit }: { items: AlertItem[]; limit: number }) {
-  if (!items.length) return <p className="text-sm text-muted">Chưa có cảnh báo ở mức đang lọc.</p>;
+  if (!items.length) return <p className="py-2 text-sm text-muted">Chưa có điều gì bất thường ở mức đang lọc.</p>;
   return (
     <ul className="divide-y divide-line">
       {items.slice(0, limit).map((a, i) => (
-        <li key={`${a.t}${a.symbol}${a.rule}${i}`} className="flex items-start gap-2 py-2">
-          <time className="tnum w-11 shrink-0 pt-0.5 text-sm text-muted">{a.t.slice(11, 16)}</time>
-          <div className="min-w-0 flex-1 text-sm"><b>{a.symbol}</b> · {a.rule_name}<div className="text-xs text-muted">{a.message}</div></div>
-          <SevTag sev={a.severity} />
+        <li key={`${a.t}${a.symbol}${a.rule}${i}`}>
+          <details className="group py-2">
+            <summary className="flex cursor-pointer list-none items-start gap-2">
+              <time className="tnum w-11 shrink-0 pt-0.5 text-sm text-muted">{a.t.slice(11, 16)}</time>
+              <span className="min-w-0 flex-1 text-sm"><b>{a.symbol}</b>: {RULE_PLAIN[a.rule] ?? a.rule_name}
+                <span className="ml-1 text-xs text-accent group-open:hidden">· chi tiết</span></span>
+              <SevTag sev={a.severity} />
+            </summary>
+            <p className="mt-1 pl-[3.25rem] text-xs text-muted">{a.message}. Cảnh báo là tín hiệu đáng xem, không phải khuyến nghị mua bán.</p>
+          </details>
         </li>
       ))}
     </ul>
@@ -72,12 +83,10 @@ export function Overview({ p, f, live, onAlerts }: { p: Payload; f: Filters; liv
     : row ? [{ code, v: row.value, ch: row.change, pct: row.pct_change, adv: row.advances, dec: row.declines, nc: row.no_change }] : [];
   const liveAlerts: AlertItem[] = (lp ? live?.alerts ?? [] : []).map((a) => ({ t: a.t, symbol: a.s, rule: a.rule,
     rule_name: p.alerts?.rule_names[a.rule] ?? a.rule, severity: a.sev, message: a.msg, value: null, threshold: null }));
-  const alerts = [...liveAlerts, ...(p.alerts?.items ?? [])]
-    .filter((a) => SEV_ORDER.indexOf(a.severity) <= SEV_ORDER.indexOf(f.minSev) && (!f.sym || a.symbol.includes(f.sym.toUpperCase())));
+  const allAlerts = [...liveAlerts, ...(p.alerts?.items ?? [])];
+  const alerts = allAlerts.filter((a) => SEV_ORDER.indexOf(a.severity) <= SEV_ORDER.indexOf(f.minSev)
+    && (!f.sym || a.symbol.includes(f.sym.toUpperCase())));
   const summary = p.pulse?.summary ?? [];
-  const dek = live?.tick && ixs.length
-    ? `${ixs.map((x) => `${x.code} ${num(x.v)} (${signed(x.pct)}%)`).join(" · ")}. Điểm nhịp cập nhật khoảng 10 giây một lần.`
-    : summary[1] ?? summary[0] ?? "Chưa có nhận định.";
   const pts = live?.points[code] ?? [];
   const series = (pts.length ? mergeSeries((p.pulse?.series ?? []).map((r) => ({ t: r.t, value: r.index })), pts)
     : (p.pulse?.series ?? []).filter((r) => r.index !== null).map((r) => ({ t: r.t, v: r.index as number })))
@@ -85,78 +94,113 @@ export function Overview({ p, f, live, onAlerts }: { p: Payload; f: Filters; liv
   const ref = row?.ref ?? null;
   const fs = p.foreign?.summary;
 
+  // "Vì sao": hai thành phần ảnh hưởng nhiều nhất (|giá trị| x trọng số, cả hai do Python cho)
+  const drivers = comps.filter((c) => isNum(c.value))
+    .sort((a, b) => Math.abs((b.value as number) * b.weight) - Math.abs((a.value as number) * a.weight)).slice(0, 2);
+  const nHigh = allAlerts.filter((a) => a.severity === "CAO").length;
+  const hot = Array.from(new Set(allAlerts.filter((a) => a.severity === "CAO").map((a) => a.symbol))).slice(0, 3);
+  const ix0 = ixs.find((x) => x.code === code) ?? ixs[0];
+
   return (
-    <article className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
-      <div className="min-w-0">
-        {/* điện thoại: chỉ số + cảnh báo lên đầu (ưu tiên 2-3), trước phần kể chuyện */}
-        <div className="mb-6 space-y-4 lg:hidden">
-          {ixs.length ? <section aria-label="Chỉ số"><IndexList rows={ixs} compact /></section> : null}
-          <section aria-labelledby="m-alerts">
-            <div className="flex items-baseline justify-between"><h2 id="m-alerts" className="text-base font-bold">Cảnh báo mới nhất</h2>
-              <button onClick={onAlerts} className="min-h-10 text-sm text-accent underline underline-offset-4">Xem tất cả</button></div>
-            <AlertList items={alerts} limit={3} />
-          </section>
+    <div>
+      <Guide />
+
+      {/* Phần đầu: đồng hồ (điểm nhấn) + luận giải bằng lời thường */}
+      <section aria-labelledby="hero-title" className="grid grid-cols-1 items-center gap-6 rounded-2xl border border-line bg-surface p-4 sm:p-6 md:grid-cols-[minmax(260px,360px)_1fr]">
+        <div>
+          <div className="mb-1 flex justify-center text-sm text-muted"><Term k="pulse">Điểm nhịp thị trường</Term></div>
+          <Gauge score={score} label={label} />
+          {!lp && p.pulse?.sensitivity && isNum(p.pulse.sensitivity.p05) ? (
+            <p className="mt-1 text-center text-xs text-muted">Đổi trọng số ±50%: điểm trong khoảng {num(p.pulse.sensitivity.p05, 1)}–{num(p.pulse.sensitivity.p95, 1)}, nhãn giữ nguyên {ratioPct(p.pulse.sensitivity.label_stability)} số lần.</p>
+          ) : null}
+        </div>
+        <div className="min-w-0">
+          <h2 id="hero-title" className="text-[clamp(1.5rem,3.6vw,2.3rem)] font-bold leading-tight tracking-tight [text-wrap:balance]">
+            Thị trường {label.toLowerCase()}
+          </h2>
+          {ix0 ? (
+            <p className="mt-1 text-base text-muted">{ix0.code} <b className={`tnum ${TONE_CLASS[priceTone(ix0.ch)]}`}>{num(ix0.v)}</b> <Change value={ix0.pct} />
+              {isNum(ix0.adv) ? ` · ${num(ix0.adv, 0)} mã tăng, ${num(ix0.dec, 0)} mã giảm` : ""}</p>
+          ) : null}
+          <h3 className="mt-4 text-sm font-bold uppercase tracking-wide">Hôm nay nghĩa là gì?</h3>
+          <ul className="mt-2 space-y-2 text-base leading-relaxed">
+            <li><b>Trạng thái.</b> {scoreMeaning(score)}</li>
+            {drivers.length ? <li><b>Vì sao.</b> {drivers.map((c) => componentMeaning(c.key, c.value).replace(/\.$/, "")).join("; ")}.</li> : null}
+            <li><b>Cần để ý.</b> {p.pulse?.divergence ? `${p.pulse.divergence} ` : ""}{nHigh
+              ? <>{nHigh} cảnh báo mức cao trong phiên{hot.length ? `, nhiều nhất ở ${hot.join(", ")}` : ""}.{" "}
+                <button onClick={onAlerts} className="text-accent underline underline-offset-4">Xem cảnh báo</button></>
+              : "Chưa có cảnh báo mức cao."}</li>
+          </ul>
+        </div>
+      </section>
+
+      <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="min-w-0">
+          {/* điện thoại: chỉ số + cảnh báo trước phần chi tiết */}
+          <div className="mb-8 space-y-4 lg:hidden">
+            {ixs.length ? <section aria-label="Chỉ số"><IndexList rows={ixs} compact /></section> : null}
+            <section aria-labelledby="m-alerts">
+              <div className="flex items-baseline justify-between"><h2 id="m-alerts" className="text-base font-bold">Điều gì bất thường</h2>
+                <button onClick={onAlerts} className="min-h-10 text-sm text-accent underline underline-offset-4">Xem tất cả</button></div>
+              <AlertList items={alerts} limit={3} />
+            </section>
+          </div>
+
+          <h3 className="text-xl font-bold">Chỉ số đi thế nào trong phiên</h3>
+          <figure className="mt-2">
+            {series.length > 1 ? <IndexChart data={series} code={code} refValue={ref} /> : <p className="text-sm text-muted">Chưa đủ điểm dữ liệu để vẽ.</p>}
+            <figcaption className="mt-1 border-t border-line pt-1 text-sm text-muted">
+              <b className="text-fg">Hình 1.</b> {code} theo phút. Trên đường đứt màu vàng (giá tham chiếu) là đang tăng so với hôm qua, dưới là đang giảm. Rê chuột hoặc chạm để xem giá từng phút.
+            </figcaption>
+          </figure>
+
+          <h3 className="mt-10 text-xl font-bold"><Term k="sector">Ngành nào kéo, ngành nào đè</Term></h3>
+          <p className="mt-1 text-sm text-muted">Chạm vào một ngành để xem các mã trong ngành.</p>
+          <div className="mt-2"><SectorCard sectors={p.sectors} live={lp?.sec ?? null} indexCode={code} /></div>
+
+          <h3 className="mt-10 text-xl font-bold">Năm thành phần của điểm nhịp</h3>
+          <p className="mt-1 text-sm text-muted">Mỗi thành phần từ −1 (rất tiêu cực) đến +1 (rất tích cực). Chạm để xem nó đo gì.</p>
+          <ul className="mt-2 divide-y divide-line rounded-xl border border-line bg-surface">
+            {comps.map((c) => {
+              const tone = priceTone(c.value);
+              return (
+                <li key={c.key}>
+                  <details className="px-3 py-2.5">
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
+                      <span className="min-w-0"><b>{c.name}</b> <span className="text-sm text-muted">· trọng số {Math.round(c.weight * 100)}%</span>
+                        <span className="block text-sm text-muted">{componentMeaning(c.key, c.value)}</span></span>
+                      <span className={`tnum shrink-0 text-lg font-semibold ${TONE_CLASS[tone]}`}><span aria-hidden>{TONE_MARK[tone]} </span>{signed(c.value)}</span>
+                    </summary>
+                    <p className="mt-2 text-sm">{GLOSSARY[c.key]?.body}</p>
+                  </details>
+                </li>
+              );
+            })}
+          </ul>
+
+          {summary.length ? (
+            <details className="mt-8 rounded-xl border border-line bg-surface p-3">
+              <summary className="cursor-pointer font-semibold">Bản tóm tắt số liệu đầy đủ{lp ? " (theo ảnh chụp gần nhất)" : ""}</summary>
+              <ul className="mt-2 max-w-[68ch] list-disc space-y-1.5 pl-5">{summary.map((s, i) => <li key={i}>{s}</li>)}</ul>
+              <Note>Câu chữ dựng từ mẫu câu gắn với số liệu, không phải dự báo hay khuyến nghị.</Note>
+            </details>
+          ) : null}
         </div>
 
-        <h2 className="text-[clamp(1.6rem,4.5vw,2.6rem)] font-bold leading-tight tracking-tight [text-wrap:balance]">
-          Thị trường {label.toLowerCase()}: điểm nhịp <span className="tnum">{num(score, 1)}</span>/100
-        </h2>
-        <p className="mt-3 max-w-[68ch] text-lg leading-relaxed text-muted">{dek}</p>
-        <div className="mt-5 max-w-md"><ScoreScale score={score} /></div>
-        {!lp && p.pulse?.sensitivity && isNum(p.pulse.sensitivity.p05) ? (
-          <Note>Đổi mỗi trọng số ±50%: điểm dao động {num(p.pulse.sensitivity.p05, 1)}–{num(p.pulse.sensitivity.p95, 1)}, nhãn giữ nguyên trong {ratioPct(p.pulse.sensitivity.label_stability)} số lần thử. Điểm mô tả hiện trạng, không dự báo.</Note>
-        ) : null}
-        {p.pulse?.divergence ? <p className="mt-4 max-w-[68ch] border-l-0 bg-surface2 p-3 text-sm"><b>Phân kỳ chỉ số – độ rộng:</b> {p.pulse.divergence}</p> : null}
-
-        <figure className="mt-6">
-          {series.length > 1 ? (
-            <IndexChart data={series} code={code} refValue={ref} />
-          ) : <p className="text-sm text-muted">Chưa đủ điểm dữ liệu để vẽ.</p>}
-          <figcaption className="mt-1 border-t border-line pt-1 text-sm text-muted">
-            <b className="text-fg">Hình 1.</b> {code} trong phiên theo phút{isNum(ref) ? ", đường đứt màu vàng là giá tham chiếu" : ""}.
-            {live?.tick ? " Điểm cuối cập nhật trực tiếp." : ""}
-          </figcaption>
-        </figure>
-
-        <h3 className="mt-8 text-xl font-bold">Ngành nào kéo, ngành nào đè</h3>
-        <div className="mt-2"><SectorCard sectors={p.sectors} live={lp?.sec ?? null} indexCode={code} /></div>
-
-        <h3 className="mt-8 text-xl font-bold">Vì sao điểm nhịp như vậy</h3>
-        <ul className="mt-2 max-w-xl divide-y divide-line">
-          {comps.map((c) => {
-            const tone = priceTone(c.value);
-            return (
-              <li key={c.key} className="flex items-baseline justify-between py-1.5">
-                <span>{c.name} <span className="text-sm text-muted">· trọng số {Math.round(c.weight * 100)}%</span></span>
-                <span className={`tnum ${TONE_CLASS[tone]}`}><span aria-hidden>{TONE_MARK[tone]} </span>{signed(c.value)}</span>
-              </li>
-            );
-          })}
-        </ul>
-        <Note>Mỗi thành phần nằm trong [−1; 1]; dương là nghiêng tích cực. Công thức ở mục Phương pháp & giới hạn.</Note>
-
-        {summary.length ? (
-          <>
-            <h3 className="mt-8 text-xl font-bold">Nhận định từ số liệu{lp ? " (theo ảnh chụp gần nhất)" : ""}</h3>
-            <ul className="mt-2 max-w-[68ch] list-disc space-y-1.5 pl-5">{summary.map((s, i) => <li key={i}>{s}</li>)}</ul>
-            <Note>Câu chữ dựng từ mẫu câu gắn với số liệu, không phải dự báo hay khuyến nghị.</Note>
-          </>
-        ) : null}
+        <aside className="hidden space-y-8 lg:block lg:border-l lg:border-line lg:pl-6">
+          <section aria-labelledby="a-ix"><h2 id="a-ix" className="text-sm font-bold uppercase tracking-wide">Bảng chỉ số</h2><IndexList rows={ixs} /></section>
+          <section aria-labelledby="a-al">
+            <div className="flex items-baseline justify-between"><h2 id="a-al" className="text-sm font-bold uppercase tracking-wide">Điều gì bất thường</h2>
+              <button onClick={onAlerts} className="min-h-10 text-sm text-accent underline underline-offset-4">Xem tất cả</button></div>
+            <AlertList items={alerts} limit={6} />
+          </section>
+          <section aria-labelledby="a-fn">
+            <h2 id="a-fn" className="text-sm font-bold uppercase tracking-wide"><Term k="foreign">Khối ngoại trong rổ</Term></h2>
+            <p className="mt-1 text-2xl font-semibold"><SignedMoney value={fs?.net_val ?? null} /></p>
+            <p className="text-sm text-muted">{(fs?.net_val ?? 0) >= 0 ? "Mua ròng" : "Bán ròng"} · {num(fs?.n_net_buy ?? null, 0)} mã mua ròng, {num(fs?.n_net_sell ?? null, 0)} mã bán ròng</p>
+          </section>
+        </aside>
       </div>
-
-      <aside className="hidden space-y-6 lg:block lg:border-l lg:border-line lg:pl-6">
-        <section aria-labelledby="a-ix"><h2 id="a-ix" className="text-sm font-bold uppercase tracking-wide">Bảng chỉ số</h2><IndexList rows={ixs} /></section>
-        <section aria-labelledby="a-al">
-          <div className="flex items-baseline justify-between"><h2 id="a-al" className="text-sm font-bold uppercase tracking-wide">Cảnh báo mới nhất</h2>
-            <button onClick={onAlerts} className="min-h-10 text-sm text-accent underline underline-offset-4">Xem tất cả</button></div>
-          <AlertList items={alerts} limit={6} />
-        </section>
-        <section aria-labelledby="a-fn">
-          <h2 id="a-fn" className="text-sm font-bold uppercase tracking-wide">Khối ngoại trong rổ</h2>
-          <p className="mt-1 text-xl font-semibold"><SignedMoney value={fs?.net_val ?? null} /></p>
-          <p className="text-sm text-muted">{num(fs?.n_net_buy ?? null, 0)} mã mua ròng · {num(fs?.n_net_sell ?? null, 0)} mã bán ròng</p>
-        </section>
-      </aside>
-    </article>
+    </div>
   );
 }

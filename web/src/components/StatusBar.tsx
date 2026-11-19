@@ -91,8 +91,8 @@ export function StatusBar({ meta, nowMs, notice, pollError, live = null, liveNot
         </span>
       </div>
       {meta.is_simulated || live?.simulated ? (
-        <div className="border-y border-dashed border-sim bg-surface2 px-4 py-1.5 text-center text-xs font-semibold text-sim sm:text-sm">
-          DỮ LIỆU MÔ PHỎNG — mọi con số do bộ giả lập sinh ra để trình diễn, không phản ánh thị trường thật.
+        <div className="border-y border-dashed border-sim bg-surface2 px-4 py-1.5 text-center text-xs text-sim sm:text-sm">
+          <b>DỮ LIỆU MÔ PHỎNG</b>: số do bộ giả lập sinh ra để trình diễn, không phản ánh thị trường thật.
         </div>
       ) : null}
       {f.level === "snapshot" ? (
@@ -105,7 +105,7 @@ export function StatusBar({ meta, nowMs, notice, pollError, live = null, liveNot
         <div className="border-b border-line bg-surface2 px-4 py-1.5 text-center text-xs text-fg sm:text-sm">{f.detail}</div>
       ) : null}
       {liveNote ? <div role="status" className="border-b border-line bg-surface2 px-4 py-1.5 text-center text-xs text-fg sm:text-sm">{liveNote}</div> : null}
-      {notice ? <div className="bg-surface2 px-4 py-1.5 text-center text-xs text-muted sm:text-sm">{notice}</div> : null}
+      {notice && !meta.is_simulated ? <div className="bg-surface2 px-4 py-1.5 text-center text-xs text-muted sm:text-sm">{notice}</div> : null}
       {pollError ? <div role="alert" className="border-b border-line bg-surface2 px-4 py-1.5 text-center text-xs text-fg sm:text-sm">Không làm mới được: {pollError}. Đang giữ bản dữ liệu gần nhất.</div> : null}
     </div>
   );

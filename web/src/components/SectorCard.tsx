@@ -1,11 +1,13 @@
 "use client";
 
+import { Fragment, useState } from "react";
+
 import { isNum, priceTone, TONE_CLASS, TONE_MARK } from "@/lib/fmt";
 import { num, signed } from "@/lib/format";
 import type { Num, Sectors } from "@/lib/types";
 import { Card, Note } from "./ui";
 
-interface Row { sector: string; up: number; down: number; pct: Num; contrib: Num }
+interface Row { sector: string; up: number; down: number; pct: Num; contrib: Num; symbols: string[] }
 
 /** Ngành trong phiên: độ rộng, % bình quân theo vốn hóa, đóng góp điểm (ước lượng). Số do Python tính. */
 export function SectorCard({ sectors, live, indexCode }: {
@@ -13,9 +15,11 @@ export function SectorCard({ sectors, live, indexCode }: {
   live: { n: string; p: Num; c: Num; u: number; d: number }[] | null;
   indexCode: string;
 }) {
+  const [open, setOpen] = useState<string | null>(null);
+  const members = new Map((sectors?.rows ?? []).map((r) => [r.sector, r.symbols]));
   const rows: Row[] = live?.length
-    ? live.map((r) => ({ sector: r.n, up: r.u, down: r.d, pct: r.p, contrib: r.c }))
-    : (sectors?.rows ?? []).map((r) => ({ sector: r.sector, up: r.n_up, down: r.n_down, pct: r.pct_cap, contrib: r.contrib_pts }));
+    ? live.map((r) => ({ sector: r.n, up: r.u, down: r.d, pct: r.p, contrib: r.c, symbols: members.get(r.n) ?? [] }))
+    : (sectors?.rows ?? []).map((r) => ({ sector: r.sector, up: r.n_up, down: r.n_down, pct: r.pct_cap, contrib: r.contrib_pts, symbols: r.symbols }));
   if (!rows.length) return null;
   const maxAbs = Math.max(...rows.map((r) => (isNum(r.contrib) ? Math.abs(r.contrib) : 0)), 0.01);
   return (
@@ -35,8 +39,13 @@ export function SectorCard({ sectors, live, indexCode }: {
               const tone = priceTone(r.pct);
               const w = isNum(r.contrib) ? (Math.abs(r.contrib) / maxAbs) * 50 : 0;
               return (
-                <tr key={r.sector} className="border-t border-line">
-                  <td className="px-2 py-1.5 font-medium">{r.sector}</td>
+                <Fragment key={r.sector}>
+                <tr className="cursor-pointer border-t border-line hover:bg-surface2" onClick={() => setOpen(open === r.sector ? null : r.sector)}>
+                  <td className="px-2 py-1.5 font-medium">
+                    <button type="button" aria-expanded={open === r.sector} className="text-left" onClick={(e) => { e.stopPropagation(); setOpen(open === r.sector ? null : r.sector); }}>
+                      <span aria-hidden className="mr-1 text-muted">{open === r.sector ? "▾" : "▸"}</span>{r.sector}
+                    </button>
+                  </td>
                   <td className="tnum px-2 py-1.5 text-right">
                     <span className="text-up">▲{r.up}</span> / <span className="text-down">▼{r.down}</span>
                   </td>
@@ -60,6 +69,12 @@ export function SectorCard({ sectors, live, indexCode }: {
                     </div>
                   </td>
                 </tr>
+                {open === r.sector ? (
+                  <tr className="bg-surface2"><td colSpan={4} className="px-3 py-2 text-sm">
+                    {r.symbols.length ? <>Các mã trong ngành: <b>{r.symbols.join(", ")}</b></> : "Chưa có danh sách mã cho ngành này."}
+                  </td></tr>
+                ) : null}
+                </Fragment>
               );
             })}
           </tbody>
