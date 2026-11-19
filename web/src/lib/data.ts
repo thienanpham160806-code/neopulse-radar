@@ -54,7 +54,8 @@ async function loadFrom(
   } catch {
     // index.json chỉ được ghi khi kết thúc phiên: giữa phiên vẫn xem được latest.json
   }
-  let rel = code && code !== "VN30" ? `latest_${code}.json` : "latest.json";
+  // latest_<MÃ>.json luôn có cho mọi chỉ số; latest.json chỉ là bí danh của chỉ số chính (có thể không phải VN30)
+  let rel = code ? `latest_${code}.json` : "latest.json";
   if (date) {
     const e = index.sessions.find((s) => s.trading_date === date && (!code || s.index_code === code));
     if (!e) throw new ParseError(`Không có phiên ${date}${code ? ` (${code})` : ""} trong danh sách đã xuất.`);

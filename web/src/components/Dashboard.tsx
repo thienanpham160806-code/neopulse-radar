@@ -108,7 +108,7 @@ export function Dashboard({ initial, requestedDate, requestedIndex, initialTab }
   const go = (date: string | null, code: string | null) => {
     const qs = new URLSearchParams();
     if (date) qs.set("date", date);
-    if (code && code !== "VN30") qs.set("index", code);
+    if (code) qs.set("index", code);
     qs.set("tab", SLUGS[tab]);
     router.push(`/?${qs}`);
   };
@@ -146,7 +146,7 @@ export function Dashboard({ initial, requestedDate, requestedIndex, initialTab }
             <select
               aria-label="Chọn chỉ số"
               className="rounded-md border border-line bg-surface px-2 py-1"
-              value={requestedIndex ?? "VN30"}
+              value={requestedIndex ?? meta.index_code}
               onChange={(e) => go(requestedDate, e.target.value)}
             >
               {(codes.length ? codes : [meta.index_code]).map((c) => <option key={c}>{c}</option>)}

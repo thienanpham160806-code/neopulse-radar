@@ -234,7 +234,7 @@ def test_publish_uploads_each_cycle_and_final_session(db_path, tmp_path):
     client = wp.BlobClient(FAKE_TOKEN, prefix="neopulse", transport=httpx.MockTransport(ok))
     st = wp.run_publish(_settings(db_path), source="sim", client=client, max_cycles=2, work_dir=tmp_path,
                         sleep=lambda s: None, validation_every=1e9)
-    assert puts[0] == "neopulse/latest.json" and st.failures == 0
+    assert "neopulse/latest.json" in puts and "neopulse/latest_VN30.json" in puts and st.failures == 0
     assert "neopulse/sessions/sim_2026-11-13_VN30.json" in puts and "neopulse/index.json" in puts   # chu kỳ cuối ghi phiên
 
 

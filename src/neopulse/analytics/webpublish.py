@@ -131,9 +131,9 @@ def publish_cycle(db_path: str, source: str, work: Path, client: BlobClient | No
         for code in index_codes:
             payload = wx.build_payload(db, source, day, code, order_value=order_value, extras=validation_block)
             text = wx.dumps(payload)
-            name = wx.latest_filename(code, index_codes[0])
-            (work / name).write_text(text, encoding="utf-8")
-            rels.append(name)
+            for name in wx.latest_filenames(code, index_codes[0]):
+                (work / name).write_text(text, encoding="utf-8")
+                rels.append(name)
             if final and day:
                 rel = wx.session_filename(source, day, code)
                 (work / rel).write_text(text, encoding="utf-8")

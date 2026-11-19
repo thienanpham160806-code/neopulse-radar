@@ -164,3 +164,11 @@ def test_no_real_data_tracked_in_git():
         if f.endswith(".json") and not f.endswith("index.json"):
             meta = json.loads((REPO / f).read_text(encoding="utf-8"))["meta"]
             assert meta["is_simulated"] is True, f"{f} không phải dữ liệu mô phỏng"
+
+
+def test_primary_index_other_than_vn30_maps_files_by_code(db_path, tmp_path):
+    """CX-001: chỉ số chính VNINDEX (đảo thứ tự --indexes) -> mỗi chỉ số vẫn có latest_<MÃ>.json đúng nội dung."""
+    ws.publish_static(db_path, "sim", out_dir=tmp_path, index_codes=["VNINDEX", "VN30"], with_validation=False)
+    assert _read(tmp_path / "latest.json")["meta"]["index_code"] == "VNINDEX"
+    assert _read(tmp_path / "latest_VNINDEX.json")["meta"]["index_code"] == "VNINDEX"
+    assert _read(tmp_path / "latest_VN30.json")["meta"]["index_code"] == "VN30"

@@ -340,8 +340,9 @@ def session_filename(source: str, trading_date: str, index_code: str) -> str:
     return f"sessions/{source}_{trading_date}_{index_code}.json"
 
 
-def latest_filename(index_code: str, primary: str) -> str:
-    return "latest.json" if index_code == primary else f"latest_{index_code}.json"
+def latest_filenames(index_code: str, primary: str) -> list[str]:
+    """Luôn có latest_<MÃ>.json cho mọi chỉ số (web đọc theo mã); latest.json là bí danh của chỉ số chính."""
+    return [f"latest_{index_code}.json"] + (["latest.json"] if index_code == primary else [])
 
 
 def update_index(out_dir: Path, entries: list[dict]) -> dict:
@@ -394,7 +395,8 @@ def export_to_dir(db: Storage, source: str, out_dir: str | Path, *, trading_date
             rel = session_filename(source, day, code)
             (out / rel).write_text(dumps(payload), encoding="utf-8")
             if day == targets[-1]:
-                (out / latest_filename(code, codes[0])).write_text(dumps(payload), encoding="utf-8")
+                for name in latest_filenames(code, codes[0]):
+                    (out / name).write_text(dumps(payload), encoding="utf-8")
             if (e := index_entry(payload, rel)):
                 entries.append(e)
     update_index(out, entries)
