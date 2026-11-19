@@ -179,8 +179,27 @@ export interface Validation {
   };
 }
 
+export interface SectorRow {
+  sector: string;
+  n: number;
+  n_up: number;
+  n_down: number;
+  n_flat: number;
+  pct_cap: Num;
+  contrib_pts: Num;
+  weight: Num;
+  symbols: string[];
+}
+export interface Sectors {
+  rows: SectorRow[];
+  contrib_sum: Num;
+  index_change: Num;
+  note: string;
+}
+
 export interface Payload {
   meta: Meta;
+  sectors?: Sectors;
   pulse?: Pulse;
   index?: IndexBlock;
   breadth?: Breadth;

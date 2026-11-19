@@ -7,6 +7,7 @@ import { dmy } from "@/lib/format";
 import type { Severity } from "@/lib/types";
 import { liveForSnapshot, liveMode } from "@/lib/live";
 import { StatusBar } from "./StatusBar";
+import { ThemeToggle } from "./ThemeToggle";
 import { useLive } from "./useLive";
 import { Alerts, Book, Foreign, Futures, Method, Overview, Ranking, Validation, type Filters } from "./tabs";
 import { Empty } from "./ui";
@@ -29,37 +30,9 @@ function useNow(): number {
   return now;
 }
 
-function useTheme(): [string, () => void] {
-  const [theme, setTheme] = useState("auto");
-  useEffect(() => {
-    try {
-      const t = localStorage.getItem("np-theme");
-      if (t === "light" || t === "dark") {
-        setTheme(t);
-        document.documentElement.dataset.theme = t;
-      }
-    } catch {
-      /* localStorage có thể bị chặn: bỏ qua */
-    }
-  }, []);
-  const toggle = () => {
-    const dark = theme === "dark" || (theme === "auto" && window.matchMedia("(prefers-color-scheme: dark)").matches);
-    const next = dark ? "light" : "dark";
-    setTheme(next);
-    document.documentElement.dataset.theme = next;
-    try {
-      localStorage.setItem("np-theme", next);
-    } catch {
-      /* bỏ qua */
-    }
-  };
-  return [theme, toggle];
-}
-
 export function Dashboard({ initial, requestedDate, requestedIndex, initialTab }: { initial: Loaded; requestedDate: string | null; requestedIndex: string | null; initialTab: string | null }) {
   const router = useRouter();
   const now = useNow();
-  const [theme, toggleTheme] = useTheme();
   const [loaded, setLoaded] = useState<Loaded>(initial);
   const [pollError, setPollError] = useState<string | null>(null);
   const [tab, setTabState] = useState<Tab>(tabFromSlug(initialTab));
@@ -185,12 +158,7 @@ export function Dashboard({ initial, requestedDate, requestedIndex, initialTab }
               <option value="THẤP">Tất cả</option>
             </select>
           </label>
-          <button onClick={toggleTheme} className="rounded-md border border-line bg-surface px-2 py-1" aria-label="Đổi giao diện sáng/tối" title={`Giao diện: ${theme}`}>
-            <svg viewBox="0 0 20 20" className="h-4 w-4" aria-hidden>
-              <circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" strokeWidth="1.6" />
-              <path d="M10 3a7 7 0 0 1 0 14z" fill="currentColor" />
-            </svg>
-          </button>
+          <ThemeToggle />
         </div>
       </header>
 

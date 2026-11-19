@@ -8,6 +8,7 @@ import {
 import { dash, hm, money, num, pct, ratioPct, signed } from "@/lib/format";
 import type { AlertItem, BookRow, Payload, Severity } from "@/lib/types";
 import { mergeSeries, type LiveState } from "@/lib/live";
+import { SectorCard } from "./SectorCard";
 import { LiveStrip } from "./LiveStrip";
 import { Card, CenterBar, Empty, Gauge, Note, Pill, SEV_TONE, Stat, Td, Th, TOOLTIP_STYLE, signTone } from "./ui";
 
@@ -92,6 +93,8 @@ export function Overview({ p, f, live }: { p: Payload; f: Filters; live?: LiveSt
       </div>
 
       {pulse?.divergence ? <div role="note" className="rounded-xl border border-warn/40 bg-warn/10 p-3 text-sm text-warn"><b>Phân kỳ chỉ số – độ rộng:</b> {pulse.divergence}</div> : null}
+
+      <SectorCard sectors={p.sectors} live={lp?.sec ?? null} indexCode={p.index?.code ?? p.meta.index_code} />
 
       <div className="grid gap-3 lg:grid-cols-2">
         <Card title="Nhận định từ số liệu">

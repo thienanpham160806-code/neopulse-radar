@@ -34,6 +34,8 @@ export interface PulseData extends Envelope {
   alerts: LiveAlert[];
   n_alerts: number;
   index_code: string;
+  /** ngành: n tên, p % bình quân vốn hóa, c đóng góp điểm (ước lượng), u/d số mã tăng/giảm */
+  sec?: { n: string; p: Num; c: Num; u: number; d: number }[];
 }
 export interface StatusData extends Envelope {
   event: "start" | "end" | "phase" | "data_gap" | "data_ok";

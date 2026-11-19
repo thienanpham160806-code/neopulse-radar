@@ -17,6 +17,7 @@
   --sim: #7c3aed;
   --ceil: #a21caf;
   --floor: #0e7490;
+  --refc: #a16207;
 }
 :root:not([data-theme="light"]) {
   color-scheme: light dark;
@@ -37,6 +38,7 @@
     --sim: #c4a5ff;
     --ceil: #e879f9;
     --floor: #22d3ee;
+    --refc: #facc15;
   }
 }
 :root[data-theme="dark"] {
@@ -55,6 +57,7 @@
   --sim: #c4a5ff;
   --ceil: #e879f9;
   --floor: #22d3ee;
+  --refc: #facc15;
 }
 
 @theme inline {
@@ -70,7 +73,10 @@
   --color-down: var(--down);
   --color-warn: var(--warn);
   --color-sim: var(--sim);
-  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-sans: var(--font-bvp), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --color-ceil: var(--ceil);
+  --color-floor: var(--floor);
+  --color-refc: var(--refc);
 }
 
 html {

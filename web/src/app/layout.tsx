@@ -1,5 +1,18 @@
 import type { Metadata, Viewport } from "next";
+import localFont from "next/font/local";
 import "./globals.css";
+
+// Be Vietnam Pro (SIL OFL 1.1, xem fonts/OFL.txt) - dấu tiếng Việt chuẩn, số đều nhau khi bật tabular-nums
+const beVietnam = localFont({
+  src: [
+    { path: "./fonts/BeVietnamPro-Regular.ttf", weight: "400", style: "normal" },
+    { path: "./fonts/BeVietnamPro-Medium.ttf", weight: "500", style: "normal" },
+    { path: "./fonts/BeVietnamPro-SemiBold.ttf", weight: "600", style: "normal" },
+    { path: "./fonts/BeVietnamPro-Bold.ttf", weight: "700", style: "normal" },
+  ],
+  variable: "--font-bvp",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "NeoPulse Radar",
@@ -11,7 +24,7 @@ export const viewport: Viewport = { width: "device-width", initialScale: 1 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="vi">
+    <html lang="vi" className={beVietnam.variable} suppressHydrationWarning>
       <body className="min-h-dvh antialiased">{children}</body>
     </html>
   );

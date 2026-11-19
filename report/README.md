@@ -34,6 +34,10 @@ Nội dung nên viết (lấy từ `docs/web_architecture.md`):
 - **Bảo mật:** khóa SSI chỉ ở `.env` máy ghi; Vercel chỉ có `SITE_PASSWORD`; cookie `httpOnly` lưu băm; không đặt mật khẩu thì dữ liệu thật bị khóa; chỉ xuất chỉ báo tổng hợp, không xuất bảng giá/sổ lệnh thô.
 - **Ảnh minh họa:** `docs/img/web_*_sim.png` (dữ liệu MÔ PHỎNG — phải ghi rõ trong chú thích); thay bằng ảnh dữ liệu thật khi đã thu.
 
+## Tái sử dụng mã nguồn (ghi trong báo cáo, mục Triển khai hoặc Phụ lục)
+
+Có tái sử dụng có chọn lọc từ dự án cá nhân trước của tác giả (invest-system-phase2): font Be Vietnam Pro (SIL OFL), các hàm định dạng số/tiền/ngày (đã bỏ phần màu khuyến nghị mua/bán), nút sáng/tối, danh sách mã tham chiếu cho phân ngành dự phòng, và cách gọi dự phòng Vietcap qua vnstock. Bảng chi tiết (tệp, nguồn, đã sửa gì) ở README mục "Tái sử dụng từ dự án cũ của tác giả". Không dùng mã của đồ án nhóm Kumo_VN_bot. Tính năng mới dựa trên phần tái sử dụng: **Ngành trong phiên** (độ rộng, % bình quân vốn hóa, đóng góp điểm ước lượng) và **RVOL theo thời điểm** (đầu vào cho cảnh báo khối lượng) - xem docs/methodology.md mục 11-12, kể cả giới hạn (đóng góp lệch do chưa free-float; IC chưa kiểm định lại vì mới một phiên).
+
 ## Việc phải có trước khi viết phần 4, 6, 7
 
 - [ ] ≥ 5 phiên dữ liệu **thật** (ưu tiên 10) — theo `docs/live_checklist.md`.
