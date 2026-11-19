@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { CompanyLink } from "./CompanyLink";
 import {
   Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, ComposedChart, Line, ReferenceLine,
   ResponsiveContainer, Scatter, ScatterChart, Tooltip, Treemap, XAxis, YAxis, ZAxis,
@@ -23,7 +24,7 @@ function AlertRow({ a }: { a: AlertItem }) {
     <li className="flex items-start gap-2 border-b border-line py-2 last:border-0">
       <SevTag sev={a.severity} />
       <div className="min-w-0 flex-1">
-        <div className="text-sm"><b>{a.symbol}</b> <span className="text-muted">· {a.rule_name}</span></div>
+        <div className="text-sm"><CompanyLink symbol={a.symbol} /> <span className="text-muted">· {a.rule_name}</span></div>
         <div className="text-xs text-muted">{a.message}</div>
       </div>
       <time className="tnum text-xs text-muted">{hm(a.t)}</time>
@@ -100,7 +101,7 @@ export function Book({ p, f }: { p: Payload; f: Filters }) {
             <tbody>
               {sorted.map((r) => (
                 <tr key={r.symbol} className="border-t border-line">
-                  <Td right={false} className="font-semibold">{r.symbol}</Td>
+                  <Td right={false} className="font-semibold"><CompanyLink symbol={r.symbol} /></Td>
                   <Td>{num(r.last, 0)}</Td><Td className={signTone(r.pct_change)}>{pct(r.pct_change)}</Td>
                   <Td className={signTone(r.obi3)}>{signed(r.obi3)}</Td><Td>{num(r.spread_bps, 1)}</Td>
                   <Td>{money(r.depth_value)}</Td><Td>{money(r.total_value)}</Td><Td>{num(r.slippage_bps, 1)}</Td>
@@ -206,7 +207,7 @@ export function Foreign({ p, f }: { p: Payload; f: Filters }) {
             <tbody>
               {rows.map((r) => (
                 <tr key={r.symbol} className="border-t border-line">
-                  <Td right={false} className="font-semibold">{r.symbol}</Td><Td>{money(r.buy)}</Td><Td>{money(r.sell)}</Td>
+                  <Td right={false} className="font-semibold"><CompanyLink symbol={r.symbol} /></Td><Td>{money(r.buy)}</Td><Td>{money(r.sell)}</Td>
                   <Td><SignedMoney value={r.net} /></Td><Td>{signed(r.net_ratio)}</Td><Td>{ratioPct(r.participation)}</Td><Td>{ratioPct(r.room_used)}</Td>
                 </tr>
               ))}
@@ -302,7 +303,7 @@ export function Ranking({ p, f }: { p: Payload; f: Filters }) {
           <tbody>
             {rows.map((r) => (
               <tr key={r.symbol} className="border-t border-line">
-                <Td>{r.rank}</Td><Td right={false} className="font-semibold">{r.symbol}</Td><Td>{num(r.score)}</Td><Td>{num(r.last, 0)}</Td>
+                <Td>{r.rank}</Td><Td right={false} className="font-semibold"><CompanyLink symbol={r.symbol} /></Td><Td>{num(r.score)}</Td><Td>{num(r.last, 0)}</Td>
                 <Td className={signTone(r.pct_change)}>{pct(r.pct_change)}</Td><Td>{signed(r.obi3)}</Td><Td>{signed(r.net_ratio)}</Td><Td>{num(r.spread_bps, 1)}</Td>
                 {zs.map(([k]) => <Td key={k}><span className="block rounded px-1" style={zCell(r.z[k] ?? null)}>{signed(r.z[k] ?? null, 1)}</span></Td>)}
               </tr>

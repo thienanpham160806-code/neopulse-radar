@@ -47,3 +47,16 @@ tests/              vitest: trạng thái tươi/cũ, phân tích JSON, cổng d
 ```
 
 Web công khai, không cần đăng nhập. Snapshot và API chỉ cung cấp chỉ báo tổng hợp; khóa gốc không được gửi xuống trình duyệt. /login cũ chuyển về trang chủ.
+
+## Hồ sơ doanh nghiệp
+
+`/doanh-nghiep` tìm theo mã, tên hoặc ngành. `/doanh-nghiep/MWG` gồm bốn phần: doanh nghiệp/ngành, tài chính/kinh doanh, tóm tắt/rủi ro, định giá/giả định. Các mã trong cảnh báo, bảng thanh khoản, khối ngoại, xếp hạng và danh sách ngành dẫn đến hồ sơ. Bố cục tham khảo phần chính của báo cáo MWG; không đưa phụ lục vào giao diện.
+
+```bash
+neopulse company --refresh --symbols MWG,FRT,DGW,PNJ
+neopulse company                          # dựng lại toàn bộ hồ sơ từ cache, không gọi mạng
+```
+
+Dữ liệu công khai tải qua vnstock/Vietcap, cache tại `data/company/raw/`; JSON hiển thị tại `web/public/data/company/`, cả hai bị Git bỏ qua. Khi triển khai, phải kèm thư mục JSON này; không tự tải dữ liệu doanh nghiệp trên trình duyệt. Mỗi hồ sơ ghi ngày giá, năm BCTC và thời điểm lấy dữ liệu. Mã thiếu hiện thông báo chưa có hồ sơ.
+
+Python tính tỷ số, DuPont, so sánh cùng ICB và bảng độ nhạy DCF. Bội số dùng kết quả năm gần nhất đã tải, không phải TTM. DCF giữ FCFF hoạt động nền cố định 5 năm, WACC 10/12/14%, g 2/3/4%, thuế giả định 20%; đây là minh họa, không phải dự phóng riêng hay giá mục tiêu. Không áp dụng mô hình này cho ngân hàng, bảo hiểm, chứng khoán hoặc khi thiếu đầu vào. Các phân tích chiến lược/thị phần chưa có dữ liệu được ghi rõ, không tạo nội dung thay thế.

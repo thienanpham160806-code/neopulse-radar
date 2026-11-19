@@ -108,7 +108,8 @@ export function Guide() {
     }
   };
   return (
-    <section aria-label="Hướng dẫn đọc trang" className="mb-6 rounded-xl border border-line bg-surface p-4">
+    <details aria-label="Hướng dẫn đọc trang" className="mb-4 rounded-xl border border-line bg-surface px-4 py-2">
+      <summary className="min-h-10 cursor-pointer py-2 text-sm font-semibold">Mới dùng NeoPulse? Xem cách đọc trang</summary>
       <div className="flex items-start justify-between gap-3">
         <h2 className="text-base font-bold">Đọc trang này thế nào?</h2>
         <button onClick={close} className="min-h-10 rounded-md px-2 text-sm text-muted underline underline-offset-4">Đã hiểu, ẩn đi</button>
@@ -119,6 +120,6 @@ export function Guide() {
         <li><b>3. Có gì bất thường?</b> Cột cảnh báo: mã nào vừa có khối lượng, giá hay dòng tiền khác thường.</li>
       </ol>
       <p className="mt-2 text-xs text-muted">Biểu tượng <b>i</b> cạnh một thuật ngữ mở lời giải thích. Đây là công cụ học thuật, không phải lời khuyên đầu tư.</p>
-    </section>
+    </details>
   );
 }

@@ -291,6 +291,49 @@ def cmd_refdata(args, s: Settings) -> int:
     return 0
 
 
+def cmd_company(args, s: Settings) -> int:
+    """Hồ sơ doanh nghiệp (BCTC năm, hồ sơ, giá) qua vnstock/Vietcap -> web/public/data/company/. Không cần khóa SSI."""
+    import json
+    import re
+    from datetime import timedelta
+    from pathlib import Path
+
+    from .analytics import company as co
+    from .analytics.refdata import load_refdata
+    from .timeutil import now_vn
+    ref = load_refdata(s.db_path)["reference"]
+    syms = [x.strip().upper() for x in args.symbols.split(",")] if args.symbols else sorted(ref)
+    if not syms or any(not re.fullmatch(r"[A-Z][A-Z0-9]{1,9}", sym) for sym in syms):
+        print("Mã doanh nghiệp không hợp lệ.")
+        return 2
+    raw_dir = Path(s.db_path).parent / "company" / "raw"
+    raw_dir.mkdir(parents=True, exist_ok=True)
+    end = now_vn().date()
+    start = (end - timedelta(days=400)).isoformat()
+    if args.refresh:
+        ix = co.fetch_index_prices("VNINDEX", start=start, end=end.isoformat())
+        (raw_dir / "_VNINDEX.json").write_text(json.dumps(ix), encoding="utf-8")
+        for i, sym in enumerate(syms, 1):
+            try:
+                raw = co.fetch_raw(sym, start=start, end=end.isoformat())
+            except RuntimeError as e:
+                print(f"[{i}/{len(syms)}] {sym}: dừng ({e}); chạy lại sau, các mã đã lấy vẫn giữ.")
+                break
+            (raw_dir / f"{sym}.json").write_text(json.dumps(raw, ensure_ascii=False), encoding="utf-8")
+            print(f"[{i}/{len(syms)}] {sym}: {len(raw['income']['years'])} năm BCTC, {len(raw['prices'])} phiên giá")
+    ix_path = raw_dir / "_VNINDEX.json"
+    ix = json.loads(ix_path.read_text(encoding="utf-8")) if ix_path.exists() else []
+    # Dựng lại toàn bộ cache để --symbols không xóa danh sách hồ sơ khác và vẫn có nhóm cùng ngành.
+    raws = {p.stem: json.loads(p.read_text(encoding="utf-8")) for p in sorted(raw_dir.glob("*.json"))
+            if not p.stem.startswith("_")}
+    if not raws:
+        print("Chưa có dữ liệu thô. Chạy: neopulse company --refresh")
+        return 2
+    out = co.write_reports(co.build_all(raws, ix, ref), args.out)
+    print(f"Đã ghi {len(raws)} hồ sơ doanh nghiệp vào {out}")
+    return 0
+
+
 def cmd_live_relay(args, s: Settings) -> int:
     from .analytics import liverelay as lr
     src = args.source or (s.live_source if s.is_live else "sim")
@@ -384,6 +427,11 @@ def build_parser() -> argparse.ArgumentParser:
     sp = sub.add_parser("refdata", help="dữ liệu tham chiếu: phân ngành + KL trung bình 20 phiên (REST SSI)")
     sp.add_argument("--refresh", action="store_true", help="gọi REST SSI để cập nhật (chạy trước phiên)")
     sp.set_defaults(fn=cmd_refdata)
+    sp = sub.add_parser("company", help="hồ sơ doanh nghiệp + phân tích BCTC cho web (vnstock/Vietcap, dữ liệu công khai)")
+    sp.add_argument("--refresh", action="store_true", help="tải lại từ vnstock (khoảng 30 giây mỗi mã)")
+    sp.add_argument("--symbols", help="danh sách mã, phân cách dấu phẩy (mặc định: rổ VN30 tham chiếu)")
+    sp.add_argument("--out", default="web/public/data/company")
+    sp.set_defaults(fn=cmd_company)
     sp = sub.add_parser("live-relay", help="phát số liệu tổng hợp lên Ably kênh neopulse:live (chỉ đọc SQLite)")
     sp.add_argument("--source", choices=["neo", "ssi", "sim"], help="mặc định: nguồn thật đang cấu hình, hoặc sim")
     sp.add_argument("--until", default="15:05", help="giờ dừng HH:MM (giờ VN)")

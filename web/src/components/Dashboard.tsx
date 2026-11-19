@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Loaded } from "@/lib/data";
 import { clock, dmy } from "@/lib/format";
@@ -119,6 +120,7 @@ export function Dashboard({ initial, requestedDate, requestedIndex, initialTab }
         liveNote={live.available && !mode.live && live.state.lastMsgAt !== null ? `${mode.reason} — đang hiển thị snapshot.` : null}
       />
       <header className="mx-auto max-w-6xl px-4 pt-5 text-center sm:px-6">
+        <nav aria-label="Khu vực" className="mb-6 flex justify-center gap-6 border-b border-line pb-3 text-sm"><span aria-current="page" className="font-semibold">Nhịp thị trường</span><Link href="/doanh-nghiep" className="text-accent underline underline-offset-4">Tìm hiểu doanh nghiệp →</Link></nav>
         <h1 className="text-2xl font-bold tracking-tight sm:text-4xl">Bản tin Nhịp Thị Trường</h1>
         <p className="mt-1 text-sm text-muted">NeoPulse Radar · nhịp thị trường, áp lực sổ lệnh, cảnh báo bất thường trong phiên</p>
       </header>
@@ -226,7 +228,7 @@ export function Dashboard({ initial, requestedDate, requestedIndex, initialTab }
         </div>
       </nav>
 
-      <footer className="mx-auto max-w-7xl px-4 pb-8 pt-2 text-xs text-muted">
+      <footer className="mx-auto max-w-7xl px-4 pb-24 pt-2 text-xs text-muted md:pb-8">
         <p className="font-medium text-fg">{meta.disclaimer}</p>
         <p className="mt-1">
           Đồ án học phần Gói phần mềm ứng dụng cho tài chính 1 (UEL). Nguồn: {meta.source_label}. Bản JSON schema v{meta.schema_version}; Python tính, web chỉ hiển thị.

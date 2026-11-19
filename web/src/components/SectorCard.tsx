@@ -6,6 +6,7 @@ import { isNum, priceTone, TONE_CLASS, TONE_MARK } from "@/lib/fmt";
 import { num, signed } from "@/lib/format";
 import type { Num, Sectors } from "@/lib/types";
 import { Card, Note } from "./ui";
+import { CompanyLink } from "./CompanyLink";
 
 interface Row { sector: string; up: number; down: number; pct: Num; contrib: Num; symbols: string[] }
 
@@ -71,7 +72,7 @@ export function SectorCard({ sectors, live, indexCode }: {
                 </tr>
                 {open === r.sector ? (
                   <tr className="bg-surface2"><td colSpan={4} className="px-3 py-2 text-sm">
-                    {r.symbols.length ? <>Các mã trong ngành: <b>{r.symbols.join(", ")}</b></> : "Chưa có danh sách mã cho ngành này."}
+                    {r.symbols.length ? <>Các mã trong ngành: <span className="inline-flex flex-wrap gap-x-3 gap-y-2">{r.symbols.map((s) => <CompanyLink key={s} symbol={s} />)}</span></> : "Chưa có danh sách mã cho ngành này."}
                   </td></tr>
                 ) : null}
                 </Fragment>

@@ -9,10 +9,11 @@ import dynamic from "next/dynamic";
 import { isNum, priceTone, TONE_CLASS, TONE_MARK } from "@/lib/fmt";
 import { hm, num, ratioPct, signed } from "@/lib/format";
 import { mergeSeries, type LiveState } from "@/lib/live";
-import { componentMeaning, GLOSSARY, RULE_PLAIN, scoreMeaning } from "@/lib/plain";
+import { alertDigest, componentMeaning, GLOSSARY, missingComponents, RULE_PLAIN, scoreMeaning } from "@/lib/plain";
 import type { AlertItem, Num, Payload, Severity } from "@/lib/types";
 import { Gauge, Guide, Term } from "./Explain";
 import { SectorCard } from "./SectorCard";
+import { CompanyLink } from "./CompanyLink";
 import { type Filters } from "./tabs";
 import { Change, Note, SevTag, SignedMoney } from "./ui";
 
@@ -59,11 +60,12 @@ function AlertList({ items, limit }: { items: AlertItem[]; limit: number }) {
           <details className="group py-2">
             <summary className="flex cursor-pointer list-none items-start gap-2">
               <time className="tnum w-11 shrink-0 pt-0.5 text-sm text-muted">{a.t.slice(11, 16)}</time>
-              <span className="min-w-0 flex-1 text-sm"><b>{a.symbol}</b>: {RULE_PLAIN[a.rule] ?? a.rule_name}
+              <span className="min-w-0 flex-1 text-sm"><CompanyLink symbol={a.symbol} />: {RULE_PLAIN[a.rule] ?? a.rule_name}
                 <span className="ml-1 text-xs text-accent group-open:hidden">· chi tiết</span></span>
               <SevTag sev={a.severity} />
             </summary>
             <p className="mt-1 pl-[3.25rem] text-xs text-muted">{a.message}. Cảnh báo là tín hiệu đáng xem, không phải khuyến nghị mua bán.</p>
+            <p className="mt-2 pl-[3.25rem] text-sm"><CompanyLink symbol={a.symbol}>Tìm hiểu doanh nghiệp {a.symbol} →</CompanyLink></p>
           </details>
         </li>
       ))}
@@ -83,7 +85,7 @@ export function Overview({ p, f, live, onAlerts }: { p: Payload; f: Filters; liv
     : row ? [{ code, v: row.value, ch: row.change, pct: row.pct_change, adv: row.advances, dec: row.declines, nc: row.no_change }] : [];
   const liveAlerts: AlertItem[] = (lp ? live?.alerts ?? [] : []).map((a) => ({ t: a.t, symbol: a.s, rule: a.rule,
     rule_name: p.alerts?.rule_names[a.rule] ?? a.rule, severity: a.sev, message: a.msg, value: null, threshold: null }));
-  const allAlerts = [...liveAlerts, ...(p.alerts?.items ?? [])];
+  const { items: allAlerts, nHigh, hot } = alertDigest(liveAlerts, p.alerts?.items ?? [], p.alerts?.by_severity?.CAO, p.meta.last_update);
   const alerts = allAlerts.filter((a) => SEV_ORDER.indexOf(a.severity) <= SEV_ORDER.indexOf(f.minSev)
     && (!f.sym || a.symbol.includes(f.sym.toUpperCase())));
   const summary = p.pulse?.summary ?? [];
@@ -97,8 +99,7 @@ export function Overview({ p, f, live, onAlerts }: { p: Payload; f: Filters; liv
   // "Vì sao": hai thành phần ảnh hưởng nhiều nhất (|giá trị| x trọng số, cả hai do Python cho)
   const drivers = comps.filter((c) => isNum(c.value))
     .sort((a, b) => Math.abs((b.value as number) * b.weight) - Math.abs((a.value as number) * a.weight)).slice(0, 2);
-  const nHigh = allAlerts.filter((a) => a.severity === "CAO").length;
-  const hot = Array.from(new Set(allAlerts.filter((a) => a.severity === "CAO").map((a) => a.symbol))).slice(0, 3);
+  const missing = missingComponents(comps);
   const ix0 = ixs.find((x) => x.code === code) ?? ixs[0];
 
   return (
@@ -106,15 +107,16 @@ export function Overview({ p, f, live, onAlerts }: { p: Payload; f: Filters; liv
       <Guide />
 
       {/* Phần đầu: đồng hồ (điểm nhấn) + luận giải bằng lời thường */}
-      <section aria-labelledby="hero-title" className="grid grid-cols-1 items-center gap-6 rounded-2xl border border-line bg-surface p-4 sm:p-6 md:grid-cols-[minmax(260px,360px)_1fr]">
-        <div>
+      <section aria-labelledby="hero-title" className="grid grid-cols-1 items-center gap-6 rounded-2xl border border-line bg-surface p-4 sm:p-6 md:grid-cols-[1fr_240px]">
+        <div className="order-2 border-t border-line pt-4 md:border-l md:border-t-0 md:pl-6 md:pt-0">
           <div className="mb-1 flex justify-center text-sm text-muted"><Term k="pulse">Điểm nhịp thị trường</Term></div>
           <Gauge score={score} label={label} />
           {!lp && p.pulse?.sensitivity && isNum(p.pulse.sensitivity.p05) ? (
             <p className="mt-1 text-center text-xs text-muted">Đổi trọng số ±50%: điểm trong khoảng {num(p.pulse.sensitivity.p05, 1)}–{num(p.pulse.sensitivity.p95, 1)}, nhãn giữ nguyên {ratioPct(p.pulse.sensitivity.label_stability)} số lần.</p>
           ) : null}
         </div>
-        <div className="min-w-0">
+        <div className="order-1 min-w-0">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted">Toàn cảnh phiên · {code}</p>
           <h2 id="hero-title" className="text-[clamp(1.5rem,3.6vw,2.3rem)] font-bold leading-tight tracking-tight [text-wrap:balance]">
             Thị trường {label.toLowerCase()}
           </h2>
@@ -125,9 +127,10 @@ export function Overview({ p, f, live, onAlerts }: { p: Payload; f: Filters; liv
           <h3 className="mt-4 text-sm font-bold uppercase tracking-wide">Hôm nay nghĩa là gì?</h3>
           <ul className="mt-2 space-y-2 text-base leading-relaxed">
             <li><b>Trạng thái.</b> {scoreMeaning(score)}</li>
-            {drivers.length ? <li><b>Vì sao.</b> {drivers.map((c) => componentMeaning(c.key, c.value).replace(/\.$/, "")).join("; ")}.</li> : null}
+            {drivers.length ? <li><b>Vì sao.</b> {drivers.map((c) => componentMeaning(c.key, c.value).replace(/\.$/, "")).join("; ")}.
+              {missing.length ? <span className="text-muted"> Chưa có dữ liệu: {missing.join(", ")}; điểm chỉ tính trên các thành phần còn lại.</span> : null}</li> : null}
             <li><b>Cần để ý.</b> {p.pulse?.divergence ? `${p.pulse.divergence} ` : ""}{nHigh
-              ? <>{nHigh} cảnh báo mức cao trong phiên{hot.length ? `, nhiều nhất ở ${hot.join(", ")}` : ""}.{" "}
+              ? <>{nHigh} cảnh báo mức cao trong phiên{hot.length ? `; trong danh sách hiện có, tập trung ở ${hot.join(", ")}` : ""}.{" "}
                 <button onClick={onAlerts} className="text-accent underline underline-offset-4">Xem cảnh báo</button></>
               : "Chưa có cảnh báo mức cao."}</li>
           </ul>

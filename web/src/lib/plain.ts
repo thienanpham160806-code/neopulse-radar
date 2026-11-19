@@ -3,7 +3,7 @@
  * (chọn câu theo dấu/độ lớn), không tính thêm chỉ báo nào.
  */
 import { isNum } from "./fmt";
-import type { Num } from "./types";
+import type { AlertItem, Num } from "./types";
 
 export const GLOSSARY: Record<string, { title: string; body: string }> = {
   pulse: {
@@ -29,21 +29,57 @@ export function componentMeaning(key: string, v: Num): string {
     breadth: ["Số mã tăng áp đảo số mã giảm", "Số mã giảm áp đảo số mã tăng", "Số mã tăng và giảm gần cân bằng"],
     momentum: ["Chỉ số đang đi lên so với nhịp thường ngày", "Chỉ số đang đi xuống so với nhịp thường ngày", "Chỉ số gần như đứng yên"],
     book: ["Người mua đặt chờ dày hơn người bán", "Người bán đặt chờ dày hơn người mua", "Lệnh chờ mua và bán gần cân bằng"],
-    foreign: ["Khối ngoại đang mua ròng", "Khối ngoại đang bán ròng", "Khối ngoại gần như đứng ngoài"],
+    foreign: ["Khối ngoại đang mua ròng", "Khối ngoại đang bán ròng", "Khối ngoại mua và bán gần cân bằng"],
     liquidity: ["Tiền vào nhiều hơn các phiên trước cùng giờ", "Tiền vào ít hơn các phiên trước cùng giờ", "Thanh khoản như thường lệ"],
   };
   const [up, down, flat] = t[key] ?? ["Nghiêng tích cực", "Nghiêng tiêu cực", "Trung tính"];
   return pos ? `${up} (mức ${strength}).` : neg ? `${down} (mức ${strength}).` : `${flat}.`;
 }
 
-/** Ý nghĩa của điểm nhịp theo dải nhãn (35/45/55/65 do Python quy định). */
+/**
+ * Ý nghĩa của điểm nhịp theo dải nhãn (35/45/55/65 do Python quy định). Chỉ nói mức nghiêng của điểm tổng hợp:
+ * điểm cao không bảo đảm từng thành phần đều tích cực (CX-013), nên không khẳng định độ rộng/dòng tiền ở đây.
+ */
 export function scoreMeaning(score: Num): string {
   if (!isNum(score)) return "Chưa đủ dữ liệu để kết luận.";
-  if (score >= 65) return "Đa số cổ phiếu cùng tăng, tiền và lệnh mua ủng hộ: sức khỏe thị trường tốt và lan tỏa.";
-  if (score >= 55) return "Thị trường nghiêng về phía tích cực nhưng chưa lan tỏa mạnh.";
-  if (score >= 45) return "Hai phe giằng co, chưa nghiêng hẳn về phía nào.";
-  if (score >= 35) return "Thị trường nghiêng về phía tiêu cực, bên bán chiếm ưu thế nhẹ.";
-  return "Đa số cổ phiếu cùng giảm, áp lực bán lan rộng.";
+  if (score >= 65) return "Các tín hiệu cộng lại nghiêng rõ về phía tích cực.";
+  if (score >= 55) return "Các tín hiệu cộng lại nghiêng nhẹ về phía tích cực.";
+  if (score >= 45) return "Các tín hiệu gần cân bằng, chưa nghiêng hẳn về phía nào.";
+  if (score >= 35) return "Các tín hiệu cộng lại nghiêng nhẹ về phía tiêu cực.";
+  return "Các tín hiệu cộng lại nghiêng rõ về phía tiêu cực.";
+}
+
+const alertTime = (t: string) => Date.parse(t);
+const alertKey = (a: AlertItem) => `${Number.isFinite(alertTime(a.t)) ? alertTime(a.t) : a.t}|${a.symbol}|${a.rule}`;
+
+/**
+ * Gộp cảnh báo live với snapshot, bỏ trùng theo (giờ, mã, quy tắc) (CX-014). Số cảnh báo CAO trong phiên lấy tổng
+ * Python đã đếm (by_severity, không bị cắt MAX_ALERTS) cộng các cảnh báo live mới hơn snapshot; "hot" xếp theo tần suất.
+ */
+export function alertDigest(live: AlertItem[], snap: AlertItem[], snapHigh: number | undefined, snapshotAt?: string | null) {
+  const seen = new Set<string>();
+  const unique = (rows: AlertItem[]) => rows.filter((a) => {
+    const key = alertKey(a);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  const base = unique(snap);
+  const last = snapshotAt && Number.isFinite(alertTime(snapshotAt)) ? alertTime(snapshotAt)
+    : Math.max(-Infinity, ...base.map((a) => alertTime(a.t)).filter(Number.isFinite));
+  const fresh = unique(live);
+  const items = [...fresh, ...base].sort((a, b) => alertTime(b.t) - alertTime(a.t));
+  const nHigh = (snapHigh ?? snap.filter((a) => a.severity === "CAO").length)
+    + fresh.filter((a) => a.severity === "CAO" && alertTime(a.t) > last).length;
+  const count = new Map<string, number>();
+  for (const a of items) if (a.severity === "CAO") count.set(a.symbol, (count.get(a.symbol) ?? 0) + 1);
+  const hot = [...count.entries()].sort((x, y) => y[1] - x[1] || x[0].localeCompare(y[0])).slice(0, 3).map(([s]) => s);
+  return { items, nHigh, hot };
+}
+
+/** Thành phần không có dữ liệu (Python chuẩn hóa lại trọng số trên phần còn lại). */
+export function missingComponents(comps: { name: string; value: Num }[]): string[] {
+  return comps.filter((c) => !isNum(c.value)).map((c) => c.name);
 }
 
 /** Cảnh báo bằng lời thường (số thống kê để trong phần chi tiết). */
