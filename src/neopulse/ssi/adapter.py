@@ -6,7 +6,8 @@ SSI phát từng loại tin riêng theo chủ đề (topic), mỗi tin chỉ man
     room.<MÃ>         room ngoại (tr, cr) và mua/bán nước ngoài lũy kế (bq, bv, sq, sv)
     market.<MÃ>       giá trần/sàn/tham chiếu (ce, fl, ref)
     market.flag       cờ phiên của sàn (ATO, LO, ATC ...)
-    trade.index.<MÃ>  tick của chỉ số
+    indexsummary.<MÃ> chỉ số: v (giá trị), c, cr (%), adv/dec/nc/ce/fl, tq/tv (KL/GT lũy kế, đồng)
+    trade.index.<MÃ>  KHÔNG dùng: chỉ có p (giá trị) + q/v (khối lượng), không có thay đổi hay độ rộng
 Adapter giữ trạng thái gộp theo mã và mỗi lần có tin mới phát ra MỘT bản ghi đầy đủ theo lược đồ NEO,
 nhờ đó `Ingestor` (chuẩn hóa, khử lặp, kiểm tra chất lượng) dùng lại nguyên vẹn.
 
@@ -66,8 +67,11 @@ class SsiAdapter:
         if interval and interval.lower() != "tick":
             self.n_ignored += 1  # nến 1m/5m: không dùng
             return []
+        if kind.startswith("indexsummary."):
+            return self._index(head.split(".", 1)[1], data)
         if kind.startswith("trade.index."):
-            return self._index(head.split(".", 2)[2], data)
+            self.n_ignored += 1  # trường `v` ở đây là khối lượng, không phải giá trị chỉ số (lỗi đã gặp 19/11/2026)
+            return []
         sym = (str(data.get("s") or "") or head.partition(".")[2]).strip().upper()
         if kind == "market.flag":
             return self._flag(data)
@@ -79,7 +83,7 @@ class SsiAdapter:
             return self._emit(sym, self._on_room(sym, data))
         if kind.startswith("market."):
             return self._emit(sym, self._on_master(sym, data))
-        if kind.startswith(("oddlot.", "put.", "indexsummary.")):
+        if kind.startswith(("oddlot.", "put.")):
             self.n_ignored += 1  # hợp lệ nhưng ngoài phạm vi chỉ báo
             return []
         return [("unknown", frame)]
@@ -177,8 +181,8 @@ class SsiAdapter:
         return [("marketSession", {"marketCode": BOARD_TO_MARKET.get(board, board), "marketStatus": flag})]
 
     def _index(self, code: str, d: dict) -> list[tuple[str, dict]]:
-        code = INDEX_FROM_SSI.get(code.upper(), code.upper())
-        # Ý nghĩa trường chỉ số được SDK suy từ chữ viết tắt, chưa kiểm chứng trên luồng thật (docs/ssi_notes.md).
+        code = INDEX_FROM_SSI.get(str(d.get("s") or code).upper(), str(d.get("s") or code).upper())
+        # Trường của indexsummary.* đã đối chiếu với luồng thật 19/11/2026 (docs/ssi_notes.md).
         body = {
             "indexCode": code, "indexValue": _num(d.get("v")), "indexChange": _num(d.get("c")),
             "indexPercentChange": _num(d.get("cr")), "advances": _num(d.get("adv")),

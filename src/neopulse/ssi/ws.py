@@ -33,8 +33,9 @@ def build_topics(stocks: list[str], futures: list[str], indexes: list[str]) -> l
     for s in futures:
         topics += [f"trade.{s}", f"quote.{s}", f"market.{s}"]
     for code in indexes:
-        c = "HNXUPCOMINDEX" if code == "UPCOMINDEX" else code
-        topics.append(f"trade.index.{c}")
+        # indexsummary mang giá trị, thay đổi, %, tăng/giảm/đứng/trần/sàn, KL/GT lũy kế (kiểm chứng 19/11/2026);
+        # trade.index chỉ có giá trị + khối lượng nên không dùng. UPCOMINDEX đăng ký được trực tiếp.
+        topics.append(f"indexsummary.{code}")
     return topics
 
 

@@ -62,3 +62,12 @@ Mọi khung tin không nhận diện được đi vào kênh `unknown` và đư�
 - HĐTL nằm trong bản ghi của sàn HNX với `stockType=Future`, và mã là mã nội bộ chứ không phải dạng `VN30F2612`: `41I1GB000` (VN30, đáo hạn 19/11/2026), `41I1GC000` (VN30, 17/12/2026), `41I1H3000` (03/2027), `41I1H6000` (06/2027). Mã `VN30F...` có phải chủ đề streaming hợp lệ không CHƯA biết; máy chủ trả "Subscribed to N topic(s)" cho mọi chủ đề (kể cả mã chưa kiểm chứng), nên xác nhận ack **không** chứng minh chủ đề tồn tại. Chỉ biết có dữ liệu hay không khi chạy trong phiên.
 - Token: `expiresAt` cho thời hạn ~899 giây (~15 phút), không phải vài giờ ⇒ luồng WebSocket phải nối lại gần 15 phút một lần (`SsiStream` đã chủ động nối lại khi còn dưới 120 giây).
 - Windows: console mặc định cp1252 làm `neopulse check` lỗi `UnicodeEncodeError`; đã ép stdout/stderr UTF-8 trong `cli.main`.
+
+## Phát hiện trên luồng thật 19/11/2026: chỉ số lấy sai chủ đề
+
+- `trade.index.<MÃ>` thật chỉ có `s, t, p, q, a, si, o, h, l, v`, trong đó **`p` là giá trị chỉ số** (VN30 1791,18), `q` là khối lượng tick và **`v` là khối lượng lũy kế** (55.506.118); `o/h/l` bằng 0. Không có thay đổi, % hay tăng/giảm.
+- Các trường SDK mô tả (`v, c, cr, adv, dec, nc, ce, fl, tq/tmq, tv/tmv`) thuộc chủ đề **`indexsummary.<MÃ>`**. Khung thật: `{"s":"VN30","b":"HOSE","ss":"C","v":"1791.9","c":"-14.64","cr":"-0.81","adv":"3","dec":"23","nc":"4","ce":"0","fl":"0","tq":"56330506","tv":"1678049508750",...}`. `tv` là giá trị giao dịch lũy kế tính bằng đồng (gồm thỏa thuận; `tmv` là khớp lệnh), tin tới khoảng 5 giây một lần.
+- Hệ quả của lỗi: phiên 19/11 từ 09:58 tới 10:44, bảng `index_ticks` ghi `value` = khối lượng lũy kế, còn % thay đổi và độ rộng trống. Giá và sổ lệnh từng mã không bị ảnh hưởng.
+- Cách sửa: `build_topics` đăng ký `indexsummary.<MÃ>`, adapter bỏ qua `trade.index.*`. Có test hồi quy dùng khung thật (`test_real_index_frames_from_live_stream_19_11_2026`). Đoạn dữ liệu sai được gắn cờ `index_mapping_bug` trong `quality_log`.
+- UPCOM: đăng ký `indexsummary.UPCOMINDEX` thì nhận được tin; chủ đề trả về là `indexsummary.HNXUPCOMINDEX`, trường `s` = `HNXUPCOMINDEX` (adapter đổi về `UPCOMINDEX`). Đăng ký `trade.index.HNXUPCOMINDEX` thì không có tin.
+- Tham chiếu phiên trước: REST `indexSummary?index=VN30` trả dữ liệu ngày giao dịch gần nhất đã đóng (18/11: 1.806,54, -1,67%). Lưu ý `totalAdvanceStock` của VN30 trong REST là 0, nhưng luồng `indexsummary.VN30` có số tăng/giảm.

@@ -89,6 +89,13 @@ def cmd_simulate(args, s: Settings) -> int:
     return 0
 
 
+def _positive_seconds(v: str) -> float:
+    x = float(v)
+    if not 0.2 <= x <= 60:
+        raise argparse.ArgumentTypeError("phải trong khoảng 0,2-60 giây")
+    return x
+
+
 def _parse_until(v: str | None) -> time | None:
     return time.fromisoformat(v) if v else None
 
@@ -103,13 +110,14 @@ def cmd_record(args, s: Settings) -> int:
         if not s.has_ssi_credentials:
             print("Thiếu SSI_API_KEY/SSI_API_SECRET trong .env.")
             return 2
-        res = asyncio.run(record_ssi(s, until=_parse_until(args.until)))
+        res = asyncio.run(record_ssi(s, until=_parse_until(args.until), flush_every_s=args.flush_every))
         print("Kết thúc ghi (SSI):", json.dumps(res, ensure_ascii=False))
         return 0
     if not s.has_neo_credentials:
         print("Thiếu thông tin đăng nhập NEO API trong .env.")
         return 2
-    res = asyncio.run(record(s, until=_parse_until(args.until), rest_every_s=args.rest_every))
+    res = asyncio.run(record(s, until=_parse_until(args.until), rest_every_s=args.rest_every,
+                             flush_every_s=args.flush_every))
     print("Kết thúc ghi:", json.dumps(res, ensure_ascii=False))
     return 0
 
@@ -297,6 +305,8 @@ def build_parser() -> argparse.ArgumentParser:
     sp = sub.add_parser("record")
     sp.add_argument("--until", default="15:05", help="giờ dừng HH:MM (giờ VN)")
     sp.add_argument("--rest-every", type=float, default=60.0)
+    sp.add_argument("--flush-every", type=_positive_seconds, default=5.0,
+                    help="giây giữa hai lần ghi lô xuống SQLite (mặc định 5; dùng 1 khi chạy live-relay)")
     sp.set_defaults(fn=cmd_record)
     sp = sub.add_parser("poll")
     sp.add_argument("--interval", type=float, default=15.0)

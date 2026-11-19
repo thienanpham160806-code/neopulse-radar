@@ -68,7 +68,7 @@ def test_adapter_futures_index_and_session_flag():
     (_, f), = a.feed(frame("trade.VN30F2612", s="VN30F2612", b="DER", p=1859.5, q=2, v=1000))
     assert f["stockType"] == "FU" and f["marketCode"] == "FU"
     assert f["maturityDate"] == "2026-12-17" and f["underlyingSymbol"] == "VN30"
-    (ch, ix), = a.feed(frame("trade.index.HNXUPCOMINDEX", s="HNXUPCOMINDEX", v="125.4", c="0.3", cr="0.24", adv=100, dec=80, nc=20))
+    (ch, ix), = a.feed(frame("indexsummary.HNXUPCOMINDEX", s="HNXUPCOMINDEX", v="125.4", c="0.3", cr="0.24", adv=100, dec=80, nc=20))
     assert ch == "marketInfo" and ix["indexCode"] == "UPCOMINDEX" and ix["indexValue"] == 125.4 and ix["advances"] == 100
     assert a.feed(frame("market.flag", b="HOSE", t="09:00:00", f="ATO")) == [("marketSession", {"marketCode": "HOSE", "marketStatus": "ATO"})]
     assert a.feed(frame("market.flag", b="DER", f="LO"))[0][1]["marketCode"] == "FU"
@@ -94,7 +94,7 @@ def test_adapter_output_goes_through_existing_ingestor(tmp_path):
     for fr in (frame("market.VPB", s="VPB", b="HOSE", ce=33800, fl=29400, ref=31600),
                frame("quote.VPB", s="VPB", bids=[[31250, 1000]], asks=[[31300, 2000]]),
                frame("trade.VPB", s="VPB", p=31250, q=100, v=5000, a=31300),
-               frame("trade.index.VN30", s="VN30", v=1900.5, c=5, cr=0.26, adv=20, dec=8, nc=2)):
+               frame("indexsummary.VN30", s="VN30", v=1900.5, c=5, cr=0.26, adv=20, dec=8, nc=2)):
         for ch, body in a.feed(fr):
             ing.handle(ch, body, recv)
     ing.flush()
@@ -253,7 +253,7 @@ def test_build_topics():
     t = build_topics(["VPB"], ["VN30F2612"], ["VN30", "UPCOMINDEX"])
     assert t == ["market.flag", "trade.VPB", "quote.VPB", "room.VPB", "market.VPB",
                  "trade.VN30F2612", "quote.VN30F2612", "market.VN30F2612",
-                 "trade.index.VN30", "trade.index.HNXUPCOMINDEX"]
+                 "indexsummary.VN30", "indexsummary.UPCOMINDEX"]
 
 
 # -------------------------------------------------------------------- config
@@ -281,3 +281,25 @@ def test_config_legacy_consumer_vars(monkeypatch, tmp_path):
     monkeypatch.delenv("SSI_CONSUMER_SECRET", raising=False)
     s = load_settings(env)
     assert s.ssi_api_key == "old-id" and s.source == "neo"
+
+
+def test_real_index_frames_from_live_stream_19_11_2026():
+    """Khung tin THẬT ghi lại 19/11/2026: indexsummary mang đủ chỉ số; trade.index chỉ có giá trị + khối lượng.
+
+    Lỗi đã gặp: adapter đọc trade.index và lấy `v` (khối lượng lũy kế 55.506.118) làm giá trị VN30.
+    """
+    a = SsiAdapter()
+    summary = {"s": "VN30", "b": "HOSE", "ss": "C", "t": "2026/11/19 10:39:45", "v": "1791.9", "c": "-14.64",
+               "cr": "-0.81", "adv": "3", "dec": "23", "nc": "4", "ce": "0", "fl": "0", "tmv": "1677247419150",
+               "tmq": "56290474", "tvp": "802089600", "tqp": "40032", "tq": "56330506", "tv": "1678049508750"}
+    (ch, ix), = a.feed({"channel": "DATA", "topic": "indexsummary.VN30", "data": summary})
+    assert ch == "marketInfo" and ix["indexCode"] == "VN30"
+    assert ix["indexValue"] == 1791.9 and ix["indexChange"] == -14.64 and ix["indexPercentChange"] == -0.81
+    assert (ix["advances"], ix["declines"], ix["noChange"], ix["numberOfCe"], ix["numberOfFl"]) == (3, 23, 4, 0, 0)
+    assert ix["totalVolume"] == 56330506 and ix["totalValue"] == 1678049508750
+    up = dict(summary, s="HNXUPCOMINDEX", b="UPCOM", v="120.5")
+    (_, u), = a.feed({"channel": "DATA", "topic": "indexsummary.HNXUPCOMINDEX", "data": up})
+    assert u["indexCode"] == "UPCOMINDEX" and u["indexValue"] == 120.5
+    trade = {"s": "VN30", "t": "2026/11/19 10:38:30.000", "p": "1791.18", "q": "198038", "a": "29857.8", "si": "",
+             "o": "0", "h": "0", "l": "0", "v": "55506118"}
+    assert a.feed({"channel": "DATA", "topic": "trade.index.VN30", "data": trade}) == []   # không bao giờ ra marketInfo sai
