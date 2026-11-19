@@ -10,8 +10,8 @@ export interface Freshness {
   ageSeconds: number | null;
 }
 
-export const GREEN_UNDER_S = 60;
-export const AMBER_UNDER_S = 300;
+const GREEN_UNDER_S = 60;
+const AMBER_UNDER_S = 300;
 
 /** Pha phiên theo giờ Việt Nam (UTC+7, không có giờ mùa hè). Khớp `webexport.session_phase` bên Python. */
 export function sessionPhase(nowMs: number): Phase {

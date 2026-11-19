@@ -70,7 +70,7 @@ export function Overview({ p, f }: { p: Payload; f: Filters }) {
         <Stat label="Khối ngoại ròng (rổ)" value={money(fs?.net_val ?? null)} tone={signTone(fs?.net_val ?? null)} sub={fs ? `${num(fs.n_net_buy, 0)} mua · ${num(fs.n_net_sell, 0)} bán` : undefined} />
       </div>
 
-      {pulse?.divergence ? <div role="note" className="rounded-xl border border-warn/40 bg-warn/10 p-3 text-sm text-warn">🔀 {pulse.divergence}</div> : null}
+      {pulse?.divergence ? <div role="note" className="rounded-xl border border-warn/40 bg-warn/10 p-3 text-sm text-warn"><b>Phân kỳ chỉ số – độ rộng:</b> {pulse.divergence}</div> : null}
 
       <div className="grid gap-3 lg:grid-cols-2">
         <Card title="Nhận định từ số liệu">

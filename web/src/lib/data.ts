@@ -12,7 +12,7 @@ export interface Loaded {
   notice: string | null;
 }
 
-export const REVALIDATE_S = 15;
+const REVALIDATE_S = 15;
 
 function blobBase(): string {
   return (process.env.BLOB_READ_URL ?? "").trim().replace(/\/+$/, "");

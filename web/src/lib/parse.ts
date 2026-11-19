@@ -1,6 +1,6 @@
 import type { Payload, SessionIndex } from "./types";
 
-export const SUPPORTED_SCHEMA = 1;
+const SUPPORTED_SCHEMA = 1;
 export class ParseError extends Error {}
 
 function isObj(x: unknown): x is Record<string, unknown> {

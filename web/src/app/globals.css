@@ -10,6 +10,7 @@
   --fg: #0f172a;
   --muted: #5b6676;
   --accent: #1d4ed8;
+  --on-accent: #ffffff;
   --up: #15803d;
   --down: #b91c1c;
   --warn: #b45309;
@@ -29,6 +30,7 @@
     --fg: #e6ebf5;
     --muted: #9aa7bd;
     --accent: #6ea0ff;
+    --on-accent: #0b1220;
     --up: #4ade80;
     --down: #f87171;
     --warn: #fbbf24;
@@ -46,6 +48,7 @@
   --fg: #e6ebf5;
   --muted: #9aa7bd;
   --accent: #6ea0ff;
+  --on-accent: #0b1220;
   --up: #4ade80;
   --down: #f87171;
   --warn: #fbbf24;
@@ -62,6 +65,7 @@
   --color-fg: var(--fg);
   --color-muted: var(--muted);
   --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
   --color-up: var(--up);
   --color-down: var(--down);
   --color-warn: var(--warn);
@@ -78,6 +82,19 @@ body {
   color: var(--fg);
   font-family: var(--font-sans);
   -webkit-text-size-adjust: 100%;
+}
+::selection {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+  color: var(--fg);
+}
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+html {
+  scrollbar-color: var(--line) transparent;
+  accent-color: var(--accent);
 }
 .tnum {
   font-variant-numeric: tabular-nums;

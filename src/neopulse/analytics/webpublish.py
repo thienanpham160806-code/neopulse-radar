@@ -17,7 +17,7 @@ from __future__ import annotations
 import logging
 import time as _time
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import time
 from pathlib import Path
 
@@ -92,8 +92,6 @@ class PublishStats:
     uploads: int = 0
     failures: int = 0
     last_error: str | None = None
-    last_ok_at: float | None = None
-    urls: dict[str, str] = field(default_factory=dict)
 
 
 def _upload_files(client: BlobClient | None, work: Path, rels: list[str], stats: PublishStats) -> None:
@@ -101,9 +99,8 @@ def _upload_files(client: BlobClient | None, work: Path, rels: list[str], stats:
         return
     for rel in rels:
         try:
-            stats.urls[rel] = client.put(rel, (work / rel).read_bytes())
+            client.put(rel, (work / rel).read_bytes())
             stats.uploads += 1
-            stats.last_ok_at = _time.time()
         except BlobPutError as e:
             stats.failures += 1
             stats.last_error = str(e)

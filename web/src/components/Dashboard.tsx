@@ -119,7 +119,13 @@ export function Dashboard({ initial, requestedDate, requestedIndex, initialTab }
       <StatusBar meta={meta} nowMs={now} notice={loaded.notice} pollError={pollError} />
       <header className="mx-auto flex max-w-7xl flex-wrap items-end justify-between gap-3 px-4 pb-2 pt-4">
         <div>
-          <h1 className="text-xl font-bold sm:text-2xl">📡 NeoPulse Radar</h1>
+          <h1 className="flex items-center gap-2 text-xl font-bold tracking-tight sm:text-2xl">
+            <svg viewBox="0 0 32 32" className="h-7 w-7 shrink-0" aria-hidden>
+              <rect width="32" height="32" rx="7" fill="var(--accent)" />
+              <path d="M6 20a10 10 0 0 1 20 0M16 20l5-8" stroke="var(--on-accent)" strokeWidth="3" fill="none" strokeLinecap="round" />
+            </svg>
+            NeoPulse Radar
+          </h1>
           <p className="text-xs text-muted sm:text-sm">Nhịp thị trường · áp lực sổ lệnh · cảnh báo bất thường nội phiên</p>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -166,19 +172,36 @@ export function Dashboard({ initial, requestedDate, requestedIndex, initialTab }
               <option value="THẤP">Tất cả</option>
             </select>
           </label>
-          <button onClick={toggleTheme} className="rounded-md border border-line bg-surface px-2 py-1" aria-label="Đổi giao diện sáng/tối" title={`Giao diện: ${theme}`}>◐</button>
+          <button onClick={toggleTheme} className="rounded-md border border-line bg-surface px-2 py-1" aria-label="Đổi giao diện sáng/tối" title={`Giao diện: ${theme}`}>
+            <svg viewBox="0 0 20 20" className="h-4 w-4" aria-hidden>
+              <circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" strokeWidth="1.6" />
+              <path d="M10 3a7 7 0 0 1 0 14z" fill="currentColor" />
+            </svg>
+          </button>
         </div>
       </header>
 
       <nav aria-label="Các mục" className="border-y border-line bg-bg">
         <div role="tablist" className="scroll-x mx-auto flex max-w-7xl gap-1 px-4 py-1.5">
-          {TABS.map((t) => (
+          {TABS.map((t, i) => (
             <button
               key={t}
+              id={`tab-${SLUGS[t]}`}
               role="tab"
               aria-selected={tab === t}
+              aria-controls="tabpanel"
+              tabIndex={tab === t ? 0 : -1}
               onClick={() => setTab(t)}
-              className={`whitespace-nowrap rounded-full px-3 py-1.5 text-sm ${tab === t ? "bg-accent font-semibold text-white" : "text-muted hover:bg-surface2"}`}
+              onKeyDown={(e) => {
+                // mẫu tablist WAI-ARIA: mũi tên trái/phải chuyển tab, Home/End về đầu/cuối
+                const k = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: TABS.length - 1 }[e.key];
+                if (k === undefined) return;
+                e.preventDefault();
+                const next = TABS[(k + TABS.length) % TABS.length];
+                setTab(next);
+                document.getElementById(`tab-${SLUGS[next]}`)?.focus();
+              }}
+              className={`whitespace-nowrap rounded-full px-3 py-1.5 text-sm ${tab === t ? "bg-accent font-semibold text-on-accent" : "text-muted hover:bg-surface2 hover:text-fg"}`}
             >
               {t}
             </button>
@@ -186,7 +209,7 @@ export function Dashboard({ initial, requestedDate, requestedIndex, initialTab }
         </div>
       </nav>
 
-      <main className="mx-auto min-w-0 max-w-7xl px-4 py-4">
+      <main id="tabpanel" role="tabpanel" aria-labelledby={`tab-${SLUGS[tab]}`} className="mx-auto min-w-0 max-w-7xl px-4 py-4">
         {empty && tab !== "Phương pháp & giới hạn" ? (
           <Empty>
             <p className="mb-1 font-medium text-fg">Chưa có dữ liệu để hiển thị</p>

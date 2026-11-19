@@ -18,7 +18,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           className="rounded-md border border-line bg-surface px-3 py-2 text-base"
         />
         {sp.error ? <p role="alert" className="text-sm text-down">Mật khẩu không đúng.</p> : null}
-        <button type="submit" className="rounded-md bg-accent px-3 py-2 font-medium text-white">Vào xem</button>
+        <button type="submit" className="rounded-md bg-accent px-3 py-2 font-medium text-on-accent">Vào xem</button>
       </form>
     </main>
   );
