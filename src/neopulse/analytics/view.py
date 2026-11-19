@@ -95,6 +95,10 @@ def build_view(storage, source: str, trading_date: str | None = None, index_code
     v = SessionView(source, day, index_code)
     quotes = storage.quotes(day, symbols, "stock", source)
     index = storage.index_ticks(day, index_code, source)
+    # tick chỉ số không có % thay đổi là không dùng được (VD 19/11/2026 bộ ghi SSI lấy nhầm khối lượng làm giá trị,
+    # xem quality_log 'index_mapping_bug'): bỏ để không làm hỏng chuỗi chỉ số, basis và điểm nhịp
+    if len(index):
+        index = index[pd.to_numeric(index["pct_change"], errors="coerce").notna()]
     futures = storage.quotes(day, None, "future", source)
     if as_of is not None:
         quotes, index, futures = (d[d["ts"] <= as_of] if len(d) else d for d in (quotes, index, futures))

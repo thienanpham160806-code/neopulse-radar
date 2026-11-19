@@ -161,3 +161,16 @@ def test_cli_end_to_end(tmp_path, monkeypatch, capsys):
     assert main(["check"]) == 0 and main(["record"]) == 2    # không ghi dữ liệu thật khi đang ở chế độ sim
     out = capsys.readouterr().out
     assert "MÔ PHỎNG" in out and "< 5 phiên" in out and "<trống>" in out
+
+
+def test_view_drops_index_ticks_without_pct_change(tmp_path):
+    """19/11/2026: tick chỉ số SSI bị ghi với value = khối lượng, pct/độ rộng trống -> không được lọt vào view."""
+    from neopulse.data.storage import Storage as S
+    d = S(tmp_path / "bad.sqlite")
+    simulate_sessions(d, 1, end=date(2026, 11, 13), step_seconds=300, symbols=None)
+    good = d.index_ticks("2026-11-13", "VN30", "sim")
+    first = good.iloc[0]
+    d.insert_index([{"ts": (first["ts"] - pd.Timedelta(seconds=30)).isoformat(), "trading_date": "2026-11-13",
+                     "index_code": "VN30", "source": "sim", "value": 34790395.0}])
+    v = build_view(d, "sim", "2026-11-13", "VN30")
+    assert v.index["value"].max() < 10_000 and len(v.index) == len(good)
