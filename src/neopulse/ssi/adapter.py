@@ -49,6 +49,7 @@ class SsiAdapter:
         self.price_scale = price_scale
         self._state: dict[str, dict[str, Any]] = {}
         self.n_ignored = 0
+        self.watch: set[str] = set()  # mã đang theo dõi, để preload_master chỉ nạp đúng rổ
 
     # ------------------------------------------------------------------ API
     def feed(self, frame: Any) -> list[tuple[str, dict]]:
@@ -87,6 +88,21 @@ class SsiAdapter:
             self.n_ignored += 1  # hợp lệ nhưng ngoài phạm vi chỉ báo
             return []
         return [("unknown", frame)]
+
+    def preload_master(self, rows: list[dict]) -> int:
+        """Nạp sẵn trần/sàn/tham chiếu từ REST masterdata cho các mã đang theo dõi (không phát bản ghi). Trả số mã đã nạp."""
+        n = 0
+        for r in rows:
+            sym = str(r.get("symbol") or "").strip().upper()
+            if sym not in self.watch and sym not in self.futures_meta:
+                continue
+            st = self._st(sym, {"b": r.get("board")})
+            for key, name in (("ceiling", "ceilingPrice"), ("floor", "floorPrice"), ("refPrice", "refPrice")):
+                v = self._px(r.get(key))
+                if v:
+                    st[name] = v
+            n += 1
+        return n
 
     # --------------------------------------------------------------- nội bộ
     def _st(self, sym: str, data: dict) -> dict[str, Any]:

@@ -27,6 +27,7 @@ EP_INDEX_LIST = "/api/v3/data/indexList"
 EP_INDEX_SUMMARY = "/api/v3/data/indexSummary"
 EP_OHLC = "/api/v3/data/ohlc"
 EP_SECURITIES_SUMMARY = "/api/v3/data/securitiesSummary"
+EP_MASTERDATA = "/api/v3/data/masterdata"
 TOKEN_REFRESH_MARGIN_S = 120
 RETRYABLE_HTTP = {429, 500, 502, 503, 504}
 
@@ -165,6 +166,19 @@ class SsiClient:
 
     def index_summary(self, index: str, trading_date: str | None = None) -> list[dict]:
         return rows_of(self.get(EP_INDEX_SUMMARY, {"index": index.upper(), "tradingDate": trading_date}))
+
+    def masterdata(self, page_size: int = 1000) -> list[dict]:
+        """Trần/sàn/tham chiếu của PHIÊN HÔM NAY cho mọi mã (4 sàn, ~2.100 mã, 3 trang).
+
+        Luồng `market.<mã>` không gửi các giá này trong phiên (kiểm chứng 19/11/2026) nên phải lấy qua REST."""
+        out: list[dict] = []
+        for page in range(1, 50):
+            body = self.get(EP_MASTERDATA, {"pageIndex": page, "pageSize": page_size})
+            out.extend(rows_of(body))
+            pages = int(body.get("pagesCount") or 1) if isinstance(body, dict) else 1
+            if page >= pages:
+                break
+        return out
 
     def daily_ohlc(self, symbol: str, from_date: str, to_date: str, page_size: int = 1000) -> list[dict]:
         """Nến ngày (from/to dạng 'YYYY/MM/DD HH:MM:SS' theo SDK chính thức); đi hết các trang."""

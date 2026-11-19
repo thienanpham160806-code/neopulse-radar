@@ -64,6 +64,14 @@ async def record_ssi(settings: Settings, *, until: time | None = None, flush_eve
         if not stocks:
             raise RuntimeError(f"Rổ {settings.universe_index} không trả về mã nào - kiểm tra NEOPULSE_UNIVERSE_INDEX.")
         adapter = SsiAdapter(futures_meta=futures_meta(settings.futures), price_scale=settings.ssi_price_scale)
+        adapter.watch = set(stocks)
+        try:  # luồng market.<mã> không gửi trần/sàn/tham chiếu trong phiên -> nạp từ REST masterdata
+            n = adapter.preload_master(await asyncio.to_thread(client.masterdata))
+            log.info("Đã nạp trần/sàn/tham chiếu cho %d/%d mã từ REST masterdata", n, len(stocks) + len(settings.futures))
+        except Exception as e:  # noqa: BLE001 - thiếu giá tham chiếu không được làm dừng bộ ghi
+            log.warning("Không nạp được masterdata (%s): %% thay đổi và trần/sàn sẽ trống", type(e).__name__)
+            db.log_quality([{"ts": iso_vn(now_vn()), "source": LIVE_SOURCE, "kind": "masterdata_failed",
+                             "subject": "masterdata", "detail": type(e).__name__}])
 
         def on_message(channel: str, body: dict, recv_ts: float) -> None:
             ing.handle(channel, body, recv_ts)

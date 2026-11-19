@@ -303,3 +303,33 @@ def test_real_index_frames_from_live_stream_19_11_2026():
     trade = {"s": "VN30", "t": "2026/11/19 10:38:30.000", "p": "1791.18", "q": "198038", "a": "29857.8", "si": "",
              "o": "0", "h": "0", "l": "0", "v": "55506118"}
     assert a.feed({"channel": "DATA", "topic": "trade.index.VN30", "data": trade}) == []   # không bao giờ ra marketInfo sai
+
+
+def test_preload_master_fills_ref_ceiling_floor_from_rest():
+    """19/11/2026: market.<mã> không gửi trần/sàn/tham chiếu trong phiên -> nạp từ REST masterdata."""
+    a = SsiAdapter(futures_meta=futures_meta(["41I1GC000"]))
+    a.watch = {"FPT"}
+    rows = [{"board": "HOSE", "symbol": "FPT", "tradingDate": "2026/11/19", "ceiling": 50200, "floor": 43700, "refPrice": 46950},
+            {"board": "DERIVATIVES", "symbol": "41I1GC000", "tradingDate": "2026/11/19", "ceiling": 1934.5,
+             "floor": 1681.5, "refPrice": 1808},
+            {"board": "HOSE", "symbol": "KHONGTHEODOI", "ceiling": 1, "floor": 1, "refPrice": 1}]
+    assert a.preload_master(rows) == 2
+    (_, b), = a.feed(frame("trade.FPT", s="FPT", p="46700", q="3300", a="47069.88", v="4294000"))
+    assert (b["refPrice"], b["ceilingPrice"], b["floorPrice"]) == (46950.0, 50200.0, 43700.0)
+    assert b["percentPriceChange"] == pytest.approx((46700 - 46950) / 46950 * 100)
+    (_, f), = a.feed(frame("trade.41I1GC000", s="41I1GC000", p="1797.6", q="1", v="100"))
+    assert f["refPrice"] == 1808.0 and f["stockType"] == "FU"
+    assert "KHONGTHEODOI" not in a._state
+
+
+def test_client_masterdata_walks_all_pages():
+    pages = {1: [{"symbol": "A"}], 2: [{"symbol": "B"}], 3: [{"symbol": "C"}]}
+
+    def handler(req):
+        if req.url.path.endswith("/auth/token"):
+            return httpx.Response(200, json={"data": {"accessToken": "t", "expiresAt": 9e12}})
+        p = int(req.url.params["pageIndex"])
+        return httpx.Response(200, json={"code": 200, "pagesCount": 3, "pageIndex": p, "data": pages[p]})
+    s = Settings(mode="live", source="ssi", ssi_api_key="k", ssi_api_secret="s", ssi_max_rps=10)
+    with SsiClient(s, transport=httpx.MockTransport(handler)) as c:
+        assert [r["symbol"] for r in c.masterdata()] == ["A", "B", "C"]
