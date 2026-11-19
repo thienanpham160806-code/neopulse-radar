@@ -122,7 +122,7 @@ neopulse publish-static --source ssi --deploy       # ghi + `vercel --prod` tron
 neopulse publish-static --source ssi --date 2026-11-19 --indexes VN30,VNINDEX --deploy
 ```
 
-Vercel chỉ cần `SITE_PASSWORD` (bắt buộc khi dữ liệu là thật; chưa đặt thì dữ liệu thật bị khóa và `/data/*` trả 403). **Không** đặt khóa SSI. Vì sao snapshot thay cho đẩy liên tục lên Vercel Blob: gói Hobby chỉ có 2.000 thao tác Blob/tháng, dữ liệu SSI không nên nằm ở URL công khai, và độ trễ gần-thời-gian-thực không có giá trị cho bài toán phân tích cuối phiên. Lệnh `neopulse publish` (Blob) vẫn còn nhưng là **tùy chọn, tốn hạn mức**. Chi tiết: [`docs/web_architecture.md`](docs/web_architecture.md).
+Web mở công khai, không có mật khẩu. Vercel chỉ cần ABLY_API_KEY phía server nếu bật realtime; khóa SSI/NEO vẫn ở máy ghi. Chỉ công bố JSON chỉ báo tổng hợp, không có bảng giá/sổ lệnh thô. Snapshot vẫn hoạt động khi không cấu hình Ably. Chi tiết: [docs/web_architecture.md](docs/web_architecture.md).
 
 ![Bản web — tổng quan (dữ liệu MÔ PHỎNG)](docs/img/web_desktop_overview_sim.png)
 *Ảnh chụp bản web với dữ liệu mô phỏng (có nhãn).*

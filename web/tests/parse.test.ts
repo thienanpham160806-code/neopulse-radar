@@ -1,8 +1,6 @@
 import { readFileSync } from "fs";
 import path from "path";
 import { describe, expect, it } from "vitest";
-import { cookieValue, safeEqual } from "../src/lib/auth";
-import { gateAllows } from "../src/lib/data";
 import { dmy, money, num, pct } from "../src/lib/format";
 import { ParseError, parseIndex, parsePayload } from "../src/lib/parse";
 
@@ -47,31 +45,6 @@ describe("parseIndex", () => {
     expect(idx.sessions.every((s) => s.is_simulated)).toBe(true);
   });
   it("từ chối cấu trúc sai", () => expect(() => parseIndex({ sessions: 3 })).toThrow(ParseError));
-});
-
-describe("cổng dữ liệu thật", () => {
-  const sim = parsePayload(sample("latest.json"));
-  const real = { ...sim, meta: { ...sim.meta, is_simulated: false } };
-  it("không đặt mật khẩu: chỉ cho dữ liệu mô phỏng", () => {
-    expect(gateAllows(sim, false)).toBe(true);
-    expect(gateAllows(real, false)).toBe(false);
-  });
-  it("đã đặt mật khẩu: cho cả hai", () => expect(gateAllows(real, true)).toBe(true));
-});
-
-describe("auth", () => {
-  it("cookie là băm, không chứa mật khẩu, ổn định và đổi theo mật khẩu", async () => {
-    const a = await cookieValue("mat-khau-bi-mat");
-    expect(a).toMatch(/^[0-9a-f]{64}$/);
-    expect(a).not.toContain("mat-khau");
-    expect(await cookieValue("mat-khau-bi-mat")).toBe(a);
-    expect(await cookieValue("khac")).not.toBe(a);
-  });
-  it("safeEqual", () => {
-    expect(safeEqual("abc", "abc")).toBe(true);
-    expect(safeEqual("abc", "abd")).toBe(false);
-    expect(safeEqual("abc", "abcd")).toBe(false);
-  });
 });
 
 describe("định dạng", () => {

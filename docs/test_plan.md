@@ -42,12 +42,12 @@
 | `--deploy` chạy `vercel --prod --yes` trong `web/`, in URL alias; lỗi báo rõ | pytest (runner giả) | thiếu vercel / thư mục sai / mã thoát khác 0 |
 | Dữ liệu thật không vào git | pytest (`git check-ignore`, `git ls-files`) | `web/public/data/**` bị ignore; `web/public/sample/**` được theo dõi và đều `is_simulated` |
 | Trạng thái snapshot: cuối phiên không bao giờ đỏ, giữa phiên cam, MÔ PHỎNG/lỗi giữ nguyên | vitest (`snapshot.test.ts`) | 11 ca |
-| Quyết định truy cập: chưa mật khẩu chặn `/data/*`; có mật khẩu chặn trang/API/dữ liệu | vitest + `curl` trên bản build | 403 / 401 / 200 |
+| Web/API/snapshot công khai, không cần cookie | vitest + HTTP production | 200 |
 | `publish --dry-run` (Blob, tùy chọn) không gọi mạng | pytest (chặn `httpx.Client.put`) | ghi `latest.json`, `index.json` cục bộ |
 | Blob: ghi đè cùng đường dẫn, header đúng giao thức | pytest (MockTransport) | `x-allow-overwrite=1`, `x-add-random-suffix=0` |
 | Mạng rớt: thử lại lùi dần, không crash, log không lộ token | pytest | chờ 1 s, 2 s...; `failures>0` nhưng vòng lặp vẫn chạy đủ chu kỳ |
 | CSDL thiếu: đẩy trạng thái `error` để web hiện rõ | pytest | `latest.json` có `data_status.state="error"` |
-| Cổng dữ liệu thật khi chưa đặt `SITE_PASSWORD`; cookie là băm | vitest + thử `curl` | 307 -> /login, API 401, sai mật khẩu 303 ?error=1, đúng mật khẩu đặt cookie httpOnly |
+| Token Ably công khai vẫn chỉ subscribe, TTL ngắn và không lộ khóa | vitest + HTTP production | 200, capability chỉ subscribe; thiếu key:503 |
 | Bố cục di động 390 px, không tràn ngang, 8 tab, sáng/tối | puppeteer chụp từng tab | `scrollWidth` = 390; ảnh trong `docs/img/web_*_sim.png` |
 
 ## 3. Kiểm chứng với dữ liệu thật — **việc còn phải làm**

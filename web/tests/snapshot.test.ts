@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { decide } from "../src/lib/auth";
 import { freshness, snapshotFreshness } from "../src/lib/status";
 import type { Meta } from "../src/lib/types";
 
@@ -62,22 +61,5 @@ describe("trạng thái snapshot tĩnh", () => {
     const m = snap();
     delete m.snapshot_kind;
     expect(snapshotFreshness(m, at(16, 0)).level).toBe("snapshot");
-  });
-});
-
-describe("quyết định truy cập", () => {
-  it("chưa đặt mật khẩu: /data/* bị chặn hẳn, trang vẫn vào (dữ liệu thật bị khóa ở tầng gate)", () => {
-    expect(decide("/data/latest.json", false, false)).toBe("forbidden");
-    expect(decide("/data/sessions/ssi_2026-11-19_VN30.json", false, false)).toBe("forbidden");
-    expect(decide("/", false, false)).toBe("next");
-    expect(decide("/sample/latest.json", false, false)).toBe("next");
-  });
-  it("đã đặt mật khẩu, chưa đăng nhập: trang -> login, API và dữ liệu -> 401", () => {
-    expect(decide("/", true, false)).toBe("login");
-    expect(decide("/api/data", true, false)).toBe("unauthorized");
-    expect(decide("/data/latest.json", true, false)).toBe("unauthorized");
-  });
-  it("đã đăng nhập: cho qua mọi đường dẫn", () => {
-    for (const p of ["/", "/api/data", "/data/latest.json"]) expect(decide(p, true, true)).toBe("next");
   });
 });

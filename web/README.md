@@ -32,7 +32,7 @@ Web đọc theo thứ tự: `BLOB_READ_URL` (tùy chọn) → `web/public/data/`
 
 | Biến | Ý nghĩa |
 |---|---|
-| `SITE_PASSWORD` | Mật khẩu trang. **Bắt buộc khi dữ liệu là thật.** Không đặt ⇒ chỉ xem được dữ liệu MÔ PHỎNG và `/data/*` trả 403. |
+| `ABLY_API_KEY` | Khóa Ably chỉ ở server, cấp token chỉ subscribe kênh neopulse:live. Không cấu hình thì dùng snapshot. |
 | `BLOB_READ_URL` | *Tùy chọn, tốn hạn mức*: địa chỉ đọc Blob nếu dùng `neopulse publish`. Bỏ trống = snapshot tĩnh. |
 
 **Không** đặt khóa SSI/NEO hay `BLOB_READ_WRITE_TOKEN` trên Vercel.
@@ -40,9 +40,10 @@ Web đọc theo thứ tự: `BLOB_READ_URL` (tùy chọn) → `web/public/data/`
 ## Cấu trúc
 
 ```
-src/app/            page.tsx (đọc dữ liệu phía máy chủ) · api/data (làm mới) · api/login · login/
-src/middleware.ts   chặn khi đã đặt SITE_PASSWORD mà chưa có cookie httpOnly hợp lệ
+src/app/            page.tsx (đọc dữ liệu phía máy chủ) · api/data (làm mới) · api/ably-token
 src/lib/            types (hợp đồng JSON) · status (tươi/cũ/snapshot) · parse · data (Blob tùy chọn/tĩnh/mẫu) · auth (quyết định truy cập) · format
 src/components/     StatusBar · Dashboard (bộ lọc, 8 tab) · tabs · ui
 tests/              vitest: trạng thái tươi/cũ, phân tích JSON, cổng dữ liệu, xác thực, định dạng
 ```
+
+Web công khai, không cần đăng nhập. Snapshot và API chỉ cung cấp chỉ báo tổng hợp; khóa gốc không được gửi xuống trình duyệt. /login cũ chuyển về trang chủ.

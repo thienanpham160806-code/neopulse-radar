@@ -95,8 +95,3 @@ export async function loadData(date?: string | null, code?: string | null): Prom
     notice: `${notice ? notice + " " : ""}Chưa có snapshot dữ liệu thật (public/data trống): đang hiển thị dữ liệu MẪU MÔ PHỎNG đi kèm mã nguồn.`,
   };
 }
-
-/** Nếu chưa đặt SITE_PASSWORD, chỉ cho phép dữ liệu mô phỏng. */
-export function gateAllows(payload: Payload, hasPassword: boolean): boolean {
-  return hasPassword || payload.meta.is_simulated;
-}

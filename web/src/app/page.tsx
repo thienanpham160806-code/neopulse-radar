@@ -1,6 +1,5 @@
 import { Dashboard } from "@/components/Dashboard";
-import { sitePassword } from "@/lib/auth";
-import { gateAllows, loadData } from "@/lib/data";
+import { loadData } from "@/lib/data";
 import { ParseError } from "@/lib/parse";
 
 export const dynamic = "force-dynamic";
@@ -25,14 +24,6 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
   } catch (e) {
     const msg = e instanceof ParseError ? e.message : "Không đọc được dữ liệu mẫu hay dữ liệu trực tiếp.";
     return <Message title="Không tải được dữ liệu">{msg}</Message>;
-  }
-  if (!gateAllows(loaded.payload, Boolean(sitePassword()))) {
-    return (
-      <Message title="Dữ liệu thật đang được khóa">
-        Chưa đặt biến môi trường <code>SITE_PASSWORD</code> trên Vercel nên trang chỉ cho xem dữ liệu mô phỏng. Đặt mật khẩu
-        rồi triển khai lại để xem dữ liệu thật.
-      </Message>
-    );
   }
   return <Dashboard key={`${sp.date ?? ""}|${sp.index ?? ""}`} initial={loaded} requestedDate={sp.date ?? null} requestedIndex={sp.index ?? null} initialTab={sp.tab ?? null} />;
 }

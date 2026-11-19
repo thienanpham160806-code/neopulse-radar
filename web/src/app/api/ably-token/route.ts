@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { sitePassword } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -8,12 +7,9 @@ const TTL_MS = 15 * 60 * 1000; // ngắn: ably-js tự gọi lại route này đ
 
 /**
  * Cấp token Ably CHỈ subscribe kênh `neopulse:live`, hạn 15 phút. Khóa gốc ABLY_API_KEY chỉ dùng ở máy chủ, không bao giờ
- * gửi xuống trình duyệt. Route nằm sau middleware mật khẩu; chưa đặt SITE_PASSWORD thì từ chối (dữ liệu trực tiếp là thật).
+ * gửi xuống trình duyệt. Khách truy cập công khai không có quyền publish.
  */
 export async function GET() {
-  if (!sitePassword()) {
-    return NextResponse.json({ error: "Kênh trực tiếp bị khóa: chưa đặt SITE_PASSWORD." }, { status: 403 });
-  }
   const key = (process.env.ABLY_API_KEY ?? "").trim();
   const keyName = key.split(":")[0];
   if (!key.includes(":") || !keyName.includes(".")) {
