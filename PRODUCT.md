@@ -20,3 +20,9 @@ Web Next.js (`web/`), chế độ Operate: bảng điều khiển đọc số tr
 
 ## Ràng buộc
 Mọi chỉ báo do Python tính; web không tính công thức tài chính. Không xuất sổ lệnh thô. Font Be Vietnam Pro (SIL OFL) tự phục vụ (giả định: giữ cho mọi hướng).
+
+
+## Bổ sung theo yêu cầu — 19/11/2026
+- Đăng ký Telegram hoàn toàn tự nguyện, không bắt buộc dùng website. Người dùng chọn nhóm tin, mã theo dõi và hủy/xóa từ bot. Worker cloud theo đợt khoảng 15 phút, không phụ thuộc laptop; nguồn cảnh báo vẫn phụ thuộc dữ liệu thị trường được cập nhật.
+- Có lịch sử đóng cửa ngày, chọn khung thời gian, bật/tắt MA/EMA và tham chiếu. Mọi chỉ báo vẫn tính tại Python, không dựng nến hoặc phiên phút giả từ dữ liệu đóng cửa.
+- Tin doanh nghiệp/chính sách kèm nguồn và ngày đăng; không tự suy ra nội dung pháp lý hoặc hiệu lực từ tiêu đề. Dữ liệu đăng ký phải được mã hóa trước khi lưu cloud.

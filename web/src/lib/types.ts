@@ -200,6 +200,7 @@ export interface Sectors {
 }
 
 export interface Payload {
+  chart?: import("@/components/TechnicalChart").ChartData;
   meta: Meta;
   sectors?: Sectors;
   pulse?: Pulse;

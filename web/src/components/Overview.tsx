@@ -15,7 +15,7 @@ import type { AlertItem, Num, Payload, Severity } from "@/lib/types";
 import { Gauge, Guide, Term } from "./Explain";
 import { SectorCard } from "./SectorCard";
 import { CompanyLink } from "./CompanyLink";
-import { TradingViewChart } from "./TradingViewChart";
+import { TechnicalChart } from "./TechnicalChart";
 import { type Filters } from "./tabs";
 import { Change, Note, SevTag, SignedMoney } from "./ui";
 
@@ -147,9 +147,9 @@ export function Overview({ p, f, live, onAlerts }: { p: Payload; f: Filters; liv
 
           <h3 className="text-xl font-bold">Chỉ số đi thế nào trong phiên</h3>
           <figure className="mt-2">
-            {series.length > 1 ? <TradingViewChart symbol={code} data={series} /> : <p className="text-sm text-muted">Chưa đủ điểm dữ liệu để vẽ.</p>}
+            {series.length > 1 ? <TechnicalChart key={code} symbol={code} intraday={series} intradayChart={p.chart} reference={row?.ref} /> : <p className="text-sm text-muted">Chưa đủ điểm dữ liệu để vẽ.</p>}
             <figcaption className="mt-1 border-t border-line pt-1 text-sm text-muted">
-              <b className="text-fg">Hình 1.</b> {code} theo phút. Dữ liệu theo phút từ NeoPulse. Rê chuột hoặc chạm để xem từng điểm; cuộn để thu phóng.
+              <b className="text-fg">Hình 1.</b> {code}: khung Phiên dùng dữ liệu nội phiên đã ghi; các khung còn lại dùng giá đóng cửa ngày từ Vietcap. Rê chuột hoặc chạm để xem từng điểm; cuộn để thu phóng.
             </figcaption>
           </figure>
 

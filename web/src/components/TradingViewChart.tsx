@@ -4,8 +4,8 @@ import { AreaSeries, LineSeries, ColorType, createChart, type Time, type UTCTime
 import { num } from "@/lib/format";
 import { chartPoints } from "@/lib/chart";
 
-export function TradingViewChart({ symbol, data, comparison, exchange = "HOSE" }: {
-  symbol: string; data: { time: string; value: number }[]; comparison?: { time: string; value: number }[]; exchange?: string | null;
+export function TradingViewChart({ symbol, data, comparison, overlays = [], reference, exchange = "HOSE" }: {
+  overlays?: { name: string; color: string; data: { time: string; value: number }[] }[]; reference?: number | null; symbol: string; data: { time: string; value: number }[]; comparison?: { time: string; value: number }[]; exchange?: string | null;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const api = useRef<IChartApi | null>(null);
@@ -44,6 +44,18 @@ export function TradingViewChart({ symbol, data, comparison, exchange = "HOSE" }
     comparisonSeries.current?.setData(chartPoints(comparison ?? []).map((p) => ({ ...p, time: p.time as UTCTimestamp })));
     if (api.current && !fitted.current) { api.current.timeScale().fitContent(); fitted.current = true; }
   }, [data, comparison, ready, hasComparison, intraday, symbol]);
+  useEffect(() => {
+    const chart = api.current, area = mainSeries.current;
+    if (!chart || !area) return;
+    const first = data[0]?.time, last = data.at(-1)?.time;
+    const lines = overlays.map((o) => {
+      const line = chart.addSeries(LineSeries, { color: o.color, lineWidth: 2, title: o.name, priceLineVisible: false });
+      line.setData(chartPoints(o.data.filter((p) => (!first || p.time >= first) && (!last || p.time <= last))).map((p) => ({ ...p, time: p.time as UTCTimestamp })));
+      return line;
+    });
+    const priceLine = reference != null ? area.createPriceLine({ price: reference, color: "#b99237", lineWidth: 1, lineStyle: 2, title: "Tham chiếu phiên" }) : null;
+    return () => { if (api.current === chart) { lines.forEach((line) => chart.removeSeries(line)); if (priceLine) area.removePriceLine(priceLine); } };
+  }, [overlays, reference, data, ready, hasComparison, intraday, symbol]);
   return <div>
     <div className="mb-3 flex flex-wrap justify-between gap-2 text-xs"><span className="tnum font-medium">{selected ?? `${symbol}${comparison ? " / VN-Index · ngày đầu = 100" : " · chỉ số"}`}</span><a href={url} target="_blank" rel="noopener noreferrer" className="text-accent underline underline-offset-4">Mở trên TradingView ↗</a></div>
     {data.length > 1 ? <div ref={host} data-testid="tradingview-chart" className="h-72 min-w-0 sm:h-96" role="img" aria-label={`Biểu đồ tương tác ${symbol}`} /> : <p className="py-10 text-center text-sm text-muted">Chưa đủ điểm dữ liệu để vẽ biểu đồ.</p>}

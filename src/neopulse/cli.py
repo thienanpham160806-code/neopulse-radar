@@ -291,6 +291,25 @@ def cmd_refdata(args, s: Settings) -> int:
     return 0
 
 
+def cmd_charts(args, s: Settings) -> int:
+    from datetime import timedelta
+    from pathlib import Path
+
+    from .analytics.charting import export_cached
+    from .analytics.company import fetch_index_prices
+    from .timeutil import now_vn
+    raw = Path(s.db_path).parent / "company" / "raw"
+    raw.mkdir(parents=True, exist_ok=True)
+    if args.refresh:
+        import json
+        end = now_vn().date()
+        for code in ("VN30", "VNINDEX"):
+            rows = fetch_index_prices(code, start=(end - timedelta(days=1100)).isoformat(), end=end.isoformat())
+            (raw / f"_{code}.json").write_text(json.dumps(rows), encoding="utf-8")
+    print(f"Đã xuất {export_cached(raw, args.out)} biểu đồ lịch sử và MA/EMA.")
+    return 0
+
+
 def cmd_company(args, s: Settings) -> int:
     """Hồ sơ doanh nghiệp (BCTC năm, hồ sơ, giá) qua vnstock/Vietcap -> web/public/data/company/. Không cần khóa SSI."""
     import json
@@ -330,6 +349,8 @@ def cmd_company(args, s: Settings) -> int:
         print("Chưa có dữ liệu thô. Chạy: neopulse company --refresh")
         return 2
     out = co.write_reports(co.build_all(raws, ix, ref), args.out)
+    from .analytics.charting import export_cached
+    export_cached(raw_dir, Path(args.out).parent / "charts")
     print(f"Đã ghi {len(raws)} hồ sơ doanh nghiệp vào {out}")
     return 0
 
@@ -427,6 +448,10 @@ def build_parser() -> argparse.ArgumentParser:
     sp = sub.add_parser("refdata", help="dữ liệu tham chiếu: phân ngành + KL trung bình 20 phiên (REST SSI)")
     sp.add_argument("--refresh", action="store_true", help="gọi REST SSI để cập nhật (chạy trước phiên)")
     sp.set_defaults(fn=cmd_refdata)
+    sp = sub.add_parser("charts", help="lịch sử ngày và MA/EMA cho web, tính bằng Python")
+    sp.add_argument("--refresh", action="store_true", help="lấy lại lịch sử VN30/VNINDEX từ nguồn công khai")
+    sp.add_argument("--out", default="web/public/data/charts")
+    sp.set_defaults(fn=cmd_charts)
     sp = sub.add_parser("company", help="hồ sơ doanh nghiệp + phân tích BCTC cho web (vnstock/Vietcap, dữ liệu công khai)")
     sp.add_argument("--refresh", action="store_true", help="tải lại từ vnstock (khoảng 30 giây mỗi mã)")
     sp.add_argument("--symbols", help="danh sách mã, phân cách dấu phẩy (mặc định: rổ VN30 tham chiếu)")

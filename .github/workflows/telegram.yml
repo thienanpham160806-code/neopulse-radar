@@ -1,0 +1,47 @@
+name: telegram-notifications
+on:
+  schedule:
+    - cron: '7,22,37,52 * * * *'
+  workflow_dispatch:
+concurrency:
+  group: telegram-notifications
+  cancel-in-progress: false
+permissions:
+  contents: read
+  actions: read
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PYTHONPATH: src
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install httpx cryptography
+      - name: Restore encrypted subscription state
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p state
+          run_id=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=telegram-state&per_page=1" --jq '.artifacts[0].workflow_run.id // empty')
+          if [ -n "$run_id" ]; then
+            gh run download "$run_id" --name telegram-state --dir state
+            test -s state/telegram.enc
+          fi
+      - name: Process opt-in commands and new messages
+        run: python -m neopulse.analytics.telegram_cloud
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_STATE_KEY: ${{ secrets.TELEGRAM_STATE_KEY }}
+      - name: Persist encrypted state even after a delivery failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: telegram-state
+          path: state/telegram.enc
+          retention-days: 90
+          if-no-files-found: error

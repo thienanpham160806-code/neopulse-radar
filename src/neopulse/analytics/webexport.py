@@ -337,6 +337,9 @@ def build_payload(db: Storage, source: str, trading_date: str | None = None, ind
         "alerts": _alerts(v), "book": _book(v), "foreign": _foreign(v), "futures": _futures(v),
         "sectors": _sectors(v),
     }
+    from .charting import build_chart
+    payload["chart"] = build_chart(index_code, [[r["t"], r["index"]] for r in payload["pulse"]["series"] if r.get("index") is not None],
+                                   source=f"{source} · nội phiên đã ghi")
     meta["rvol"] = {k: (_r(x) if isinstance(x, float) else x) for k, x in v.rvol_meta.items()}
     if extras:
         payload.update(extras)
