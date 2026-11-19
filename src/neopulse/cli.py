@@ -9,6 +9,7 @@
   validate   báo cáo kiểm chứng tín hiệu + chất lượng dữ liệu
   export     xuất dữ liệu một phiên ra CSV/Parquet
   export-web xuất JSON chỉ báo tổng hợp cho giao diện web (chỉ đọc SQLite)
+  live-relay phát số liệu tổng hợp trực tiếp lên Ably (chỉ đọc SQLite; --dry-run để thử cục bộ)
   publish-static  xuất snapshot tĩnh vào web/public/data/ (+ --deploy lên Vercel) - cách khuyên dùng
   publish    TÙY CHỌN, tốn hạn mức: đẩy JSON lên Vercel Blob theo chu kỳ (--dry-run để thử cục bộ)
 """
@@ -266,6 +267,23 @@ def cmd_publish_static(args, s: Settings) -> int:
     return 0
 
 
+def cmd_live_relay(args, s: Settings) -> int:
+    from .analytics import liverelay as lr
+    src = args.source or (s.live_source if s.is_live else "sim")
+    speed = args.replay_speed if args.replay_speed is not None else (10.0 if src == "sim" else 0.0)
+    try:
+        st = lr.run_live_relay(s, source=src, until=_parse_until(args.until), dry_run=args.dry_run, viewers=args.viewers,
+                               replay_speed=speed)
+    except lr.LiveRelayError as e:
+        print(f"LỖI: {e}")
+        return 2
+    except KeyboardInterrupt:
+        print("Đã dừng live-relay.")
+        return 0
+    print(f"Kết thúc live-relay: {st.sent} · lỗi {st.failed}" + (" (dry-run: out/live_dryrun.jsonl)" if args.dry_run else ""))
+    return 0
+
+
 def cmd_publish(args, s: Settings) -> int:
     from .analytics import webpublish as wp
     src = args.source or (s.live_source if s.is_live else "sim")
@@ -339,6 +357,13 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--no-validation", action="store_true", help="bỏ khối kiểm chứng (nhanh hơn)")
     sp.add_argument("--order-value-mn", type=float, default=500.0, help="lệnh giả định đo trượt giá (triệu đồng)")
     sp.set_defaults(fn=cmd_export_web)
+    sp = sub.add_parser("live-relay", help="phát số liệu tổng hợp lên Ably kênh neopulse:live (chỉ đọc SQLite)")
+    sp.add_argument("--source", choices=["neo", "ssi", "sim"], help="mặc định: nguồn thật đang cấu hình, hoặc sim")
+    sp.add_argument("--until", default="15:05", help="giờ dừng HH:MM (giờ VN)")
+    sp.add_argument("--dry-run", action="store_true", help="ghi tin ra out/live_dryrun.jsonl, không gọi Ably")
+    sp.add_argument("--viewers", type=int, default=5, help="số người xem giả định để ước tính hạn mức Ably")
+    sp.add_argument("--replay-speed", type=float, help="phát lại phiên với tốc độ x lần (mặc định: 10 với sim, 0 = thật)")
+    sp.set_defaults(fn=cmd_live_relay)
     sp = sub.add_parser("publish-static", help="xuất snapshot tĩnh vào web/public/data/ và tùy chọn --deploy lên Vercel (khuyên dùng)")
     sp.add_argument("--source", choices=["neo", "ssi", "sim"], help="mặc định: nguồn thật đang cấu hình, hoặc sim")
     sp.add_argument("--date", default="latest", help="phiên YYYY-MM-DD hoặc 'latest' (mặc định)")
