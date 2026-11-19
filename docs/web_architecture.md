@@ -114,3 +114,34 @@ record (--flush-every 1) ──► SQLite ──(chỉ đọc)──► neopulse
 ### Định danh client Ably
 
 Namespace Ably có thể yêu cầu identified client (lỗi 40161). Relay REST gửi header `X-Ably-ClientId` mã hóa base64 cho `neopulse-relay`; token trình duyệt gắn `clientId=neopulse-web`, vẫn chỉ subscribe `neopulse:live`, hạn 15 phút. Không cần nới rule hoặc capability của tài khoản. Kiểm thử thật 19/11/2026 đã xác nhận gửi/nhận probe sau khi bổ sung định danh; HTTP 200 của SSE riêng lẻ chưa đủ chứng minh nhận tin.
+
+## Thiết kế giao diện: khung "Bản tin", ghép mobile kiểu "Ứng dụng" (chốt 19/11/2026)
+
+**Cách chọn.** Dựng ba hướng khác biệt rõ trên cùng lớp dữ liệu, cùng luồng trực tiếp mô phỏng (route `/preview/a|b|c`, đã gỡ sau khi chọn; ảnh còn trong `docs/img/design_options/`):
+
+| Hướng | Mô tả | Nielsen | Dễ đọc / demo / mobile (1–5) |
+|---|---|---|---|
+| A "Terminal" | nền tối, mật độ cao | 23/40 | 3 / 2 / 2 |
+| B "Bản tin" | nền sáng kiểu báo tài chính, tiêu đề + chú thích | ≈24/40 | 4 / 4 / 3 |
+| C "Ứng dụng" | thẻ, ưu tiên điện thoại, chạm để đi sâu | 22/40 | 4 / 2 / 4 |
+
+Chấm bằng `critique` của impeccable: thẩm định thiết kế độc lập cho từng hướng, cộng detector và đo trên trình duyệt (tương phản, tràn ngang, vùng chạm, giảm chuyển động). **Chọn B làm khung** vì hợp nhất với người chấm và gần bản tin mẫu của giảng viên. **Ghép mobile của C**: trên điện thoại, dải chỉ số và cảnh báo lên đầu, có thanh tab đáy (Tổng quan, Cảnh báo, Khối ngoại, Thêm). A giữ làm gợi ý cho một chế độ "theo dõi liên tục" sau này.
+
+**Sửa theo kết quả chấm (áp dụng cho cả 8 tab):**
+- Không mượn màu giá cho nghĩa khác: điểm nhịp dùng thang trung tính; trạng thái dữ liệu dùng accent và độ đậm mực; mức cảnh báo dùng ◆◇· thay vì đỏ/vàng; MÔ PHỎNG đổi sang xám đá, không còn lẫn với tím trần.
+- Mọi số có dấu đều kèm ▲▼■, kể cả khối ngoại ròng và đóng góp ngành.
+- Số trong câu nhận định và thông điệp cảnh báo (do Python sinh) chuyển sang định dạng Việt Nam (1.933,61).
+- Biểu đồ chỉ số có đường tham chiếu (Python xuất `index.row.ref`).
+- Màn lỗi có giờ của dữ liệu tốt gần nhất, nút "Tải lại" và "Đọc phương pháp".
+- `role="tabpanel"` chuyển khỏi thẻ `<main>`.
+
+**Lệnh impeccable đã chạy:** `context` (chưa có PRODUCT.md nên viết `PRODUCT.md` và `web/DESIGN_CONTEXT.md` từ yêu cầu của tác giả), `critique` (ba hướng), `detect` (sạch, mã thoát 0), `polish`/`adapt`/`audit`/`optimize` theo các phát hiện trên. Bỏ bước quay ngẫu nhiên `concept-seed` vì ba hướng do tác giả chỉ định.
+
+**Lighthouse mobile** (trang chính, trung vị 5 lần, cùng máy, dữ liệu mô phỏng):
+
+| | Performance | Accessibility | TBT | LCP | First Load JS |
+|---|---|---|---|---|---|
+| Trước (giao diện cũ) | 71 | 100 | 667 ms | 4,0 s | 244 kB |
+| Sau | 76 | 100 | 599 ms | 3,5 s | 117 kB |
+
+Phần cải thiện chính đến từ việc tải lười Recharts và 7 tab phụ. Số đo dao động mạnh trên máy đang chạy bộ ghi (67–80), vì vậy mới lấy trung vị.

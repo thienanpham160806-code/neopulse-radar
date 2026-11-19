@@ -34,6 +34,13 @@ Nội dung nên viết (lấy từ `docs/web_architecture.md`):
 - **Bảo mật:** khóa SSI chỉ ở `.env` máy ghi; Vercel giữ ABLY_API_KEY dạng Secret và chỉ cấp token subscribe-only; web không có đăng nhập; chỉ xuất chỉ báo tổng hợp, không xuất bảng giá/sổ lệnh thô.
 - **Ảnh minh họa:** `docs/img/web_*_sim.png` (dữ liệu MÔ PHỎNG — phải ghi rõ trong chú thích); thay bằng ảnh dữ liệu thật khi đã thu.
 
+## Triển khai sản phẩm: bổ sung về giao diện và thời gian thực (19/11/2026)
+
+- **Kiến trúc thời gian thực:** `record` (`--flush-every 1`) ghi SQLite; `live-relay` đọc chỉ-đọc và phát tin tổng hợp lên Ably kênh `neopulse:live` (tick khoảng 1 giây khi có thay đổi, pulse khoảng 10 giây, status); trình duyệt nhận qua SSE với token chỉ subscribe, hạn 15 phút. Snapshot tĩnh là dự phòng khi mất tin quá 60 giây, ngoài giờ giao dịch hoặc khi lỗi.
+- **Hạn mức Ably Free:** 6.000.000 tin/tháng, tính cả tin giao tới người xem. Ước tính một phiên ≈ 17.600 tin × (1 + 5 người xem) ≈ 106.000; 22 phiên ≈ 2,3 triệu (≈ 39%). Bộ đếm `out/ably_usage.json` tự giãn nhịp khi vượt 70%.
+- **Lý do chọn hướng thiết kế và các phương án đã cân nhắc:** xem `docs/web_architecture.md` mục "Thiết kế giao diện" (bảng điểm ba hướng A/B/C, lý do chọn B kết hợp mobile của C, Lighthouse trước và sau).
+- **Thay đổi bảo mật theo quyết định của tác giả:** bỏ mật khẩu trang (commit `1cad109`). Trang và chỉ báo tổng hợp công khai; khóa Ably vẫn chỉ ở máy chủ, token phía trình duyệt chỉ có quyền subscribe. Không xuất sổ lệnh thô.
+
 ## Tái sử dụng mã nguồn (ghi trong báo cáo, mục Triển khai hoặc Phụ lục)
 
 Có tái sử dụng có chọn lọc từ dự án cá nhân trước của tác giả (invest-system-phase2): font Be Vietnam Pro (SIL OFL), các hàm định dạng số/tiền/ngày (đã bỏ phần màu khuyến nghị mua/bán), nút sáng/tối, danh sách mã tham chiếu cho phân ngành dự phòng, và cách gọi dự phòng Vietcap qua vnstock. Bảng chi tiết (tệp, nguồn, đã sửa gì) ở README mục "Tái sử dụng từ dự án cũ của tác giả". Không dùng mã của đồ án nhóm Kumo_VN_bot. Tính năng mới dựa trên phần tái sử dụng: **Ngành trong phiên** (độ rộng, % bình quân vốn hóa, đóng góp điểm ước lượng) và **RVOL theo thời điểm** (đầu vào cho cảnh báo khối lượng) - xem docs/methodology.md mục 11-12, kể cả giới hạn (đóng góp lệch do chưa free-float; IC chưa kiểm định lại vì mới một phiên).

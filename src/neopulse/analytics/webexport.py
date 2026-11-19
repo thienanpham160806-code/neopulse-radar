@@ -26,7 +26,7 @@ from ..finance.pulse import COMPONENT_NAMES, WEIGHTS
 from ..timeutil import iso_vn, now_vn, to_vn
 from . import alerts as alerting
 from . import validation
-from .explain import template_summary
+from .explain import template_summary, vn_digits
 from .view import SessionView, build_view
 
 SCHEMA_VERSION = 1
@@ -180,7 +180,10 @@ def _index_block(v: SessionView) -> dict:
     if len(v.index):
         ix = v.index.assign(bar=v.index["ts"].dt.floor("1min")).groupby("bar").last().reset_index()
         series = [{"t": _t(x.bar), "value": _r(x.value, 2), "pct_change": _r(x.pct_change, 3)} for x in ix.itertuples()]
-    return {"code": v.index_code, "row": {k: _r(r.get(k)) for k in keys} if r else None, "series": series}
+    row = {k: _r(r.get(k)) for k in keys} if r else None
+    if row and row["value"] is not None and row["change"] is not None:
+        row["ref"] = _r(row["value"] - row["change"], 2)  # tham chiếu = đóng cửa phiên trước, để vẽ đường tham chiếu
+    return {"code": v.index_code, "row": row, "series": series}
 
 
 def _breadth(v: SessionView) -> dict:
@@ -210,7 +213,8 @@ def _alerts(v: SessionView) -> dict:
     order = {s: i for i, s in enumerate(SEVERITIES)}
     a = a.assign(_o=a["severity"].map(order)).sort_values(["_o", "ts"], ascending=[True, False]).head(MAX_ALERTS)
     items = [{"t": _t(r.ts), "symbol": r.symbol, "rule": r.rule, "rule_name": alerting.RULE_NAMES.get(r.rule, r.rule),
-              "severity": r.severity, "value": _r(r.value, 3), "threshold": _r(r.threshold, 3), "message": r.message}
+              "severity": r.severity, "value": _r(r.value, 3), "threshold": _r(r.threshold, 3),
+              "message": vn_digits(r.message)}
              for r in a.itertuples()]
     counts = v.alerts["severity"].value_counts().to_dict()
     return {"total": int(len(v.alerts)), "by_severity": {s: int(counts.get(s, 0)) for s in SEVERITIES},

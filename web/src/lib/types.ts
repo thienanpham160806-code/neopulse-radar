@@ -74,6 +74,8 @@ export interface IndexRow {
   total_volume: Num;
   ad_ratio: Num;
   pct_advancing: Num;
+  /** giá tham chiếu (đóng cửa phiên trước), Python tính */
+  ref?: Num;
 }
 export interface IndexBlock {
   code: string;

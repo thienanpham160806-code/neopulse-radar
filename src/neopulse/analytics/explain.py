@@ -60,6 +60,15 @@ def build_facts(v: SessionView) -> dict:
     return {k: x for k, x in f.items() if x is not None}
 
 
+_SEP_IN_NUMBER = re.compile(r"(?<=\d)[.,](?=\d)")
+
+
+def vn_digits(text: str) -> str:
+    """Đổi định dạng số kiểu Anh (1,933.61) sang kiểu Việt (1.933,61): chỉ đổi dấu nằm GIỮA hai chữ số,
+    nên dấu phẩy câu (luôn có khoảng trắng sau) không bị đụng."""
+    return _SEP_IN_NUMBER.sub(lambda m: "," if m.group(0) == "." else ".", text)
+
+
 def template_summary(v: SessionView) -> list[str]:
     """Danh sách câu nhận định, mỗi câu gắn với số liệu cụ thể."""
     out: list[str] = []
@@ -95,7 +104,7 @@ def template_summary(v: SessionView) -> list[str]:
         hi = v.alerts[v.alerts["severity"] == "CAO"]
         names = ", ".join(hi["symbol"].value_counts().head(5).index) if len(hi) else "không có"
         out.append(f"{len(v.alerts)} cảnh báo trong phiên, {len(hi)} mức CAO (mã: {names}).")
-    return out
+    return [vn_digits(x) for x in out]
 
 
 def numbers_grounded(text: str, facts: dict, tol: float = 0.011) -> tuple[bool, list[str]]:

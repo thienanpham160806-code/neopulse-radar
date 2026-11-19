@@ -50,7 +50,7 @@ def llm_transport(text, status=200):
 def test_template_summary_is_grounded_in_its_own_facts():
     v = V()
     text = " ".join(explain.template_summary(v))
-    assert "64.1" in text and "TCB" in text and "BID" in text
+    assert "64,1" in text and "TCB" in text and "BID" in text   # định dạng số kiểu Việt Nam
     assert explain.numbers_grounded(text, {**explain.build_facts(v), "raw": [1981.02, 22.5, 22510, 85.7, 13, 17, 100]})[0]
     assert not explain.contains_advice(text)
 
@@ -108,3 +108,10 @@ def test_telegram_is_optional_and_never_raises(settings):
     assert send_telegram(s, "hi", transport=httpx.MockTransport(boom)) is False
     msg = format_alert({"ts": "2026-11-13T10:00:00+07:00", "severity": "CAO", "symbol": "VPB", "message": "m"}, simulated=True)
     assert msg.startswith("[MÔ PHỎNG]") and "không phải khuyến nghị" in msg
+
+
+def test_vn_digits_converts_numbers_only():
+    from neopulse.analytics.explain import vn_digits
+    assert vn_digits("VN30 ở 1,933.61 (+0.44%), 18 mã tăng, giá trị 22,426.7 tỷ.") == \
+        "VN30 ở 1.933,61 (+0,44%), 18 mã tăng, giá trị 22.426,7 tỷ."
+    assert vn_digits("Điểm nhịp 58.7/100 - Nghiêng tích cực.") == "Điểm nhịp 58,7/100 - Nghiêng tích cực."

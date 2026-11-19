@@ -65,3 +65,14 @@
 ## 4. Kết quả trên dữ liệu mô phỏng (chỉ xác nhận mã chạy đúng)
 
 Chạy `neopulse simulate --sessions 6 --reset && neopulse validate`. Với seed mặc định: IC(OBI₃, 1 thanh) ngoài mẫu ≈ 0,13; độ thu hồi cảnh báo ≈ 79%, độ chính xác ≈ 86% trên 126 sự kiện cài. Tín hiệu và sự kiện đều do bộ mô phỏng cài sẵn nên các con số này **không nói gì về thị trường thật** và không được trình bày như kết quả nghiên cứu.
+
+### Bổ sung 19/11/2026: giao diện bản tin
+
+| Ca | Kiểm bằng | Kết quả |
+|---|---|---|
+| 8 tab, desktop 1440 và điện thoại 390, sáng/tối: không tràn ngang | puppeteer chụp từng tab | scrollWidth = viewport ở mọi tổ hợp |
+| Màu bảng giá: trần/sàn ưu tiên hơn tăng/giảm; mọi số có dấu có ▲▼■ | vitest `fmt.test.ts` + rà ảnh | đạt |
+| Số kiểu Việt trong câu do Python sinh | pytest `test_vn_digits_converts_numbers_only` | đạt |
+| Trợ năng | Lighthouse mobile | Accessibility 100 |
+| Hiệu năng | Lighthouse mobile, trung vị 5 lần | 71 → 76; First Load JS 244 → 117 kB |
+

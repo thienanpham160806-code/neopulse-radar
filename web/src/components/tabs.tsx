@@ -7,10 +7,7 @@ import {
 } from "recharts";
 import { dash, hm, money, num, pct, ratioPct, signed } from "@/lib/format";
 import type { AlertItem, BookRow, Payload, Severity } from "@/lib/types";
-import { mergeSeries, type LiveState } from "@/lib/live";
-import { SectorCard } from "./SectorCard";
-import { LiveStrip } from "./LiveStrip";
-import { Card, CenterBar, Empty, Gauge, Note, Pill, SEV_TONE, Stat, Td, Th, TOOLTIP_STYLE, signTone } from "./ui";
+import { Card, Empty, Note, SevTag, SignedMoney, Stat, Td, Th, TOOLTIP_STYLE, signTone } from "./ui";
 
 export interface Filters {
   sym: string;
@@ -24,7 +21,7 @@ const gridProps = { strokeDasharray: "3 3", vertical: false } as const;
 function AlertRow({ a }: { a: AlertItem }) {
   return (
     <li className="flex items-start gap-2 border-b border-line py-2 last:border-0">
-      <Pill tone={SEV_TONE[a.severity]}>{a.severity}</Pill>
+      <SevTag sev={a.severity} />
       <div className="min-w-0 flex-1">
         <div className="text-sm"><b>{a.symbol}</b> <span className="text-muted">· {a.rule_name}</span></div>
         <div className="text-xs text-muted">{a.message}</div>
@@ -35,113 +32,6 @@ function AlertRow({ a }: { a: AlertItem }) {
 }
 
 /* ------------------------------------------------------------------ Tổng quan */
-export function Overview({ p, f, live }: { p: Payload; f: Filters; live?: LiveState | null }) {
-  const pulse = p.pulse, ix = p.index?.row, fs = p.foreign?.summary, al = p.alerts;
-  // chỉ dùng pulse trực tiếp khi đúng chỉ số đang xem (relay mặc định tính cho VN30) - CX-008
-  const lp = live?.pulse && live.pulse.index_code === (p.index?.code ?? p.meta.index_code) ? live.pulse : null;
-  const score = lp ? lp.score : pulse?.score ?? null;
-  const label = lp ? lp.label : pulse?.label ?? "";
-  const comps = lp ? lp.comps.map((c) => ({ key: c.k, name: c.n, weight: c.w, value: c.v })) : pulse?.components ?? [];
-  const liveAlerts: AlertItem[] = (lp ? live?.alerts ?? [] : []).map((a) => ({
-    t: a.t, symbol: a.s, rule: a.rule, rule_name: al?.rule_names[a.rule] ?? a.rule, severity: a.sev, message: a.msg,
-    value: null, threshold: null,
-  }));
-  const top = [...liveAlerts, ...(al?.items ?? [])].filter((a) => sevOk(a.severity, f.minSev) && symOk(a.symbol, f.sym)).slice(0, 5);
-  const code = p.index?.code ?? "VN30";
-  const scoreAt = new Map((pulse?.series ?? []).map((r) => [r.t, r.score]));
-  const livePts = live?.points[code] ?? [];
-  const chart = livePts.length
-    ? mergeSeries((pulse?.series ?? []).map((r) => ({ t: r.t, value: r.index })), livePts).map((q) => ({
-        t: q.t.slice(11, 16), index: q.v, score: scoreAt.get(q.t) ?? null,
-      }))
-    : (pulse?.series ?? []).map((r) => ({ t: hm(r.t), index: r.index, score: r.score }));
-  return (
-    <div className="grid grid-cols-1 gap-3">
-      {live?.tick ? <LiveStrip tick={live.tick} /> : null}
-      <div className="grid gap-3 lg:grid-cols-5">
-        <Card title="Điểm nhịp thị trường" className="lg:col-span-2">
-          {score !== null ? (
-            <>
-              <Gauge score={score} label={label} />
-              {lp ? <Note>Điểm nhịp trực tiếp, tính lại khoảng 10 giây một lần.</Note> : null}
-              {!lp && pulse?.sensitivity && pulse.sensitivity.p05 !== null ? (
-                <Note>
-                  Độ nhạy trọng số (±50%): điểm dao động {num(pulse.sensitivity.p05, 1)}–{num(pulse.sensitivity.p95, 1)}; nhãn giữ nguyên trong{" "}
-                  {ratioPct(pulse.sensitivity.label_stability)} số lần thử. Điểm mô tả hiện trạng, không dự báo.
-                </Note>
-              ) : null}
-            </>
-          ) : (
-            <Empty>Chưa đủ thành phần để tính điểm nhịp (cần dữ liệu cho ít nhất một nửa trọng số).</Empty>
-          )}
-        </Card>
-        <Card title={`Cảnh báo nổi bật${lp ? ` · ${lp.n_alerts} trong phiên` : al ? ` · ${al.total} trong phiên` : ""}`} className="lg:col-span-3">
-          {top.length ? (
-            <ul>{top.map((a, i) => <AlertRow key={`${a.t}-${a.symbol}-${a.rule}-${i}`} a={a} />)}</ul>
-          ) : (
-            <Empty>Không có cảnh báo nào ở mức đang lọc.</Empty>
-          )}
-          <Note>Cảnh báo là tín hiệu đáng xem, không phải khuyến nghị mua/bán. Xem đầy đủ ở tab Cảnh báo.</Note>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Stat label={p.index?.code ?? "Chỉ số"} value={num(ix?.value)} sub={pct(ix?.pct_change)} tone={signTone(ix?.pct_change ?? null)} />
-        <Stat label="Tăng / Giảm" value={`${num(ix?.advances, 0)} / ${num(ix?.declines, 0)}`} sub={`A/D = ${signed(ix?.ad_ratio ?? null)} · trần ${num(ix?.n_ceiling, 0)} · sàn ${num(ix?.n_floor, 0)}`} />
-        <Stat label="Giá trị giao dịch" value={money(ix?.total_value)} />
-        <Stat label="Khối ngoại ròng (rổ)" value={money(fs?.net_val ?? null)} tone={signTone(fs?.net_val ?? null)} sub={fs ? `${num(fs.n_net_buy, 0)} mua · ${num(fs.n_net_sell, 0)} bán` : undefined} />
-      </div>
-
-      {pulse?.divergence ? <div role="note" className="rounded-xl border border-warn/40 bg-warn/10 p-3 text-sm text-warn"><b>Phân kỳ chỉ số – độ rộng:</b> {pulse.divergence}</div> : null}
-
-      <SectorCard sectors={p.sectors} live={lp?.sec ?? null} indexCode={p.index?.code ?? p.meta.index_code} />
-
-      <div className="grid gap-3 lg:grid-cols-2">
-        <Card title="Nhận định từ số liệu">
-          <ul className="list-disc space-y-1.5 pl-5 text-sm">{(pulse?.summary ?? []).map((s, i) => <li key={i}>{s}</li>)}</ul>
-          <Note>Câu chữ được dựng từ mẫu câu xác định gắn với số liệu, không phải dự báo.</Note>
-        </Card>
-        <Card title="Thành phần điểm nhịp">
-          <ul className="space-y-2.5">
-            {comps.map((c) => (
-              <li key={c.key}>
-                <div className="mb-1 flex justify-between text-xs">
-                  <span>{c.name} <span className="text-muted">(trọng số {Math.round(c.weight * 100)}%)</span></span>
-                  <span className="tnum font-medium">{signed(c.value)}</span>
-                </div>
-                <CenterBar value={c.value} />
-              </li>
-            ))}
-          </ul>
-          {pulse?.missing.length ? <Note>Thiếu dữ liệu: {pulse.missing.join(", ")} — điểm tính trên các thành phần còn lại.</Note> : null}
-        </Card>
-      </div>
-
-      <Card title="Chỉ số và điểm nhịp theo phút">
-        {chart.length > 1 ? (
-          <div className="h-64 w-full" role="img" aria-label="Đồ thị chỉ số và điểm nhịp theo phút">
-            <ResponsiveContainer>
-              <ComposedChart data={chart} margin={{ left: 0, right: 0, top: 8, bottom: 0 }}>
-                <CartesianGrid {...gridProps} />
-                <XAxis dataKey="t" minTickGap={40} />
-                <YAxis yAxisId="l" domain={["auto", "auto"]} width={52} tickFormatter={(v: number) => num(v, 0)} />
-                <YAxis yAxisId="r" orientation="right" domain={[0, 100]} width={34} />
-                <Tooltip {...TOOLTIP_STYLE} />
-                <ReferenceLine yAxisId="r" y={50} stroke="var(--line)" />
-                <Line yAxisId="l" dataKey="index" name={p.index?.code ?? "Chỉ số"} stroke="var(--accent)" dot={false} strokeWidth={2} isAnimationActive={false} />
-                <Line yAxisId="r" dataKey="score" name="Điểm nhịp" stroke="var(--sim)" dot={false} strokeDasharray="4 3" strokeWidth={2} isAnimationActive={false} connectNulls />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
-        ) : (
-          <Empty>Chưa đủ điểm dữ liệu để vẽ.</Empty>
-        )}
-        <Note>Điểm nhịp nội phiên không gồm thành phần thanh khoản. Trục phải cố định 0–100.</Note>
-      </Card>
-    </div>
-  );
-}
-
 /* ------------------------------------------------------------------ Sổ lệnh */
 type BookKey = keyof BookRow;
 function TreemapCell(props: { x?: number; y?: number; width?: number; height?: number; name?: string; obi?: number | null }) {
@@ -317,7 +207,7 @@ export function Foreign({ p, f }: { p: Payload; f: Filters }) {
               {rows.map((r) => (
                 <tr key={r.symbol} className="border-t border-line">
                   <Td right={false} className="font-semibold">{r.symbol}</Td><Td>{money(r.buy)}</Td><Td>{money(r.sell)}</Td>
-                  <Td className={signTone(r.net)}>{money(r.net)}</Td><Td>{signed(r.net_ratio)}</Td><Td>{ratioPct(r.participation)}</Td><Td>{ratioPct(r.room_used)}</Td>
+                  <Td><SignedMoney value={r.net} /></Td><Td>{signed(r.net_ratio)}</Td><Td>{ratioPct(r.participation)}</Td><Td>{ratioPct(r.room_used)}</Td>
                 </tr>
               ))}
             </tbody>
@@ -371,7 +261,7 @@ export function Alerts({ p, f }: { p: Payload; f: Filters }) {
   return (
     <div className="grid grid-cols-1 gap-3">
       <div className="grid grid-cols-3 gap-3">
-        {SEV_ORDER.map((s) => <Stat key={s} label={s} value={al.by_severity[s] ?? 0} tone={s === "CAO" ? "text-down" : s === "TRUNG BÌNH" ? "text-warn" : "text-muted"} />)}
+        {SEV_ORDER.map((s) => <Stat key={s} label={`${s === "CAO" ? "◆" : s === "TRUNG BÌNH" ? "◇" : "·"} ${s}`} value={al.by_severity[s] ?? 0} tone={s === "THẤP" ? "text-muted" : "text-fg"} />)}
       </div>
       <Card
         title={`${items.length} / ${al.total} cảnh báo`}

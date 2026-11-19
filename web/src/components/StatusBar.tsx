@@ -5,10 +5,11 @@ import { ageSince, formatAge, freshness, type Level } from "@/lib/status";
 import type { Meta } from "@/lib/types";
 
 const DOT: Record<Level, string> = {
-  green: "bg-up",
-  amber: "bg-warn",
-  red: "bg-down",
-  error: "bg-down",
+  // không mượn màu giá (xanh/đỏ/vàng): trạng thái dữ liệu dùng accent, độ đậm của mực và chữ
+  green: "bg-accent",
+  amber: "border-2 border-fg bg-transparent",
+  red: "bg-fg",
+  error: "bg-fg",
   closed: "bg-muted",
   sim: "bg-sim",
   snapshot: "bg-accent",
@@ -30,7 +31,7 @@ export function StatusBar({ meta, nowMs, notice, pollError, live = null, liveNot
   const excluded = meta.n_symbols_excluded;
   return (
     <div className="sticky top-0 z-30 border-b border-line bg-surface/95 backdrop-blur">
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2 text-xs sm:text-sm" role="status" aria-live="polite">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2 text-xs sm:text-sm" role="status" aria-live="polite">
         <span className="flex items-center gap-2 font-semibold">
           <span className={`inline-block h-2.5 w-2.5 rounded-full ${DOT[f.level]}`} aria-hidden />
           {f.label}
@@ -90,22 +91,22 @@ export function StatusBar({ meta, nowMs, notice, pollError, live = null, liveNot
         </span>
       </div>
       {meta.is_simulated || live?.simulated ? (
-        <div className="bg-sim/15 px-4 py-1.5 text-center text-xs font-semibold text-sim sm:text-sm">
+        <div className="border-y border-dashed border-sim bg-surface2 px-4 py-1.5 text-center text-xs font-semibold text-sim sm:text-sm">
           DỮ LIỆU MÔ PHỎNG — mọi con số do bộ giả lập sinh ra để trình diễn, không phản ánh thị trường thật.
         </div>
       ) : null}
       {f.level === "snapshot" ? (
         <div className="bg-accent/10 px-4 py-1.5 text-center text-xs text-accent sm:text-sm">{f.detail}</div>
       ) : f.level === "red" || f.level === "error" ? (
-        <div role="alert" className="bg-down/15 px-4 py-1.5 text-center text-xs text-down sm:text-sm">{f.detail}</div>
+        <div role="alert" className="border-y border-fg bg-surface2 px-4 py-1.5 text-center text-xs font-semibold text-fg sm:text-sm">{f.detail}</div>
       ) : f.level === "closed" && !meta.is_simulated ? (
         <div className="bg-surface2 px-4 py-1.5 text-center text-xs text-muted sm:text-sm">{f.detail}</div>
       ) : f.level === "amber" ? (
-        <div className="bg-warn/15 px-4 py-1.5 text-center text-xs text-warn sm:text-sm">{f.detail}</div>
+        <div className="border-b border-line bg-surface2 px-4 py-1.5 text-center text-xs text-fg sm:text-sm">{f.detail}</div>
       ) : null}
-      {liveNote ? <div role="status" className="bg-warn/15 px-4 py-1.5 text-center text-xs text-warn sm:text-sm">{liveNote}</div> : null}
+      {liveNote ? <div role="status" className="border-b border-line bg-surface2 px-4 py-1.5 text-center text-xs text-fg sm:text-sm">{liveNote}</div> : null}
       {notice ? <div className="bg-surface2 px-4 py-1.5 text-center text-xs text-muted sm:text-sm">{notice}</div> : null}
-      {pollError ? <div role="alert" className="bg-warn/15 px-4 py-1.5 text-center text-xs text-warn sm:text-sm">Không làm mới được: {pollError}. Đang giữ bản dữ liệu gần nhất.</div> : null}
+      {pollError ? <div role="alert" className="border-b border-line bg-surface2 px-4 py-1.5 text-center text-xs text-fg sm:text-sm">Không làm mới được: {pollError}. Đang giữ bản dữ liệu gần nhất.</div> : null}
     </div>
   );
 }

@@ -3,14 +3,25 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Loaded } from "@/lib/data";
-import { dmy } from "@/lib/format";
+import { clock, dmy } from "@/lib/format";
 import type { Severity } from "@/lib/types";
 import { liveForSnapshot, liveMode } from "@/lib/live";
 import { StatusBar } from "./StatusBar";
 import { ThemeToggle } from "./ThemeToggle";
 import { useLive } from "./useLive";
-import { Alerts, Book, Foreign, Futures, Method, Overview, Ranking, Validation, type Filters } from "./tabs";
-import { Empty } from "./ui";
+import { Overview } from "./Overview";
+import dynamic from "next/dynamic";
+import type { Filters } from "./tabs";
+
+// các tab phụ (và Recharts) tải lười khi mở, không nằm trong gói JS của lần tải đầu
+const loading = () => <p className="text-sm text-muted">Đang tải…</p>;
+const Alerts = dynamic(() => import("./tabs").then((m) => m.Alerts), { loading });
+const Book = dynamic(() => import("./tabs").then((m) => m.Book), { loading });
+const Foreign = dynamic(() => import("./tabs").then((m) => m.Foreign), { loading });
+const Futures = dynamic(() => import("./tabs").then((m) => m.Futures), { loading });
+const Method = dynamic(() => import("./tabs").then((m) => m.Method), { loading });
+const Ranking = dynamic(() => import("./tabs").then((m) => m.Ranking), { loading });
+const Validation = dynamic(() => import("./tabs").then((m) => m.Validation), { loading });
 
 const TABS = ["Tổng quan", "Sổ lệnh & thanh khoản", "Khối ngoại", "Phái sinh", "Cảnh báo", "Xếp hạng", "Kiểm chứng & dữ liệu", "Phương pháp & giới hạn"] as const;
 type Tab = (typeof TABS)[number];
@@ -20,6 +31,8 @@ const SLUGS: Record<Tab, string> = {
 };
 const tabFromSlug = (slug: string | null): Tab => TABS.find((t) => SLUGS[t] === slug) ?? "Tổng quan";
 const POLL_MS = 20_000;
+const PRIMARY: Tab[] = ["Tổng quan", "Cảnh báo", "Khối ngoại"];
+const SHORT: Partial<Record<Tab, string>> = { "Tổng quan": "Tổng quan", "Cảnh báo": "Cảnh báo", "Khối ngoại": "Khối ngoại" };
 
 function useNow(): number {
   const [now, setNow] = useState(() => Date.now());
@@ -43,6 +56,8 @@ export function Dashboard({ initial, requestedDate, requestedIndex, initialTab }
     window.history.replaceState(null, "", u);
   };
   const [filters, setFilters] = useState<Filters>({ sym: "", minSev: "TRUNG BÌNH" });
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   useEffect(() => setLoaded(initial), [initial]);
 
@@ -103,100 +118,84 @@ export function Dashboard({ initial, requestedDate, requestedIndex, initialTab }
           simulated: (liveOn.tick ?? liveOn.pulse)?.is_simulated ?? false } : null}
         liveNote={live.available && !mode.live && live.state.lastMsgAt !== null ? `${mode.reason} — đang hiển thị snapshot.` : null}
       />
-      <header className="mx-auto flex max-w-7xl flex-wrap items-end justify-between gap-3 px-4 pb-2 pt-4">
-        <div>
-          <h1 className="flex items-center gap-2 text-xl font-bold tracking-tight sm:text-2xl">
-            <svg viewBox="0 0 32 32" className="h-7 w-7 shrink-0" aria-hidden>
-              <rect width="32" height="32" rx="7" fill="var(--accent)" />
-              <path d="M6 20a10 10 0 0 1 20 0M16 20l5-8" stroke="var(--on-accent)" strokeWidth="3" fill="none" strokeLinecap="round" />
-            </svg>
-            NeoPulse Radar
-          </h1>
-          <p className="text-xs text-muted sm:text-sm">Nhịp thị trường · áp lực sổ lệnh · cảnh báo bất thường nội phiên</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          <label className="flex items-center gap-1.5">
-            <span className="text-muted">Phiên</span>
-            <select
-              aria-label="Chọn phiên giao dịch"
-              className="rounded-md border border-line bg-surface px-2 py-1"
-              value={requestedDate ?? ""}
-              onChange={(e) => go(e.target.value || null, requestedIndex ?? meta.index_code)}
-            >
-              <option value="">Mới nhất{meta.trading_date ? ` (${dmy(meta.trading_date)})` : ""}</option>
-              {dates.map((d) => <option key={d} value={d}>{dmy(d)}</option>)}
-            </select>
-          </label>
-          <label className="flex items-center gap-1.5">
-            <span className="text-muted">Chỉ số</span>
-            <select
-              aria-label="Chọn chỉ số"
-              className="rounded-md border border-line bg-surface px-2 py-1"
-              value={requestedIndex ?? meta.index_code}
-              onChange={(e) => go(requestedDate, e.target.value)}
-            >
-              {(codes.length ? codes : [meta.index_code]).map((c) => <option key={c}>{c}</option>)}
-            </select>
-          </label>
-          <input
-            aria-label="Lọc theo mã"
-            placeholder="Lọc mã…"
-            value={filters.sym}
-            onChange={(e) => setFilters({ ...filters, sym: e.target.value.trim() })}
-            className="w-24 rounded-md border border-line bg-surface px-2 py-1"
-          />
-          <label className="flex items-center gap-1.5">
-            <span className="text-muted">Cảnh báo từ</span>
-            <select
-              aria-label="Ngưỡng mức cảnh báo"
-              className="rounded-md border border-line bg-surface px-2 py-1"
-              value={filters.minSev}
-              onChange={(e) => setFilters({ ...filters, minSev: e.target.value as Severity })}
-            >
-              <option value="CAO">Mức CAO</option>
-              <option value="TRUNG BÌNH">Trung bình trở lên</option>
-              <option value="THẤP">Tất cả</option>
-            </select>
-          </label>
-          <ThemeToggle />
-        </div>
+      <header className="mx-auto max-w-6xl px-4 pt-5 text-center sm:px-6">
+        <h1 className="text-2xl font-bold tracking-tight sm:text-4xl">Bản tin Nhịp Thị Trường</h1>
+        <p className="mt-1 text-sm text-muted">NeoPulse Radar · nhịp thị trường, áp lực sổ lệnh, cảnh báo bất thường trong phiên</p>
       </header>
 
-      <nav aria-label="Các mục" className="border-y border-line bg-bg">
-        <div role="tablist" className="scroll-x mx-auto flex max-w-7xl gap-1 px-4 py-1.5">
-          {TABS.map((t, i) => (
-            <button
-              key={t}
-              id={`tab-${SLUGS[t]}`}
-              role="tab"
-              aria-selected={tab === t}
-              aria-controls="tabpanel"
-              tabIndex={tab === t ? 0 : -1}
-              onClick={() => setTab(t)}
-              onKeyDown={(e) => {
-                // mẫu tablist WAI-ARIA: mũi tên trái/phải chuyển tab, Home/End về đầu/cuối
-                const k = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: TABS.length - 1 }[e.key];
-                if (k === undefined) return;
-                e.preventDefault();
-                const next = TABS[(k + TABS.length) % TABS.length];
-                setTab(next);
-                document.getElementById(`tab-${SLUGS[next]}`)?.focus();
-              }}
-              className={`whitespace-nowrap rounded-full px-3 py-1.5 text-sm ${tab === t ? "bg-accent font-semibold text-on-accent" : "text-muted hover:bg-surface2 hover:text-fg"}`}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
-      </nav>
+      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        <button type="button" onClick={() => setFiltersOpen(!filtersOpen)} aria-expanded={filtersOpen} aria-controls="filters"
+          className="mt-3 flex min-h-10 w-full items-center justify-between rounded-md border border-line bg-surface px-3 text-sm md:hidden">
+          <span>Bộ lọc · {meta.index_code}{requestedDate ? ` · ${dmy(requestedDate)}` : " · mới nhất"}</span><span aria-hidden className="text-muted">{filtersOpen ? "▴" : "▾"}</span>
+        </button>
+          <div id="filters" className={`mt-2 flex-wrap items-center gap-2 text-sm md:mt-3 md:flex md:justify-center ${filtersOpen ? "flex" : "hidden"}`}>
+            <label className="flex items-center gap-1.5">
+              <span className="text-muted">Phiên</span>
+              <select aria-label="Chọn phiên giao dịch" className="min-h-10 rounded-md border border-line bg-surface px-2"
+                value={requestedDate ?? ""} onChange={(e) => go(e.target.value || null, requestedIndex ?? meta.index_code)}>
+                <option value="">Mới nhất{meta.trading_date ? ` (${dmy(meta.trading_date)})` : ""}</option>
+                {dates.map((d) => <option key={d} value={d}>{dmy(d)}</option>)}
+              </select>
+            </label>
+            <label className="flex items-center gap-1.5">
+              <span className="text-muted">Chỉ số</span>
+              <select aria-label="Chọn chỉ số" className="min-h-10 rounded-md border border-line bg-surface px-2"
+                value={requestedIndex ?? meta.index_code} onChange={(e) => go(requestedDate, e.target.value)}>
+                {(codes.length ? codes : [meta.index_code]).map((c) => <option key={c}>{c}</option>)}
+              </select>
+            </label>
+            <input aria-label="Lọc theo mã" placeholder="Lọc mã…" value={filters.sym}
+              onChange={(e) => setFilters({ ...filters, sym: e.target.value.trim() })}
+              className="min-h-10 w-28 rounded-md border border-line bg-surface px-2" />
+            <label className="flex items-center gap-1.5">
+              <span className="text-muted">Cảnh báo từ</span>
+              <select aria-label="Ngưỡng mức cảnh báo" className="min-h-10 rounded-md border border-line bg-surface px-2"
+                value={filters.minSev} onChange={(e) => setFilters({ ...filters, minSev: e.target.value as Severity })}>
+                <option value="CAO">Mức cao</option>
+                <option value="TRUNG BÌNH">Trung bình trở lên</option>
+                <option value="THẤP">Tất cả</option>
+              </select>
+            </label>
+            <ThemeToggle className="min-h-10" />
+          </div>
 
-      <main id="tabpanel" role="tabpanel" aria-labelledby={`tab-${SLUGS[tab]}`} className="mx-auto min-w-0 max-w-7xl px-4 py-4">
+        {/* desktop: mục lục kiểu chuyên mục báo; điện thoại dùng thanh tab đáy */}
+        <nav aria-label="Các mục" className="mt-3 hidden border-y-2 border-fg md:block">
+          <div role="tablist" className="scroll-x flex justify-center gap-1 py-1">
+            {TABS.map((t, i) => (
+              <button key={t} id={`tab-${SLUGS[t]}`} role="tab" aria-selected={tab === t} aria-controls="tabpanel"
+                tabIndex={tab === t ? 0 : -1} onClick={() => setTab(t)}
+                onKeyDown={(e) => {
+                  // mẫu tablist WAI-ARIA: mũi tên trái/phải, Home/End
+                  const k = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: TABS.length - 1 }[e.key];
+                  if (k === undefined) return;
+                  e.preventDefault();
+                  const next = TABS[(k + TABS.length) % TABS.length];
+                  setTab(next);
+                  document.getElementById(`tab-${SLUGS[next]}`)?.focus();
+                }}
+                className={`min-h-10 whitespace-nowrap px-3 text-sm ${tab === t ? "font-bold text-fg underline decoration-2 underline-offset-[10px]" : "text-muted hover:text-fg"}`}>
+                {t}
+              </button>
+            ))}
+          </div>
+        </nav>
+      </div>
+
+      <main className="mx-auto min-w-0 max-w-6xl px-4 pb-28 pt-6 sm:px-6 md:pb-10">
+        <div id="tabpanel" role="tabpanel" aria-labelledby={`tab-${SLUGS[tab]}`}>
+        <h2 className="sr-only md:hidden">{tab}</h2>
         {empty && tab !== "Phương pháp & giới hạn" ? (
-          <Empty>
-            <p className="mb-1 font-medium text-fg">Chưa có dữ liệu để hiển thị</p>
-            {meta.data_status.reason}
-          </Empty>
-        ) : tab === "Tổng quan" ? <Overview p={p} f={filters} live={liveOn} />
+          <div role="alert" className="mx-auto max-w-xl rounded-xl border border-line bg-surface p-6 text-center">
+            <p className="text-lg font-semibold">Chưa có dữ liệu để hiển thị</p>
+            <p className="mt-1 text-sm text-muted">{meta.data_status.reason}</p>
+            {meta.last_update ? <p className="mt-1 text-sm text-muted">Dữ liệu tốt gần nhất: {clock(meta.last_update)} · {dmy(meta.trading_date)}.</p> : null}
+            <div className="mt-4 flex justify-center gap-2">
+              <button onClick={() => window.location.reload()} className="min-h-10 rounded-md bg-accent px-4 font-medium text-on-accent">Tải lại</button>
+              <button onClick={() => setTab("Phương pháp & giới hạn")} className="min-h-10 rounded-md border border-line px-4">Đọc phương pháp</button>
+            </div>
+          </div>
+        ) : tab === "Tổng quan" ? <Overview p={p} f={filters} live={liveOn} onAlerts={() => setTab("Cảnh báo")} />
           : tab === "Sổ lệnh & thanh khoản" ? <Book p={p} f={filters} />
           : tab === "Khối ngoại" ? <Foreign p={p} f={filters} />
           : tab === "Phái sinh" ? <Futures p={p} />
@@ -204,7 +203,28 @@ export function Dashboard({ initial, requestedDate, requestedIndex, initialTab }
           : tab === "Xếp hạng" ? <Ranking p={p} f={filters} />
           : tab === "Kiểm chứng & dữ liệu" ? <Validation p={p} />
           : <Method />}
+        </div>
       </main>
+
+      {/* điện thoại (ghép hướng C): thanh tab đáy 4 mục + "Thêm" mở danh sách các mục còn lại */}
+      <nav aria-label="Điều hướng chính" className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 backdrop-blur md:hidden">
+        {moreOpen ? (
+          <ul className="grid grid-cols-2 gap-1 border-b border-line p-2">
+            {TABS.filter((t) => !PRIMARY.includes(t)).map((t) => (
+              <li key={t}><button onClick={() => { setTab(t); setMoreOpen(false); }} aria-current={tab === t ? "page" : undefined}
+                className={`min-h-11 w-full rounded-md px-2 text-left text-sm ${tab === t ? "bg-surface2 font-semibold" : ""}`}>{t}</button></li>
+            ))}
+          </ul>
+        ) : null}
+        <div className="grid grid-cols-4">
+          {PRIMARY.map((t) => (
+            <button key={t} onClick={() => { setTab(t); setMoreOpen(false); }} aria-current={tab === t ? "page" : undefined}
+              className={`min-h-14 px-1 text-xs ${tab === t ? "font-bold text-accent" : "text-muted"}`}>{SHORT[t] ?? t}</button>
+          ))}
+          <button onClick={() => setMoreOpen(!moreOpen)} aria-expanded={moreOpen}
+            className={`min-h-14 px-1 text-xs ${!PRIMARY.includes(tab) ? "font-bold text-accent" : "text-muted"}`}>Thêm</button>
+        </div>
+      </nav>
 
       <footer className="mx-auto max-w-7xl px-4 pb-8 pt-2 text-xs text-muted">
         <p className="font-medium text-fg">{meta.disclaimer}</p>

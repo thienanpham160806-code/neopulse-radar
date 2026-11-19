@@ -32,6 +32,7 @@ import pandas as pd
 from ..finance import basis as fbasis
 from ..timeutil import iso_vn, now_vn, to_vn
 from . import webexport as wx
+from .explain import vn_digits
 from .view import build_view
 
 log = logging.getLogger(__name__)
@@ -227,7 +228,7 @@ def pulse_payload(v, sent_alerts: set[tuple]) -> dict:
     pending = []
     if len(v.alerts):
         for r in v.alerts.sort_values("ts").itertuples():
-            a = {"t": r.ts.isoformat(timespec="seconds"), "s": r.symbol, "rule": r.rule, "sev": r.severity, "msg": r.message}
+            a = {"t": r.ts.isoformat(timespec="seconds"), "s": r.symbol, "rule": r.rule, "sev": r.severity, "msg": vn_digits(r.message)}
             if alert_key(a) not in sent_alerts:
                 pending.append(a)
     return {"score": _r(p.score, 1) if p else None, "label": p.label if p else "Không đủ dữ liệu", "comps": comps,

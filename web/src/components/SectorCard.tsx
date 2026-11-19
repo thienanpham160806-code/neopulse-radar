@@ -21,13 +21,13 @@ export function SectorCard({ sectors, live, indexCode }: {
   return (
     <Card title={`Ngành trong phiên${live?.length ? " · trực tiếp" : ""}`}>
       <div className="scroll-x">
-        <table className="w-full min-w-[520px] border-collapse text-sm">
+        <table className="w-full border-collapse sm:min-w-[520px] text-sm">
           <thead>
             <tr className="text-xs text-muted">
               <th scope="col" className="px-2 py-1.5 text-left font-medium">Ngành</th>
               <th scope="col" className="px-2 py-1.5 text-right font-medium">Tăng / Giảm</th>
               <th scope="col" className="px-2 py-1.5 text-right font-medium">% bình quân vốn hóa</th>
-              <th scope="col" className="px-2 py-1.5 text-left font-medium">Đóng góp vào {indexCode} (điểm, ước lượng)</th>
+              <th scope="col" className="px-2 py-1.5 text-left font-medium">Đóng góp vào {indexCode} <span className="hidden sm:inline">(điểm, ước lượng)</span></th>
             </tr>
           </thead>
           <tbody>
@@ -45,7 +45,7 @@ export function SectorCard({ sectors, live, indexCode }: {
                   </td>
                   <td className="px-2 py-1.5">
                     <div className="flex items-center gap-2">
-                      <div className="relative h-2 flex-1 rounded bg-surface2" aria-hidden>
+                      <div className="relative hidden h-2 flex-1 rounded bg-surface2 sm:block" aria-hidden>
                         <div className="absolute left-1/2 top-[-2px] h-3 w-px bg-line" />
                         <div
                           className="absolute top-0 h-2 rounded"
