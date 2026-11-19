@@ -18,6 +18,7 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
+from ..finance.rvol import RVOL_SPIKE
 from .anomaly import Z_CAP, Z_THRESHOLD, score_bars
 
 OBI_EXTREME = 0.6
@@ -50,7 +51,8 @@ def detect(bars: pd.DataFrame, cfg: AlertConfig | None = None, source: str = "")
     run = _signed_run_length(b)
     fshare = (b["f_net_val"].abs() / b["val"]).where(b["val"] > 0)
     rules = {
-        "volume_spike": (b["z_vol"] >= cfg.z, b["z_vol"], cfg.z),
+        # có KL TB 20 phiên: so với CÙNG GIỜ các phiên trước (RVOL); không có: z bền vững của KL trong phiên
+        "volume_spike": _volume_rule(b, cfg),
         "spread_blowout": ((b["z_spread"] >= cfg.z) & (b["spread_bps"] >= 2 * min_spread), b["z_spread"], cfg.z),
         "price_jump": (b["z_ret"].abs() >= cfg.z, b["z_ret"], cfg.z),
         "foreign_flow": ((b["z_fnet"].abs() >= cfg.z) & (fshare >= FOREIGN_MIN_SHARE), b["z_fnet"], cfg.z),
@@ -62,7 +64,8 @@ def detect(bars: pd.DataFrame, cfg: AlertConfig | None = None, source: str = "")
         hit = b.loc[mask.fillna(False), ["bar", "trading_date", "symbol", "last", "pct_change"]].copy()
         if hit.empty:
             continue
-        hit["rule"], hit["value"], hit["threshold"] = rule, value[mask.fillna(False)], thr
+        hit["rule"], hit["value"] = rule, value[mask.fillna(False)]
+        hit["threshold"] = thr[mask.fillna(False)] if isinstance(thr, pd.Series) else thr
         frames.append(hit)
     if not frames:
         return pd.DataFrame(columns=cols)
@@ -94,8 +97,20 @@ def _signed_run_length(b: pd.DataFrame) -> pd.Series:
     return length.where(sign != 0, 0)
 
 
+def _volume_rule(b: pd.DataFrame, cfg: AlertConfig):
+    if "rvol_bar" not in b:
+        return b["z_vol"] >= cfg.z, b["z_vol"], cfg.z
+    has = b["rvol_bar"].notna()
+    mask = (has & (b["rvol_bar"] >= RVOL_SPIKE)) | (~has & (b["z_vol"] >= cfg.z))
+    value = b["rvol_bar"].where(has, b["z_vol"])
+    thr = pd.Series(np.where(has, RVOL_SPIKE, cfg.z), index=b.index)
+    return mask, value, thr
+
+
 def _message(r) -> str:
     name = RULE_NAMES[r.rule]
+    if r.rule == "volume_spike" and r.threshold == RVOL_SPIKE:
+        return f"{name}: RVOL = {r.value:.1f} lần mức thường thấy cùng giờ (ngưỡng {RVOL_SPIKE:g})"
     if r.rule == "book_pressure":
         side = "bên MUA dày hơn" if r.value > 0 else "bên BÁN dày hơn"
         return f"{name}: OBI₃ = {r.value:+.2f} ({side}) trong {OBI_PERSIST} thanh liên tiếp"

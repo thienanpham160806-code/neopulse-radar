@@ -31,7 +31,7 @@ neopulse = "neopulse.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-neopulse = ["analytics/templates/*.j2"]
+neopulse = ["analytics/templates/*.j2", "data/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

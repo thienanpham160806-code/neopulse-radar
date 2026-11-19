@@ -254,6 +254,20 @@ def _foreign(v: SessionView) -> dict:
     return {"summary": {k: _r(x, 3) for k, x in s.items()}, "rows": rows}
 
 
+def _sectors(v: SessionView) -> dict:
+    """Ngành trong phiên. Đóng góp điểm là ƯỚC LƯỢNG (vốn hóa = CP niêm yết x giá tham chiếu, không free-float)."""
+    rows = []
+    for r in v.sectors.to_dict("records") if len(v.sectors) else []:
+        rows.append({"sector": r["sector"], "n": r["n"], "n_up": r["n_up"], "n_down": r["n_down"], "n_flat": r["n_flat"],
+                     "pct_cap": _r(r["pct_cap"], 3), "contrib_pts": _r(r["contrib_pts"], 2), "weight": _r(r["weight"], 4),
+                     "symbols": r["symbols"]})
+    ir = v.index_row or {}
+    total = sum(x["contrib_pts"] for x in rows if x["contrib_pts"] is not None) if rows else None
+    return {"rows": rows, "contrib_sum": _r(total, 2), "index_change": _r(ir.get("change"), 2),
+            "note": "Đóng góp điểm là ước lượng: vốn hóa = số CP niêm yết x giá tham chiếu, chưa điều chỉnh free-float "
+                    "và giới hạn tỷ trọng của chỉ số; tổng các ngành có thể lệch thay đổi thật."}
+
+
 def _futures(v: SessionView) -> dict:
     if v.basis.empty:
         return {"available": False, "state": None, "series": []}
@@ -317,7 +331,9 @@ def build_payload(db: Storage, source: str, trading_date: str | None = None, ind
     payload = {
         "meta": meta, "pulse": _pulse(v), "index": _index_block(v), "breadth": _breadth(v), "ranking": _ranking(v),
         "alerts": _alerts(v), "book": _book(v), "foreign": _foreign(v), "futures": _futures(v),
+        "sectors": _sectors(v),
     }
+    meta["rvol"] = {k: (_r(x) if isinstance(x, float) else x) for k, x in v.rvol_meta.items()}
     if extras:
         payload.update(extras)
     return payload

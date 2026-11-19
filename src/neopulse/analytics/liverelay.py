@@ -229,6 +229,8 @@ def pulse_payload(v, sent_alerts: set[tuple]) -> dict:
     return {"score": _r(p.score, 1) if p else None, "label": p.label if p else "Không đủ dữ liệu", "comps": comps,
             "up": movers(False), "down": movers(True), "alerts": pending[:MAX_ALERTS_PER_PULSE],
             "n_alerts": int(len(v.alerts)), "n_pending": len(pending),
+            "sec": [{"n": r["sector"], "p": _r(r["pct_cap"], 2), "c": _r(r["contrib_pts"], 2), "u": int(r["n_up"]),
+                     "d": int(r["n_down"])} for r in (v.sectors.to_dict("records") if len(v.sectors) else [])][:12],
             "index_code": v.index_code}
 
 

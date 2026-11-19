@@ -1,0 +1,244 @@
+{
+ "source": "SSI FastConnect REST /api/v3/data/securitiesByBoard",
+ "fetched": "2026-11-19",
+ "symbols": {
+  "ACB": {
+   "board": "HOSE",
+   "icb_code": "8355",
+   "icb_name": "Ngân hàng",
+   "listed_share": 5804421957.0,
+   "stock_type": "Stock"
+  },
+  "BCM": {
+   "board": "HOSE",
+   "icb_code": "8633",
+   "icb_name": "Bất động sản",
+   "listed_share": 1035000000.0,
+   "stock_type": "Stock"
+  },
+  "BID": {
+   "board": "HOSE",
+   "icb_code": "8355",
+   "icb_name": "Ngân hàng",
+   "listed_share": 7778229473.0,
+   "stock_type": "Stock"
+  },
+  "BSR": {
+   "board": "HOSE",
+   "icb_code": "0533",
+   "icb_name": "Sản xuất và Khai thác dầu khí",
+   "listed_share": 5007299686.0,
+   "stock_type": "Stock"
+  },
+  "BVH": {
+   "board": "HOSE",
+   "icb_code": "8575",
+   "icb_name": "Bảo hiểm nhân thọ",
+   "listed_share": 742322764.0,
+   "stock_type": "Stock"
+  },
+  "CTG": {
+   "board": "HOSE",
+   "icb_code": "8355",
+   "icb_name": "Ngân hàng",
+   "listed_share": 7766944637.0,
+   "stock_type": "Stock"
+  },
+  "FPT": {
+   "board": "HOSE",
+   "icb_code": "9537",
+   "icb_name": "Phần mềm",
+   "listed_share": 1885727648.0,
+   "stock_type": "Stock"
+  },
+  "GAS": {
+   "board": "HOSE",
+   "icb_code": "7573",
+   "icb_name": "Phân phối xăng dầu & khí đốt",
+   "listed_share": 2412949756.0,
+   "stock_type": "Stock"
+  },
+  "GVR": {
+   "board": "HOSE",
+   "icb_code": "1353",
+   "icb_name": "Nhựa, cao su & sợi",
+   "listed_share": 4000000000.0,
+   "stock_type": "Stock"
+  },
+  "HDB": {
+   "board": "HOSE",
+   "icb_code": "8355",
+   "icb_name": "Ngân hàng",
+   "listed_share": 6506859219.0,
+   "stock_type": "Stock"
+  },
+  "HPG": {
+   "board": "HOSE",
+   "icb_code": "1757",
+   "icb_name": "Thép và sản phẩm thép",
+   "listed_share": 8442964520.0,
+   "stock_type": "Stock"
+  },
+  "LPB": {
+   "board": "HOSE",
+   "icb_code": "8355",
+   "icb_name": "Ngân hàng",
+   "listed_share": 2987282100.0,
+   "stock_type": "Stock"
+  },
+  "MBB": {
+   "board": "HOSE",
+   "icb_code": "8355",
+   "icb_name": "Ngân hàng",
+   "listed_share": 9263249895.0,
+   "stock_type": "Stock"
+  },
+  "MCH": {
+   "board": "HOSE",
+   "icb_code": "3577",
+   "icb_name": "Thực phẩm",
+   "listed_share": 1307404949.0,
+   "stock_type": "Stock"
+  },
+  "MSN": {
+   "board": "HOSE",
+   "icb_code": "3577",
+   "icb_name": "Thực phẩm",
+   "listed_share": 1460374611.0,
+   "stock_type": "Stock"
+  },
+  "MWG": {
+   "board": "HOSE",
+   "icb_code": "5379",
+   "icb_name": "Phân phối hàng chuyên dụng",
+   "listed_share": 1477035294.0,
+   "stock_type": "Stock"
+  },
+  "PLX": {
+   "board": "HOSE",
+   "icb_code": "0533",
+   "icb_name": "Sản xuất và Khai thác dầu khí",
+   "listed_share": 1293878081.0,
+   "stock_type": "Stock"
+  },
+  "SAB": {
+   "board": "HOSE",
+   "icb_code": "3533",
+   "icb_name": "Sản xuất bia",
+   "listed_share": 1282562372.0,
+   "stock_type": "Stock"
+  },
+  "SHB": {
+   "board": "HOSE",
+   "icb_code": "8355",
+   "icb_name": "Ngân hàng",
+   "listed_share": 4594200024.0,
+   "stock_type": "Stock"
+  },
+  "SSB": {
+   "board": "HOSE",
+   "icb_code": "8355",
+   "icb_name": "Ngân hàng",
+   "listed_share": 3428800000.0,
+   "stock_type": "Stock"
+  },
+  "SSI": {
+   "board": "HOSE",
+   "icb_code": "8777",
+   "icb_name": "Môi giới chứng khoán",
+   "listed_share": 3003293801.0,
+   "stock_type": "Stock"
+  },
+  "STB": {
+   "board": "HOSE",
+   "icb_code": "8355",
+   "icb_name": "Ngân hàng",
+   "listed_share": 1885215716.0,
+   "stock_type": "Stock"
+  },
+  "TCB": {
+   "board": "HOSE",
+   "icb_code": "8355",
+   "icb_name": "Ngân hàng",
+   "listed_share": 7086240414.0,
+   "stock_type": "Stock"
+  },
+  "TCX": {
+   "board": "HOSE",
+   "icb_code": "8777",
+   "icb_name": "Môi giới chứng khoán",
+   "listed_share": 3329339823.0,
+   "stock_type": "Stock"
+  },
+  "TPB": {
+   "board": "HOSE",
+   "icb_code": "8355",
+   "icb_name": "Ngân hàng",
+   "listed_share": 3190134896.0,
+   "stock_type": "Stock"
+  },
+  "VCB": {
+   "board": "HOSE",
+   "icb_code": "8355",
+   "icb_name": "Ngân hàng",
+   "listed_share": 8355675094.0,
+   "stock_type": "Stock"
+  },
+  "VHM": {
+   "board": "HOSE",
+   "icb_code": "8633",
+   "icb_name": "Bất động sản",
+   "listed_share": 8214824008.0,
+   "stock_type": "Stock"
+  },
+  "VIB": {
+   "board": "HOSE",
+   "icb_code": "8355",
+   "icb_name": "Ngân hàng",
+   "listed_share": 3735386252.0,
+   "stock_type": "Stock"
+  },
+  "VIC": {
+   "board": "HOSE",
+   "icb_code": "8633",
+   "icb_name": "Bất động sản",
+   "listed_share": 7762186429.0,
+   "stock_type": "Stock"
+  },
+  "VJC": {
+   "board": "HOSE",
+   "icb_code": "5751",
+   "icb_name": "Dịch vụ hàng không",
+   "listed_share": 769092961.0,
+   "stock_type": "Stock"
+  },
+  "VNM": {
+   "board": "HOSE",
+   "icb_code": "3577",
+   "icb_name": "Thực phẩm",
+   "listed_share": 2089955445.0,
+   "stock_type": "Stock"
+  },
+  "VPB": {
+   "board": "HOSE",
+   "icb_code": "8355",
+   "icb_name": "Ngân hàng",
+   "listed_share": 10000000000.0,
+   "stock_type": "Stock"
+  },
+  "VPL": {
+   "board": "HOSE",
+   "icb_code": "5755",
+   "icb_name": "Dịch vụ giải trí",
+   "listed_share": 1793300377.0,
+   "stock_type": "Stock"
+  },
+  "VRE": {
+   "board": "HOSE",
+   "icb_code": "8633",
+   "icb_name": "Bất động sản",
+   "listed_share": 2328818410.0,
+   "stock_type": "Stock"
+  }
+ }
+}

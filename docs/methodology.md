@@ -125,3 +125,18 @@ Mặc định dùng mẫu câu xác định dựng từ số liệu. Nếu bật
 - Iglewicz, B., & Hoaglin, D. C. (1993). *How to Detect and Handle Outliers*. ASQC Quality Press.
 - Stoikov, S. (2018). The micro-price: a high-frequency estimator of future prices. *Quantitative Finance*, 18(12), 1959–1966.
 - VPBankS. *NeoAPI Docs* v1.0.0. https://neoinvest.vpbanks.com.vn/neo-openapi/docs/overview (truy cập 14/11/2026).
+
+## 11. Ngành trong phiên — `finance/sectors.py`
+
+Phân ngành theo mã ICB 4 chữ số (chuẩn cũ) do SSI trả trong `securitiesByBoard`, gom về nhóm cấp 1; tài chính tách thành Ngân hàng / Bảo hiểm / Bất động sản / Dịch vụ tài chính. Không có mã ICB thì dùng danh sách tham chiếu (tái sử dụng từ invest-system-phase2).
+
+- % ngành = Σ vốn hóaᵢ·%ᵢ / Σ vốn hóaᵢ, với vốn hóaᵢ = số CP niêm yếtᵢ × giá tham chiếuᵢ.
+- Đóng góp (điểm) = vốn hóaᵢ / Σ vốn hóa rổ × %ᵢ/100 × chỉ số phiên trước.
+
+**Giới hạn:** vốn hóa chưa điều chỉnh free-float và giới hạn tỷ trọng của VN30, nên đóng góp là **ước lượng**. Ví dụ phiên 19/11/2026 lúc 11:29: tổng ước lượng −19,0 điểm so với thay đổi thật −16,3; nhóm Bất động sản (họ Vingroup) bị phóng đại nhiều nhất.
+
+## 12. Khối lượng tương đối theo thời điểm (RVOL) — `finance/rvol.py`
+
+RVOL thanh = KL khớp trong thanh / (KL TB 20 phiên × (f(m₁) − f(m₀))), với f(m) là tỷ lệ khối lượng cả ngày thường đã khớp tới phút giao dịch thứ m. Nhờ vậy so với **cùng thời điểm** của các phiên trước, không so với cả ngày. KL TB 20 phiên lấy từ REST ngày của SSI (`neopulse refdata --refresh`, dự phòng Vietcap qua vnstock). f(m) dùng đường thực nghiệm khi đã có ít nhất 3 phiên ghi trọn, nếu không thì **giả định phân bổ đều theo phút** (bỏ qua hình chữ U và khối lượng ATC: biết là thô).
+
+Cảnh báo "Bùng nổ khối lượng" dùng RVOL thanh ≥ 3 (CAO khi ≥ 6) khi có KL TB 20 phiên; nếu không có thì quay về z bền vững của log khối lượng trong phiên. Lý do: z trong phiên cần ít nhất 20 thanh lịch sử và không biết mức "bình thường" của chính mã đó. Trên dữ liệu thật 19/11/2026 (10:59–11:29, 929 thanh, 30 mã), quy tắc z cũ cho 0 cảnh báo khối lượng, quy tắc RVOL cho 12 (1,29% số thanh, 2 mức CAO). **IC chưa kiểm định lại được** vì mới có một phiên (cần ít nhất 2 phiên để tách trong/ngoài mẫu); cần chạy lại sau khi đủ phiên.

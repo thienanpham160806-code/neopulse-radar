@@ -15,6 +15,8 @@ from ..finance import breadth as fbreadth
 from ..finance import foreign as fforeign
 from ..finance import microstructure as micro
 from ..finance import pulse as fpulse
+from ..finance import rvol as frvol
+from ..finance import sectors as fsectors
 from ..timeutil import LUNCH_END, LUNCH_START, SESSION_OPEN, now_vn
 from . import alerts as alerting
 from . import ranking
@@ -55,6 +57,8 @@ class SessionView:
     basis_state: dict = field(default_factory=dict)
     sigma_pct: float = 1.0
     n_history_sessions: int = 0
+    sectors: pd.DataFrame = field(default_factory=pd.DataFrame)
+    rvol_meta: dict = field(default_factory=dict)
 
     @property
     def is_simulated(self) -> bool:
@@ -86,7 +90,7 @@ def pulse_timeseries(bars: pd.DataFrame, index: pd.DataFrame, sigma_pct: float, 
 
 def build_view(storage, source: str, trading_date: str | None = None, index_code: str = "VN30", *,
                symbols: list[str] | None = None, as_of: pd.Timestamp | None = None, bar_freq: str = "1min",
-               stale_after_s: float = 120.0, order_value: float = 500e6) -> SessionView:
+               stale_after_s: float = 120.0, order_value: float = 500e6, refdata: dict | None = None) -> SessionView:
     dates = storage.trading_dates(source)
     if not dates:
         return SessionView(source, trading_date, index_code,
@@ -156,7 +160,18 @@ def build_view(storage, source: str, trading_date: str | None = None, index_code
     v.foreign = fforeign.foreign_table(v.latest)
     v.foreign_summary = fforeign.foreign_summary(v.foreign)
     v.ranking = ranking.rank_universe(v.latest)
+    # ---- RVOL (so với cùng giờ các phiên trước) làm đầu vào cảnh báo khối lượng; ngành trong phiên
+    if refdata is None:
+        from .refdata import load_refdata
+        refdata = load_refdata(getattr(storage, "path", None))
+    avg, profile, v.rvol_meta = rvol_inputs(storage, source, day, prev_days, refdata)
+    if avg and len(v.bars):
+        v.bars = frvol.add_rvol(v.bars, avg, profile)
     v.alerts = alerting.detect(v.bars, source=source)
+    ir = v.index_row or {}
+    prev = (ir.get("value") - ir.get("change")) if ir.get("value") is not None and ir.get("change") is not None else None
+    v.sectors = fsectors.sector_table(v.latest, refdata.get("reference", {}),
+                                      prev if prev is not None and not pd.isna(prev) else None)
 
     # ---- phái sinh
     if len(futures) and len(index):
@@ -177,3 +192,40 @@ def fmt_money(x: float | None) -> str:
     if a >= 1e6:
         return f"{x / 1e6:,.1f} triệu"
     return f"{x:,.0f}"
+
+
+_RVOL_CACHE: dict[tuple, tuple] = {}
+
+
+def rvol_inputs(storage, source: str, day: str, prev_days: list[str], refdata: dict) -> tuple[dict, object, dict]:
+    """KL trung bình 20 phiên + đường phân bổ KL trong ngày, kèm mô tả nguồn. Lưu cache theo (CSDL, nguồn, phiên).
+
+    KL TB: REST ngày của SSI (refdata) cho nguồn thật; không có thì trung bình các phiên đã ghi trước đó (>= 3 phiên).
+    Đường f(m): thực nghiệm từ >= 3 phiên đã ghi trước đó; không đủ thì giả định phân bổ đều theo phút."""
+    key = (getattr(storage, "path", id(storage)), source, day, tuple(prev_days), bool(refdata.get("avg_volume")))
+    if key in _RVOL_CACHE:
+        return _RVOL_CACHE[key]
+    hist = pd.DataFrame()
+    if prev_days:
+        marks = ", ".join("?" * len(prev_days))
+        rows = storage._con.execute(
+            "SELECT trading_date, symbol, substr(ts, 1, 16) AS m, MAX(total_volume) FROM quotes WHERE source=? "
+            f"AND instrument='stock' AND trading_date IN ({marks}) GROUP BY 1, 2, 3", (source, *prev_days)).fetchall()
+        if rows:
+            hist = pd.DataFrame(rows, columns=["trading_date", "symbol", "m", "total_volume"])
+            hist["bar"] = pd.to_datetime(hist["m"] + ":00+07:00", format="ISO8601").dt.tz_convert("Asia/Ho_Chi_Minh")
+    avg, avg_src = {}, None
+    if source != "sim" and refdata.get("avg_volume"):
+        avg, avg_src = dict(refdata["avg_volume"]), "SSI REST ngày (20 phiên)"
+    elif len(hist):
+        avg = frvol.avg_volume_from_history(hist)
+        avg_src = f"{min(20, hist['trading_date'].nunique())} phiên đã ghi" if avg else None
+    profile = frvol.empirical_profile(hist) if len(hist) else None
+    meta = {"avg_source": avg_src, "n_symbols": len(avg),
+            "profile": "thực nghiệm từ các phiên đã ghi" if profile else "giả định phân bổ đều theo phút",
+            "threshold": frvol.RVOL_SPIKE}
+    out = (avg, profile, meta)
+    if len(_RVOL_CACHE) > 32:
+        _RVOL_CACHE.clear()
+    _RVOL_CACHE[key] = out
+    return out

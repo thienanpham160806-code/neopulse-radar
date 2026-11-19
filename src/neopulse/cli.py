@@ -9,6 +9,7 @@
   validate   báo cáo kiểm chứng tín hiệu + chất lượng dữ liệu
   export     xuất dữ liệu một phiên ra CSV/Parquet
   export-web xuất JSON chỉ báo tổng hợp cho giao diện web (chỉ đọc SQLite)
+  refdata    phân ngành + KL trung bình 20 phiên (REST SSI, dự phòng Vietcap) cho RVOL và ngành trong phiên
   live-relay phát số liệu tổng hợp trực tiếp lên Ably (chỉ đọc SQLite; --dry-run để thử cục bộ)
   publish-static  xuất snapshot tĩnh vào web/public/data/ (+ --deploy lên Vercel) - cách khuyên dùng
   publish    TÙY CHỌN, tốn hạn mức: đẩy JSON lên Vercel Blob theo chu kỳ (--dry-run để thử cục bộ)
@@ -267,6 +268,29 @@ def cmd_publish_static(args, s: Settings) -> int:
     return 0
 
 
+def cmd_refdata(args, s: Settings) -> int:
+    from .analytics import refdata as rd
+    if not args.refresh:
+        d = rd.load_refdata(s.db_path)
+        print(f"refdata: {len(d['reference'])} mã có phân ngành, {len(d['avg_volume'])} mã có KL TB 20 phiên "
+              f"(tạo lúc {d['generated_at'] or 'chưa có - chạy --refresh'})")
+        return 0
+    if not (s.is_live and s.source == "ssi" and s.has_ssi_credentials):
+        print("Cần NEOPULSE_MODE=live, NEOPULSE_SOURCE=ssi và khóa SSI để lấy dữ liệu tham chiếu.")
+        return 2
+    from .data.recorder_ssi import bootstrap_universe
+    from .ssi.client import SsiClient
+    with SsiClient(s) as c:
+        syms = bootstrap_universe(c, s)
+        data = rd.fetch_refdata(c, syms)
+        n_req = c.request_count
+    p = rd.save_refdata(s.db_path, data)
+    srcs = sorted({v["source"] for v in data["avg_volume"].values()})
+    print(f"Đã lưu {p}: {len(data['reference'])} mã phân ngành, {len(data['avg_volume'])}/{len(syms)} mã có KL TB "
+          f"{data['sessions']} phiên (nguồn: {', '.join(srcs) or '—'}); {n_req} request REST.")
+    return 0
+
+
 def cmd_live_relay(args, s: Settings) -> int:
     from .analytics import liverelay as lr
     src = args.source or (s.live_source if s.is_live else "sim")
@@ -357,6 +381,9 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--no-validation", action="store_true", help="bỏ khối kiểm chứng (nhanh hơn)")
     sp.add_argument("--order-value-mn", type=float, default=500.0, help="lệnh giả định đo trượt giá (triệu đồng)")
     sp.set_defaults(fn=cmd_export_web)
+    sp = sub.add_parser("refdata", help="dữ liệu tham chiếu: phân ngành + KL trung bình 20 phiên (REST SSI)")
+    sp.add_argument("--refresh", action="store_true", help="gọi REST SSI để cập nhật (chạy trước phiên)")
+    sp.set_defaults(fn=cmd_refdata)
     sp = sub.add_parser("live-relay", help="phát số liệu tổng hợp lên Ably kênh neopulse:live (chỉ đọc SQLite)")
     sp.add_argument("--source", choices=["neo", "ssi", "sim"], help="mặc định: nguồn thật đang cấu hình, hoặc sim")
     sp.add_argument("--until", default="15:05", help="giờ dừng HH:MM (giờ VN)")
