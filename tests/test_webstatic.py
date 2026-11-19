@@ -162,8 +162,11 @@ def test_no_real_data_tracked_in_git():
     assert all(f.startswith("web/public/sample/") or not f.startswith("web/public/data/") for f in files)
     for f in files:
         if f.endswith(".json") and not f.endswith("index.json"):
-            meta = json.loads((REPO / f).read_text(encoding="utf-8"))["meta"]
-            assert meta["is_simulated"] is True, f"{f} không phải dữ liệu mô phỏng"
+            doc = json.loads((REPO / f).read_text(encoding="utf-8"))
+            if "messages" in doc:  # luồng phát lại cho bản xem trước: mọi tin phải là mô phỏng
+                assert doc["messages"] and all(m["data"]["is_simulated"] is True for m in doc["messages"]), f
+            else:
+                assert doc["meta"]["is_simulated"] is True, f"{f} không phải dữ liệu mô phỏng"
 
 
 def test_primary_index_other_than_vn30_maps_files_by_code(db_path, tmp_path):
