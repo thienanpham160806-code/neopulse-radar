@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyLive, emptyLive, liveMode, MAX_POINTS, mergeSeries, parseLive, type LiveMessage } from "../src/lib/live";
+import { applyLive, emptyLive, liveForSnapshot, liveMode, MAX_POINTS, mergeSeries, parseLive, type LiveMessage } from "../src/lib/live";
 
 // 2026-11-19 (thứ Năm) 10:00 giờ VN
 const T0 = Date.UTC(2026, 10, 19, 3, 0, 0);
@@ -43,15 +43,47 @@ describe("applyLive: thứ tự seq, độ trễ, chuỗi điểm", () => {
     expect(s.dropped).toBe(2);
     expect(s.points.VN30).toHaveLength(1);
   });
-  it("relay khởi động lại (status start hoặc seq lùi hẳn) thì đặt lại seq", () => {
-    let s = applyLive(emptyLive(), tick(900, T0), T0);
-    s = applyLive(s, status(1, T0 + 1000, "start"), T0 + 1000);
+  it("run mới reset dữ liệu; run cũ đến muộn bị bỏ", () => {
+    const first = tick(900, T0);
+    first.data.run = "run1";
+    let s = applyLive(emptyLive(), first, T0);
+    const start = status(1, T0 + 1000, "start");
+    start.data.run = "run2";
+    s = applyLive(s, start, T0 + 1000);
     expect(s.lastSeq).toBe(1);
-    s = applyLive(s, tick(2, T0 + 2000, 1810), T0 + 2000);
+    expect(s.tick).toBeNull();
+    expect(s.points).toEqual({});
+    const second = tick(2, T0 + 2000, 1810);
+    second.data.run = "run2";
+    s = applyLive(s, second, T0 + 2000);
     expect(s.tick?.ix.VN30.v).toBe(1810);
-    let r = applyLive(emptyLive(), tick(500, T0), T0);
-    r = applyLive(r, tick(3, T0 + 1000, 1700), T0 + 1000); // không có tin start nhưng seq lùi > 50
-    expect(r.tick?.ix.VN30.v).toBe(1700);
+    s = applyLive(s, first, T0 + 3000);
+    expect(s.run).toBe("run2");
+    expect(s.tick?.ix.VN30.v).toBe(1810);
+    expect(s.dropped).toBe(1);
+  });
+  it("seq lùi hơn 50 không phải restart khi thiếu run", () => {
+    let s = applyLive(emptyLive(), tick(100, T0), T0);
+    s = applyLive(s, tick(2, T0 - 10_000, 1700), T0 + 10);
+    expect(s.lastSeq).toBe(100);
+    expect(s.tick?.ix.VN30.v).toBe(1800);
+    expect(s.dropped).toBe(1);
+  });
+  it("run mới cần timestamp hợp lệ và mới hơn", () => {
+    const first = tick(100, T0);
+    first.data.run = "run1";
+    const s = applyLive(emptyLive(), first, T0);
+    const bad = tick(1, T0);
+    bad.data.run = "run2";
+    expect(applyLive(s, bad, T0 + 10).run).toBe("run1");
+    bad.data.ts = "invalid";
+    expect(applyLive(s, bad, T0 + 20).run).toBe("run1");
+  });
+  it("start phiên mới trong cùng run xóa dữ liệu phiên trước", () => {
+    const s = applyLive(emptyLive(), tick(1, T0), T0);
+    const next = applyLive(s, status(2, T0 + 1000, "start"), T0 + 1000);
+    expect(next.tick).toBeNull();
+    expect(next.points).toEqual({});
   });
   it("chuỗi điểm trực tiếp giới hạn MAX_POINTS", () => {
     let s = emptyLive();
@@ -94,6 +126,42 @@ describe("liveMode: khi nào hiện TRỰC TIẾP, khi nào quay về snapshot",
   it("relay báo kết thúc phiên -> snapshot", () => {
     const e = applyLive(s, status(2, T0 + 1000, "end"), T0 + 1000);
     expect(liveMode(e, T0 + 2000, true, null).live).toBe(false);
+  });
+  it("pulse vẫn tới không xóa data_gap; data_ok mới phục hồi", () => {
+    let st = applyLive(s, status(2, T0 + 61_000, "data_gap"), T0 + 61_000);
+    const pulse: LiveMessage = { name: "pulse", data: {
+      ts: iso(T0 + 70_000), source: "ssi", is_simulated: false, seq: 3, score: 50, label: "x",
+      comps: [], up: [], down: [], alerts: [], n_alerts: 0, index_code: "VN30",
+    } };
+    st = applyLive(st, pulse, T0 + 70_000);
+    expect(liveMode(st, T0 + 71_000, true, null).live).toBe(false);
+    const ok: LiveMessage = { name: "status", data: { ts: iso(T0 + 72_000), source: "ssi", is_simulated: false, seq: 4, event: "data_ok" } };
+    st = applyLive(st, ok, T0 + 72_000);
+    expect(liveMode(st, T0 + 72_000, true, null).live).toBe(true);
+    pulse.data.data_gap = true;
+    expect(liveMode(applyLive(emptyLive(), pulse, T0 + 70_000), T0 + 71_000, true, null).live).toBe(false);
+  });
+});
+
+describe("liveForSnapshot: không trộn nguồn, phiên hay chỉ số", () => {
+  const meta = { source: "ssi", trading_date: "2026-11-19", index_code: "VN30" };
+  it("khác nguồn/ngày thì giữ snapshot", () => {
+    const s = applyLive(emptyLive(), tick(1, T0), T0);
+    expect(liveForSnapshot(s, { ...meta, source: "sim" })).toBeNull();
+    expect(liveForSnapshot(s, { ...meta, trading_date: "2026-11-18" })).toBeNull();
+    expect(liveForSnapshot(s, meta)?.tick?.ix.VN30.v).toBe(1800);
+  });
+  it("pulse/cảnh báo VN30 không được áp lên VNINDEX", () => {
+    const s = applyLive(emptyLive(), tick(1, T0), T0);
+    const pulse: LiveMessage = { name: "pulse", data: {
+      ts: iso(T0), source: "ssi", is_simulated: false, seq: 2, day: meta.trading_date,
+      score: 12.3, label: "VN30", comps: [], up: [], down: [],
+      alerts: [{ t: iso(T0), s: "AAA", rule: "volume_spike", sev: "CAO", msg: "m" }], n_alerts: 1, index_code: "VN30",
+    } };
+    const st = applyLive(s, pulse, T0);
+    expect(liveForSnapshot(st, { ...meta, index_code: "VNINDEX" })?.pulse).toBeNull();
+    expect(liveForSnapshot(st, { ...meta, index_code: "VNINDEX" })?.alerts).toEqual([]);
+    expect(liveForSnapshot(st, meta)?.pulse?.score).toBe(12.3);
   });
 });
 

@@ -132,6 +132,8 @@ def test_ably_publisher_request_shape_and_no_key_leak(caplog):
     req = seen[0]
     assert req.method == "POST" and req.url.raw_path == b"/channels/neopulse%3Alive/messages"
     assert req.headers["authorization"].startswith("Basic ")
+    import base64
+    assert base64.b64decode(req.headers["x-ably-clientid"]).decode() == "neopulse-relay"
     body = json.loads(req.content)
     assert body["name"] == "tick" and json.loads(body["data"]) == {"a": 1}
     assert FAKE_KEY not in caplog.text and "SeCrEt" not in caplog.text
@@ -252,3 +254,84 @@ def test_cx004_basis_pairs_index_tick_not_later_than_future(tmp_path):
     from neopulse.analytics.webexport import ReadOnlyStorage
     b = lr.basis_snapshot(ReadOnlyStorage(tmp_path / "b.sqlite"), "sim", "2026-11-19")
     assert b is not None and b["b"] == 5.0 and b["s"] == 1800.0
+
+
+
+def test_cx006_relay_switches_to_new_day_when_recorder_starts(tmp_path):
+    """Relay chạy 8:55 khi CSDL chỉ có 18/11; bộ ghi bắt đầu ghi 19/11 -> relay phải phát dữ liệu 19/11."""
+    from datetime import datetime as dt
+
+    path = tmp_path / "d.sqlite"
+    d = Storage(path)
+    d.insert_index([{"ts": "2026-11-18T14:59:00.000+07:00", "trading_date": "2026-11-18", "index_code": "VN30",
+                     "source": "ssi", "value": 1800.0, "pct_change": 0.1}])
+    d.close()
+    c = Clock()
+    clock = {"now": dt(2026, 11, 19, 8, 55, tzinfo=VN_TZ)}
+
+    def sleep(s):
+        c.sleep(s)
+        if clock["now"].hour == 8:                                           # bộ ghi bắt đầu lúc mở cửa
+            clock["now"] = dt(2026, 11, 19, 9, 0, 5, tzinfo=VN_TZ)
+            w = Storage(path)
+            w.insert_index([{"ts": "2026-11-19T09:00:03.000+07:00", "trading_date": "2026-11-19", "index_code": "VN30",
+                             "source": "ssi", "value": 1900.0, "pct_change": 0.5}])
+            w.close()
+    pub = Mem()
+    r = lr.LiveRelay(str(path), "ssi", pub, lr.UsageGuard(tmp_path / "u.json", month="2026-11"),
+                     clock=lambda: clock["now"], mono=c.mono, sleep=sleep)
+    r.run(max_loops=3)
+    ticks = [d for n, d in pub.msgs if n == "tick"]
+    assert ticks[-1]["day"] == "2026-11-19" and ticks[-1]["ix"]["VN30"]["v"] == 1900.0
+    starts = [d.get("day") for n, d in pub.msgs if n == "status" and d.get("event") == "start"]
+    assert starts == [None, "2026-11-19"]
+    assert all(t["day"] == "2026-11-19" for t in ticks)
+    assert len({d["run"] for _, d in pub.msgs}) == 1                         # cùng một mã lần chạy
+
+
+def test_cx006_relay_waits_when_db_has_no_session_yet(tmp_path):
+    path = tmp_path / "e.sqlite"
+    Storage(path).close()
+    pub = Mem()
+    c = Clock()
+    r = lr.LiveRelay(str(path), "ssi", pub, lr.UsageGuard(tmp_path / "u.json", month="2026-11"),
+                     clock=c.now, mono=c.mono, sleep=c.sleep)
+    r.run(max_loops=3)                                                       # không ném lỗi, chỉ chờ
+    assert [n for n, _ in pub.msgs] == ["status", "status"]
+
+
+def test_relay_waits_for_recorder_to_create_db(tmp_path):
+    path = tmp_path / "not-created.sqlite"
+    pub, c = Mem(), Clock()
+
+    def sleep(s):
+        c.sleep(s)
+        if not path.exists():
+            d = Storage(path)
+            d.insert_index([{"ts": "2026-11-13T09:59:59+07:00", "trading_date": "2026-11-13",
+                             "index_code": "VN30", "source": "sim", "value": 1800.0, "pct_change": 0.1}])
+            d.close()
+
+    r = lr.LiveRelay(str(path), "sim", pub, lr.UsageGuard(tmp_path / "u.json"),
+                     clock=c.now, mono=c.mono, sleep=sleep)
+    r.run(max_loops=3)
+    assert any(n == "tick" and d["day"] == "2026-11-13" for n, d in pub.msgs)
+
+
+def test_gap_is_in_every_envelope_and_status_retries_after_failure(db_path, tmp_path):
+    pub = Mem(ok=False)
+    r, c = make(db_path, tmp_path, pub, speed=0)
+    r.clock = lambda: datetime(2026, 11, 13, 14, 50, tzinfo=VN_TZ)
+    from neopulse.analytics.webexport import ReadOnlyStorage
+    db = ReadOnlyStorage(db_path)
+    try:
+        r.check_status(db, "2026-11-13", None)
+        assert r._gap and r._reported_gap is None
+        assert r.envelope({})["data_gap"] is True
+        pub.ok = True
+        c.sleep(60)
+        r.check_status(db, "2026-11-13", None)
+        assert r._reported_gap is True
+        assert any(d.get("event") == "data_gap" for _, d in pub.msgs)
+    finally:
+        db.close()

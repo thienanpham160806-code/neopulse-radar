@@ -36,11 +36,12 @@ function AlertRow({ a }: { a: AlertItem }) {
 /* ------------------------------------------------------------------ Tổng quan */
 export function Overview({ p, f, live }: { p: Payload; f: Filters; live?: LiveState | null }) {
   const pulse = p.pulse, ix = p.index?.row, fs = p.foreign?.summary, al = p.alerts;
-  const lp = live?.pulse ?? null;
+  // chỉ dùng pulse trực tiếp khi đúng chỉ số đang xem (relay mặc định tính cho VN30) - CX-008
+  const lp = live?.pulse && live.pulse.index_code === (p.index?.code ?? p.meta.index_code) ? live.pulse : null;
   const score = lp ? lp.score : pulse?.score ?? null;
   const label = lp ? lp.label : pulse?.label ?? "";
   const comps = lp ? lp.comps.map((c) => ({ key: c.k, name: c.n, weight: c.w, value: c.v })) : pulse?.components ?? [];
-  const liveAlerts: AlertItem[] = (live?.alerts ?? []).map((a) => ({
+  const liveAlerts: AlertItem[] = (lp ? live?.alerts ?? [] : []).map((a) => ({
     t: a.t, symbol: a.s, rule: a.rule, rule_name: al?.rule_names[a.rule] ?? a.rule, severity: a.sev, message: a.msg,
     value: null, threshold: null,
   }));

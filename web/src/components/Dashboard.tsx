@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Loaded } from "@/lib/data";
 import { dmy } from "@/lib/format";
 import type { Severity } from "@/lib/types";
-import { liveMode } from "@/lib/live";
+import { liveForSnapshot, liveMode } from "@/lib/live";
 import { StatusBar } from "./StatusBar";
 import { useLive } from "./useLive";
 import { Alerts, Book, Foreign, Futures, Method, Overview, Ranking, Validation, type Filters } from "./tabs";
@@ -91,7 +91,7 @@ export function Dashboard({ initial, requestedDate, requestedIndex, initialTab }
   const isSnapshot = Boolean(loaded.payload.meta.snapshot_at);
   const live = useLive(!requestedDate); // chỉ khi xem phiên mới nhất
   const mode = liveMode(live.state, now, live.connected, live.error);
-  const liveOn = mode.live ? live.state : null;
+  const liveOn = mode.live ? liveForSnapshot(live.state, loaded.payload.meta) : null;
   useEffect(() => {
     if (requestedDate || isSnapshot) return; // phiên lịch sử và snapshot tĩnh không đổi: không poll
     const tick = () => {
@@ -148,7 +148,7 @@ export function Dashboard({ initial, requestedDate, requestedIndex, initialTab }
               aria-label="Chọn phiên giao dịch"
               className="rounded-md border border-line bg-surface px-2 py-1"
               value={requestedDate ?? ""}
-              onChange={(e) => go(e.target.value || null, requestedIndex)}
+              onChange={(e) => go(e.target.value || null, requestedIndex ?? meta.index_code)}
             >
               <option value="">Mới nhất{meta.trading_date ? ` (${dmy(meta.trading_date)})` : ""}</option>
               {dates.map((d) => <option key={d} value={d}>{dmy(d)}</option>)}

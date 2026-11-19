@@ -84,6 +84,13 @@ def test_vn30f_maturity_third_thursday():
     assert vn30f_maturity("VN30F2512") == "2025-12-18"
     assert vn30f_maturity("vn30f2611") == "2026-11-19"
     assert vn30f_maturity("VN30F2613") is None and vn30f_maturity("HPG") is None
+    # mã KRX hiện hành: F=2025, G=2026; tháng A/B/C = 10/11/12
+    assert vn30f_maturity("41I1GC000") == "2026-12-17"
+    assert vn30f_maturity("41i1gb000") == "2026-11-19"
+    assert vn30f_maturity("41I1G9000") == "2026-09-17"
+    assert vn30f_maturity("41I1F4000") == "2025-04-17"
+    assert vn30f_maturity("41I2GC000") is None  # VN100, không phải VN30
+    assert vn30f_maturity("41I1GD000") is None
 
 
 def test_adapter_output_goes_through_existing_ingestor(tmp_path):

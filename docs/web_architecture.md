@@ -109,3 +109,8 @@ record (--flush-every 1) ──► SQLite ──(chỉ đọc)──► neopulse
 - `/api/ably-token`: chưa đặt `SITE_PASSWORD` thì trả 403 (dữ liệu trực tiếp là thật); chưa có `ABLY_API_KEY` thì 503 (web im lặng dùng snapshot); chưa đăng nhập thì 401 (do middleware).
 - Đặt khóa trên Vercel (tự chạy, không đặt hộ): `cd web && vercel env add ABLY_API_KEY production` (và `preview` nếu muốn thử bản preview).
 - Task Scheduler (`scripts/run_record_session.ps1`) tự chạy `live-relay` song song khi `.env` có `ABLY_API_KEY` (kiểm tra bằng mã thoát, không in giá trị); log ở `out/relay_<ngày>.log`.
+
+
+### Định danh client Ably
+
+Namespace Ably có thể yêu cầu identified client (lỗi 40161). Relay REST gửi header `X-Ably-ClientId` mã hóa base64 cho `neopulse-relay`; token trình duyệt gắn `clientId=neopulse-web`, vẫn chỉ subscribe `neopulse:live`, hạn 15 phút. Không cần nới rule hoặc capability của tài khoản. Kiểm thử thật 19/11/2026 đã xác nhận gửi/nhận probe sau khi bổ sung định danh; HTTP 200 của SSE riêng lẻ chưa đủ chứng minh nhận tin.

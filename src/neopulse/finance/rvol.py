@@ -25,11 +25,27 @@ def linear_profile(minutes: np.ndarray | float) -> np.ndarray:
     return np.clip(np.asarray(minutes, dtype=float) / SESSION_MIN, 0.0, 1.0)
 
 
+def complete_history(history_bars: pd.DataFrame) -> pd.DataFrame:
+    """Giữ từng mã/phiên có đầu, cuối phiên và không mất quá 5 phút giao dịch liên tiếp."""
+    parts = []
+    for _, g in history_bars.dropna(subset=["total_volume"]).groupby(["trading_date", "symbol"]):
+        m = np.sort([trading_minutes_elapsed(t.to_pydatetime()) for t in g["bar"]])
+        if m[0] <= 5 and m[-1] >= SESSION_MIN - 1 and np.diff(m).max(initial=0) <= 5 and g["total_volume"].max() > 0:
+            parts.append(g)
+    return pd.concat(parts) if parts else history_bars.iloc[:0].copy()
+
+
 def empirical_profile(history_bars: pd.DataFrame, min_sessions: int = 3):
     """Đường f(m) thực nghiệm từ các phiên ĐÃ GHI TRỌN trước đó (cột trading_date, symbol, bar, total_volume).
 
     Trả hàm m -> f(m) (nội suy tuyến tính, đơn điệu), hoặc None nếu chưa đủ phiên."""
-    if history_bars.empty or history_bars["trading_date"].nunique() < min_sessions:
+    if history_bars.empty:
+        return None
+    history_bars = complete_history(history_bars)
+    # Mỗi mã phải có đủ phiên, không ghép ba ngày rời rạc của ba mã khác nhau.
+    counts = history_bars.groupby("symbol")["trading_date"].transform("nunique")
+    history_bars = history_bars[counts >= min_sessions]
+    if history_bars.empty:
         return None
     h = history_bars.dropna(subset=["total_volume"]).copy()
     h["m"] = [trading_minutes_elapsed(t.to_pydatetime()) for t in h["bar"]]
@@ -54,8 +70,9 @@ def add_rvol(bars: pd.DataFrame, avg_volume: dict[str, float], profile=None) -> 
         return out.assign(rvol_cum=pd.Series(dtype=float), rvol_bar=pd.Series(dtype=float))
     f = profile or linear_profile
     m1 = np.array([trading_minutes_elapsed(t.to_pydatetime()) for t in out["bar"]])
-    step = out.groupby(["trading_date", "symbol"])["bar"].diff().dt.total_seconds().div(60)
-    m0 = np.clip(m1 - step.fillna(1.0).to_numpy(), 0, None)
+    minutes = pd.Series(m1, index=out.index)
+    m0 = minutes.groupby([out["trading_date"], out["symbol"]]).shift()
+    m0 = m0.fillna(minutes - 1).clip(lower=0).to_numpy()
     avg = out["symbol"].map(lambda s: avg_volume.get(s, np.nan)).astype(float)
     exp_cum = avg * f(m1)
     exp_bar = avg * (f(m1) - f(m0))
@@ -68,6 +85,7 @@ def avg_volume_from_history(history_bars: pd.DataFrame, min_sessions: int = 3, l
     """Dự phòng khi không có REST ngày: KL cả ngày trung bình của tối đa `last_n` phiên đã ghi trước đó (>= 3 phiên)."""
     if history_bars.empty:
         return {}
+    history_bars = complete_history(history_bars)
     daily = history_bars.groupby(["symbol", "trading_date"])["total_volume"].max().reset_index()
     out = {}
     for sym, g in daily.groupby("symbol"):

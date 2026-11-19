@@ -214,6 +214,8 @@ def rvol_inputs(storage, source: str, day: str, prev_days: list[str], refdata: d
         if rows:
             hist = pd.DataFrame(rows, columns=["trading_date", "symbol", "m", "total_volume"])
             hist["bar"] = pd.to_datetime(hist["m"] + ":00+07:00", format="ISO8601").dt.tz_convert("Asia/Ho_Chi_Minh")
+    if len(hist):
+        hist = frvol.complete_history(hist)
     avg, avg_src = {}, None
     if source != "sim" and refdata.get("avg_volume"):
         avg, avg_src = dict(refdata["avg_volume"]), "SSI REST ngày (20 phiên)"

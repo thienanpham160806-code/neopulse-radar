@@ -18,6 +18,7 @@ import base64
 import json
 import logging
 import time as _time
+import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, time
@@ -65,7 +66,10 @@ class AblyPublisher:
         body = {"name": name, "data": json.dumps(data, ensure_ascii=False, separators=(",", ":"))}
         for attempt in range(self._max_retries + 1):
             try:
-                r = self._http.post(self._url, json=body, headers={"Authorization": self._auth})
+                r = self._http.post(self._url, json=body, headers={
+                    "Authorization": self._auth,
+                    "X-Ably-ClientId": base64.b64encode(b"neopulse-relay").decode(),
+                })
             except httpx.HTTPError as e:
                 why = f"lỗi mạng {type(e).__name__}"
             else:
@@ -231,7 +235,7 @@ def pulse_payload(v, sent_alerts: set[tuple]) -> dict:
             "n_alerts": int(len(v.alerts)), "n_pending": len(pending),
             "sec": [{"n": r["sector"], "p": _r(r["pct_cap"], 2), "c": _r(r["contrib_pts"], 2), "u": int(r["n_up"]),
                      "d": int(r["n_down"])} for r in (v.sectors.to_dict("records") if len(v.sectors) else [])][:12],
-            "index_code": v.index_code}
+            "index_code": v.index_code, "day": v.trading_date}
 
 
 # ----------------------------------------------------------------------------- vòng lặp
@@ -258,19 +262,22 @@ class LiveRelay:
         self._sent_alerts: set[tuple] = set()
         self._phase: str | None = None
         self._gap = False
+        self._reported_gap: bool | None = None
         self._fail_streak = 0
         self._next_send_ok = 0.0
         self._replay_t0: float | None = None
         self._replay_base: pd.Timestamp | None = None
+        # mã lần chạy: trình duyệt dùng để phân biệt relay khởi động lại với tin đến muộn (CX-009)
+        self.run_id = uuid.uuid4().hex
 
     # -- tin
     def envelope(self, payload: dict) -> dict:
         self.seq += 1
         return {"ts": iso_vn(self.clock()), "source": self.source, "is_simulated": self.source == "sim",
-                "seq": self.seq, **payload}
+                "run": self.run_id, "seq": self.seq, "data_gap": self._gap, **payload}
 
     def send(self, name: str, payload: dict) -> bool:
-        if self.mono() < self._next_send_ok and name != "status":
+        if self.mono() < self._next_send_ok:
             return False  # đang lùi sau lỗi mạng: bỏ tin tick/pulse cũ, tin sau sẽ thay
         ok = False
         try:
@@ -302,14 +309,18 @@ class LiveRelay:
             self._replay_t0 = self.mono()
         return (self._replay_base + pd.Timedelta(seconds=(self.mono() - self._replay_t0) * self.replay_speed)).isoformat()
 
+    def has_day(self, db, day: str) -> bool:
+        return db._con.execute("SELECT 1 FROM index_ticks WHERE trading_date=? AND source=? LIMIT 1",
+                               (day, self.source)).fetchone() is not None
+
     def tick_payload(self, db, day: str, as_of: str | None) -> dict:
         return {"day": day, "ix": index_snapshot(db, self.source, day, as_of), "basis": basis_snapshot(db, self.source, day, as_of)}
 
     def check_status(self, db, day: str, as_of: str | None) -> None:
         phase = wx.session_phase(self.clock()) if not self.replay_speed else "open"
         if phase != self._phase:
-            self.send("status", {"event": "phase", "phase": phase})
-            self._phase = phase
+            if self.send("status", {"event": "phase", "phase": phase}):
+                self._phase = phase
         if phase != "open":
             return
         last = db._con.execute("SELECT MAX(ts) FROM index_ticks WHERE trading_date=? AND source=?"
@@ -318,12 +329,13 @@ class LiveRelay:
         now = pd.Timestamp(as_of) if as_of else pd.Timestamp(self.clock())
         age = (now - pd.Timestamp(last)).total_seconds() if last else None
         gap = age is None or age > GAP_AFTER_S
-        if gap != self._gap:
-            self.send("status", {"event": "data_gap" if gap else "data_ok", "age_s": _r(age, 0)})
+        self._gap = gap
+        if gap != self._reported_gap:
+            if self.send("status", {"event": "data_gap" if gap else "data_ok", "age_s": _r(age, 0)}):
+                self._reported_gap = gap
             log.log(logging.WARNING if gap else logging.INFO, "Bộ ghi %s (%s)",
                     "KHÔNG ghi mới" if gap else "ghi lại bình thường",
                     "chưa có tick nào hôm nay" if age is None else f"tin mới nhất cách {age:.0f} giây")
-            self._gap = gap
 
     def build_pulse(self, db, day: str, as_of: str | None) -> dict | None:
         t0 = _time.perf_counter()
@@ -334,23 +346,54 @@ class LiveRelay:
             log.warning("build_view lỗi: %s", type(e).__name__)
             return None
         self.stats.build_view_s = _time.perf_counter() - t0
-        if v.status == "no_data":
+        if v.status == "no_data" or v.trading_date != day:
             return None
         return pulse_payload(v, self._sent_alerts)
 
     def run(self, max_loops: int | None = None) -> RelayStats:
         loops = 0
-        db = wx.ReadOnlyStorage(self.db_path)
+        db = None
         try:
-            dates = db.trading_dates(self.source)
-            if not dates:
+            # Bộ ghi có thể chưa tạo CSDL/schema khi relay được khởi động trước lúc mở cửa.
+            while db is None:
+                try:
+                    db = wx.ReadOnlyStorage(self.db_path)
+                    if not db._con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='index_ticks'").fetchone():
+                        db.close()
+                        db = None
+                except FileNotFoundError:
+                    if self.replay_speed:
+                        raise LiveRelayError("Chưa có cơ sở dữ liệu để phát lại.") from None
+                if db is None:
+                    loops += 1
+                    if (self.until and self.clock().time() >= self.until) or (max_loops and loops >= max_loops):
+                        return self.stats
+                    self.sleep(self.tick_every * 5)
+            day = (db._con.execute("SELECT MAX(trading_date) FROM index_ticks WHERE source=?", (self.source,)).fetchone()[0]
+                   if self.replay_speed else None)
+            if day is None and self.replay_speed:
                 raise LiveRelayError(f"Chưa có dữ liệu nguồn '{self.source}'.")
-            day = dates[-1]
             self.send("status", {"event": "start", "day": day})
             next_pulse = 0.0
             while True:
                 t0 = self.mono()
                 f = self.usage.factor()
+                if not self.replay_speed:
+                    # CX-006: relay khởi động 8:55 khi CSDL mới có phiên hôm trước -> chuyển sang phiên hôm nay ngay khi
+                    # bộ ghi có dữ liệu (truy vấn theo chỉ mục, rẻ); đổi phiên thì đặt lại mọi trạng thái của phiên cũ
+                    today = self.clock().date().isoformat()
+                    if day != today and self.has_day(db, today):
+                        day = today
+                        self._last_tick, self._sent_alerts, self._gap = None, set(), False
+                        self._phase, self._reported_gap = None, None
+                        next_pulse = 0.0
+                        self.send("status", {"event": "start", "day": day})
+                if day is None:
+                    loops += 1
+                    if (self.until and self.clock().time() >= self.until) or (max_loops and loops >= max_loops):
+                        break
+                    self.sleep(self.tick_every * 5)  # chưa có phiên nào: chờ bộ ghi
+                    continue
                 as_of = self.as_of(db, day)
                 self.check_status(db, day, as_of)
                 tick = self.tick_payload(db, day, as_of)
@@ -373,7 +416,8 @@ class LiveRelay:
             self.send("status", {"event": "end"})
         finally:
             self.usage.save()
-            db.close()
+            if db is not None:
+                db.close()
             self.pub.close()
         return self.stats
 

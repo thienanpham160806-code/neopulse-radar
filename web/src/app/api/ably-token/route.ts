@@ -27,6 +27,7 @@ export async function GET() {
         keyName,
         timestamp: Date.now(),
         ttl: TTL_MS,
+        clientId: "neopulse-web",
         capability: JSON.stringify({ [CHANNEL]: ["subscribe"] }),
       }),
       cache: "no-store",

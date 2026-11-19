@@ -26,18 +26,32 @@ log = logging.getLogger(__name__)
 LIVE_SOURCE = "ssi"
 
 
-def vn30f_maturity(code: str) -> str | None:
-    """VN30F2612 -> ngày đáo hạn = thứ Năm thứ ba của tháng 12/2026 (quy ước HĐTL chỉ số HNX). Không đúng mẫu -> None."""
-    c = code.upper()
-    if not (c.startswith("VN30F") and len(c) == 9 and c[5:].isdigit()):
-        return None
-    year, month = 2000 + int(c[5:7]), int(c[7:9])
-    if not 1 <= month <= 12:
-        return None
+_KRX_MONTH = {**{str(m): m for m in range(1, 10)}, "A": 10, "B": 11, "C": 12}
+
+
+def _third_thursday(year: int, month: int) -> str:
     first = date(year, month, 1)
     thursdays = [first + timedelta(days=d) for d in range(calendar.monthrange(year, month)[1])
                  if (first + timedelta(days=d)).weekday() == 3]
     return thursdays[2].isoformat()
+
+
+def vn30f_maturity(code: str) -> str | None:
+    """Ngày đáo hạn HĐTL chỉ số VN30 = thứ Năm thứ ba của tháng đáo hạn. Nhận hai kiểu mã:
+    - mã KRX hiện hành (từ 05/2025): 41I1<năm><tháng>000, năm F=2025, G=2026...; tháng 1-9, A=10, B=11, C=12
+      VD 41I1GC000 = tháng 12/2026
+    - mã cũ: VN30FYYMM, VD VN30F2612
+    Không đúng mẫu -> None."""
+    c = code.strip().upper()
+    if len(c) == 9 and c.startswith("41I1") and c.endswith("000"):
+        y, m = c[4], c[5]
+        if not ("A" <= y <= "Z") or m not in _KRX_MONTH:
+            return None
+        return _third_thursday(2020 + (ord(y) - ord("A")), _KRX_MONTH[m])
+    if c.startswith("VN30F") and len(c) == 9 and c[5:].isdigit():
+        year, month = 2000 + int(c[5:7]), int(c[7:9])
+        return _third_thursday(year, month) if 1 <= month <= 12 else None
+    return None
 
 
 def futures_meta(codes: list[str]) -> dict[str, dict]:

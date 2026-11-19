@@ -78,14 +78,38 @@ def test_add_rvol_hand_computed_linear_profile():
 def test_empirical_profile_needs_three_sessions_and_is_monotone():
     rows = []
     for d in ("2026-11-10", "2026-11-11", "2026-11-12"):
-        for t, cum in (("09:30", 200.0), ("11:00", 500.0), ("14:45", 1000.0)):
-            rows.append({"trading_date": d, "symbol": "AAA", "bar": pd.Timestamp(f"{d}T{t}:00+07:00"), "total_volume": cum})
+        for t in pd.date_range(f"{d}T09:00:00+07:00", f"{d}T14:59:00+07:00", freq="1min"):
+            if t.hour == 12 or (t.hour == 11 and t.minute >= 30):
+                continue
+            m = rvol.trading_minutes_elapsed(t.to_pydatetime())
+            cum = np.interp(m, [0, 30, 120, 269], [0, 200, 500, 1000])
+            rows.append({"trading_date": d, "symbol": "AAA", "bar": t, "total_volume": cum})
     h = pd.DataFrame(rows)
     assert rvol.empirical_profile(h[h.trading_date < "2026-11-12"]) is None
     f = rvol.empirical_profile(h)
     assert f(30) == pytest.approx(0.2) and f(120) == pytest.approx(0.5) and f(270) == pytest.approx(1.0)
     assert np.all(np.diff(f(np.arange(0, 271, 10))) >= 0)
     assert rvol.avg_volume_from_history(h) == {"AAA": 1000.0}
+
+
+def test_rvol_bar_excludes_lunch_break():
+    b = _bars(["11:29", "13:00"], [1000.0, 9000.0], [149000.0, 158000.0])
+    assert rvol.add_rvol(b, {"AAA": 270000.0})["rvol_bar"].iloc[-1] == pytest.approx(9.0)
+
+
+def test_partial_sessions_do_not_supply_profile_or_daily_average():
+    rows = []
+    for d in ("2026-11-10", "2026-11-11", "2026-11-12"):
+        for t, cum in (("09:30", 30000.0), ("10:00", 60000.0)):
+            rows.append({"trading_date": d, "symbol": "AAA", "bar": pd.Timestamp(f"{d}T{t}:00+07:00"), "total_volume": cum})
+    h = pd.DataFrame(rows)
+    assert rvol.empirical_profile(h) is None
+    assert rvol.avg_volume_from_history(h) == {}
+
+
+def test_history_with_large_internal_gap_is_not_complete():
+    h = _bars(["09:00", "10:00", "14:59"], [0, 1000, 1000], [0, 1000, 2000])
+    assert rvol.complete_history(h).empty
 
 
 def test_volume_alert_uses_rvol_when_available():

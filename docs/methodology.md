@@ -137,6 +137,8 @@ Phân ngành theo mã ICB 4 chữ số (chuẩn cũ) do SSI trả trong `securit
 
 ## 12. Khối lượng tương đối theo thời điểm (RVOL) — `finance/rvol.py`
 
+Lịch sử dùng cho profile và KL ngày dự phòng được lọc theo từng mã/phiên: có dữ liệu trong 5 phút đầu, tới ít nhất 14:59, khối lượng ngày dương và không có khoảng trống quá 5 phút giao dịch liên tiếp. Đây là tiêu chí độ phủ bảo thủ, không phải xác nhận dữ liệu của sàn đã đầy đủ. Cần ít nhất 3 phiên đạt tiêu chí cho mỗi mã; nếu không đủ thì không dùng các đoạn ghi dở như KL cả ngày. Độ dài thanh RVOL được tính bằng phút giao dịch, loại thời gian nghỉ trưa.
+
 RVOL thanh = KL khớp trong thanh / (KL TB 20 phiên × (f(m₁) − f(m₀))), với f(m) là tỷ lệ khối lượng cả ngày thường đã khớp tới phút giao dịch thứ m. Nhờ vậy so với **cùng thời điểm** của các phiên trước, không so với cả ngày. KL TB 20 phiên lấy từ REST ngày của SSI (`neopulse refdata --refresh`, dự phòng Vietcap qua vnstock). f(m) dùng đường thực nghiệm khi đã có ít nhất 3 phiên ghi trọn, nếu không thì **giả định phân bổ đều theo phút** (bỏ qua hình chữ U và khối lượng ATC: biết là thô).
 
 Cảnh báo "Bùng nổ khối lượng" dùng RVOL thanh ≥ 3 (CAO khi ≥ 6) khi có KL TB 20 phiên; nếu không có thì quay về z bền vững của log khối lượng trong phiên. Lý do: z trong phiên cần ít nhất 20 thanh lịch sử và không biết mức "bình thường" của chính mã đó. Trên dữ liệu thật 19/11/2026 (10:59–11:29, 929 thanh, 30 mã), quy tắc z cũ cho 0 cảnh báo khối lượng, quy tắc RVOL cho 12 (1,29% số thanh, 2 mức CAO). **IC chưa kiểm định lại được** vì mới có một phiên (cần ít nhất 2 phiên để tách trong/ngoài mẫu); cần chạy lại sau khi đủ phiên.
