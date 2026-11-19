@@ -15,8 +15,18 @@ const DOT: Record<Level, string> = {
 };
 
 /** Thanh trạng thái luôn hiện: nguồn · giờ cập nhật · tuổi dữ liệu · số mã tính/loại. */
-export function StatusBar({ meta, nowMs, notice, pollError }: { meta: Meta; nowMs: number; notice: string | null; pollError: string | null }) {
-  const f = freshness(meta, nowMs);
+export interface LiveInfo {
+  ts: string | null;
+  latencyMs: number | null;
+  simulated: boolean;
+}
+
+export function StatusBar({ meta, nowMs, notice, pollError, live = null, liveNote = null }: {
+  meta: Meta; nowMs: number; notice: string | null; pollError: string | null; live?: LiveInfo | null; liveNote?: string | null;
+}) {
+  const f = live
+    ? { level: "green" as Level, label: "TRỰC TIẾP", detail: "", ageSeconds: null }
+    : freshness(meta, nowMs);
   const excluded = meta.n_symbols_excluded;
   return (
     <div className="sticky top-0 z-30 border-b border-line bg-surface/95 backdrop-blur">
@@ -29,7 +39,18 @@ export function StatusBar({ meta, nowMs, notice, pollError }: { meta: Meta; nowM
           <span className="text-muted">Nguồn: </span>
           <b className={meta.is_simulated ? "text-sim" : ""}>{meta.source_label}</b>
         </span>
-        {meta.snapshot_at ? (
+        {live ? (
+          <>
+            <span className="tnum">
+              <span className="text-muted">Tin lúc: </span>
+              {clock(live.ts)} <span className="text-muted">(giờ VN)</span>
+            </span>
+            <span className="tnum">
+              <span className="text-muted">Độ trễ: </span>
+              {live.latencyMs === null ? "—" : `${(live.latencyMs / 1000).toFixed(1)} giây`}
+            </span>
+          </>
+        ) : meta.snapshot_at ? (
           <>
             <span className="tnum">
               <span className="text-muted">Snapshot lúc: </span>
@@ -68,7 +89,7 @@ export function StatusBar({ meta, nowMs, notice, pollError }: { meta: Meta; nowM
           {meta.n_sessions}
         </span>
       </div>
-      {meta.is_simulated ? (
+      {meta.is_simulated || live?.simulated ? (
         <div className="bg-sim/15 px-4 py-1.5 text-center text-xs font-semibold text-sim sm:text-sm">
           DỮ LIỆU MÔ PHỎNG — mọi con số do bộ giả lập sinh ra để trình diễn, không phản ánh thị trường thật.
         </div>
@@ -82,6 +103,7 @@ export function StatusBar({ meta, nowMs, notice, pollError }: { meta: Meta; nowM
       ) : f.level === "amber" ? (
         <div className="bg-warn/15 px-4 py-1.5 text-center text-xs text-warn sm:text-sm">{f.detail}</div>
       ) : null}
+      {liveNote ? <div role="status" className="bg-warn/15 px-4 py-1.5 text-center text-xs text-warn sm:text-sm">{liveNote}</div> : null}
       {notice ? <div className="bg-surface2 px-4 py-1.5 text-center text-xs text-muted sm:text-sm">{notice}</div> : null}
       {pollError ? <div role="alert" className="bg-warn/15 px-4 py-1.5 text-center text-xs text-warn sm:text-sm">Không làm mới được: {pollError}. Đang giữ bản dữ liệu gần nhất.</div> : null}
     </div>

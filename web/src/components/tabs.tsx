@@ -7,6 +7,8 @@ import {
 } from "recharts";
 import { dash, hm, money, num, pct, ratioPct, signed } from "@/lib/format";
 import type { AlertItem, BookRow, Payload, Severity } from "@/lib/types";
+import { mergeSeries, type LiveState } from "@/lib/live";
+import { LiveStrip } from "./LiveStrip";
 import { Card, CenterBar, Empty, Gauge, Note, Pill, SEV_TONE, Stat, Td, Th, TOOLTIP_STYLE, signTone } from "./ui";
 
 export interface Filters {
@@ -32,17 +34,35 @@ function AlertRow({ a }: { a: AlertItem }) {
 }
 
 /* ------------------------------------------------------------------ Tổng quan */
-export function Overview({ p, f }: { p: Payload; f: Filters }) {
+export function Overview({ p, f, live }: { p: Payload; f: Filters; live?: LiveState | null }) {
   const pulse = p.pulse, ix = p.index?.row, fs = p.foreign?.summary, al = p.alerts;
-  const top = (al?.items ?? []).filter((a) => sevOk(a.severity, f.minSev) && symOk(a.symbol, f.sym)).slice(0, 5);
+  const lp = live?.pulse ?? null;
+  const score = lp ? lp.score : pulse?.score ?? null;
+  const label = lp ? lp.label : pulse?.label ?? "";
+  const comps = lp ? lp.comps.map((c) => ({ key: c.k, name: c.n, weight: c.w, value: c.v })) : pulse?.components ?? [];
+  const liveAlerts: AlertItem[] = (live?.alerts ?? []).map((a) => ({
+    t: a.t, symbol: a.s, rule: a.rule, rule_name: al?.rule_names[a.rule] ?? a.rule, severity: a.sev, message: a.msg,
+    value: null, threshold: null,
+  }));
+  const top = [...liveAlerts, ...(al?.items ?? [])].filter((a) => sevOk(a.severity, f.minSev) && symOk(a.symbol, f.sym)).slice(0, 5);
+  const code = p.index?.code ?? "VN30";
+  const scoreAt = new Map((pulse?.series ?? []).map((r) => [r.t, r.score]));
+  const livePts = live?.points[code] ?? [];
+  const chart = livePts.length
+    ? mergeSeries((pulse?.series ?? []).map((r) => ({ t: r.t, value: r.index })), livePts).map((q) => ({
+        t: q.t.slice(11, 16), index: q.v, score: scoreAt.get(q.t) ?? null,
+      }))
+    : (pulse?.series ?? []).map((r) => ({ t: hm(r.t), index: r.index, score: r.score }));
   return (
     <div className="grid grid-cols-1 gap-3">
+      {live?.tick ? <LiveStrip tick={live.tick} /> : null}
       <div className="grid gap-3 lg:grid-cols-5">
         <Card title="Điểm nhịp thị trường" className="lg:col-span-2">
-          {pulse && pulse.score !== null ? (
+          {score !== null ? (
             <>
-              <Gauge score={pulse.score} label={pulse.label} />
-              {pulse.sensitivity && pulse.sensitivity.p05 !== null ? (
+              <Gauge score={score} label={label} />
+              {lp ? <Note>Điểm nhịp trực tiếp, tính lại khoảng 10 giây một lần.</Note> : null}
+              {!lp && pulse?.sensitivity && pulse.sensitivity.p05 !== null ? (
                 <Note>
                   Độ nhạy trọng số (±50%): điểm dao động {num(pulse.sensitivity.p05, 1)}–{num(pulse.sensitivity.p95, 1)}; nhãn giữ nguyên trong{" "}
                   {ratioPct(pulse.sensitivity.label_stability)} số lần thử. Điểm mô tả hiện trạng, không dự báo.
@@ -53,7 +73,7 @@ export function Overview({ p, f }: { p: Payload; f: Filters }) {
             <Empty>Chưa đủ thành phần để tính điểm nhịp (cần dữ liệu cho ít nhất một nửa trọng số).</Empty>
           )}
         </Card>
-        <Card title={`Cảnh báo nổi bật${al ? ` · ${al.total} trong phiên` : ""}`} className="lg:col-span-3">
+        <Card title={`Cảnh báo nổi bật${lp ? ` · ${lp.n_alerts} trong phiên` : al ? ` · ${al.total} trong phiên` : ""}`} className="lg:col-span-3">
           {top.length ? (
             <ul>{top.map((a, i) => <AlertRow key={`${a.t}-${a.symbol}-${a.rule}-${i}`} a={a} />)}</ul>
           ) : (
@@ -79,7 +99,7 @@ export function Overview({ p, f }: { p: Payload; f: Filters }) {
         </Card>
         <Card title="Thành phần điểm nhịp">
           <ul className="space-y-2.5">
-            {(pulse?.components ?? []).map((c) => (
+            {comps.map((c) => (
               <li key={c.key}>
                 <div className="mb-1 flex justify-between text-xs">
                   <span>{c.name} <span className="text-muted">(trọng số {Math.round(c.weight * 100)}%)</span></span>
@@ -94,10 +114,10 @@ export function Overview({ p, f }: { p: Payload; f: Filters }) {
       </div>
 
       <Card title="Chỉ số và điểm nhịp theo phút">
-        {pulse && pulse.series.length > 1 ? (
+        {chart.length > 1 ? (
           <div className="h-64 w-full" role="img" aria-label="Đồ thị chỉ số và điểm nhịp theo phút">
             <ResponsiveContainer>
-              <ComposedChart data={pulse.series.map((r) => ({ ...r, t: hm(r.t) }))} margin={{ left: 0, right: 0, top: 8, bottom: 0 }}>
+              <ComposedChart data={chart} margin={{ left: 0, right: 0, top: 8, bottom: 0 }}>
                 <CartesianGrid {...gridProps} />
                 <XAxis dataKey="t" minTickGap={40} />
                 <YAxis yAxisId="l" domain={["auto", "auto"]} width={52} tickFormatter={(v: number) => num(v, 0)} />
@@ -105,7 +125,7 @@ export function Overview({ p, f }: { p: Payload; f: Filters }) {
                 <Tooltip {...TOOLTIP_STYLE} />
                 <ReferenceLine yAxisId="r" y={50} stroke="var(--line)" />
                 <Line yAxisId="l" dataKey="index" name={p.index?.code ?? "Chỉ số"} stroke="var(--accent)" dot={false} strokeWidth={2} isAnimationActive={false} />
-                <Line yAxisId="r" dataKey="score" name="Điểm nhịp" stroke="var(--sim)" dot={false} strokeDasharray="4 3" strokeWidth={2} isAnimationActive={false} />
+                <Line yAxisId="r" dataKey="score" name="Điểm nhịp" stroke="var(--sim)" dot={false} strokeDasharray="4 3" strokeWidth={2} isAnimationActive={false} connectNulls />
               </ComposedChart>
             </ResponsiveContainer>
           </div>

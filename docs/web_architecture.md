@@ -94,3 +94,18 @@ Sau phiên:
 2. `vercel env ls` trong `web/` xác nhận có `SITE_PASSWORD` (production).
 3. `neopulse publish-static --source ssi --deploy`.
 4. Mở URL trên điện thoại → nhập mật khẩu → thanh trạng thái phải ghi *SSI FastConnect (dữ liệu thật)* và *Snapshot cuối phiên*.
+
+## Chế độ TRỰC TIẾP qua Ably (tùy chọn, snapshot vẫn là dự phòng)
+
+```
+record (--flush-every 1) ──► SQLite ──(chỉ đọc)──► neopulse live-relay ──REST──► Ably kênh neopulse:live ──SSE──► trình duyệt
+                                                                                        ▲ token chỉ subscribe, 15 phút
+                                                                       /api/ably-token (Vercel, sau mật khẩu)
+```
+
+- `neopulse live-relay --source ssi --until 15:05` gửi `tick` khoảng 1 giây (chỉ khi đổi; tin thật 588 B), `pulse` khoảng 10 giây (8 × thời gian `build_view` đo thật 0,65 s, kẹp 10–30 giây; tin thật 2,9 KB) và `status` (bắt đầu/kết thúc/đổi pha/mất dữ liệu > 60 giây). Mỗi tin có `ts`, `source`, `is_simulated`, `seq`. Chỉ có số liệu tổng hợp.
+- Hạn mức Free 6.000.000 tin/tháng tính cả tin giao tới người xem: `out/ably_usage.json` ước tính = đã gửi × (1 + người xem, mặc định 5). Vượt 70% thì giãn nhịp ×5. Ước tính một phiên: khoảng 16.000 tick + 1.600 pulse ≈ 17.600 tin × 6 ≈ 106.000; 22 phiên ≈ 2,3 triệu (khoảng 39%).
+- Trình duyệt không dùng SDK: `EventSource` tới `https://realtime.ably.io/sse` với token chỉ subscribe. Gói `ably` 2.30 không qua được SWC của Next 15 (lỗi `'super' keyword outside a method`), nên không dùng. Mất tin > 60 giây, ngoài giờ, lỗi kết nối hoặc relay báo kết thúc thì thanh trạng thái quay về "Snapshot lúc …".
+- `/api/ably-token`: chưa đặt `SITE_PASSWORD` thì trả 403 (dữ liệu trực tiếp là thật); chưa có `ABLY_API_KEY` thì 503 (web im lặng dùng snapshot); chưa đăng nhập thì 401 (do middleware).
+- Đặt khóa trên Vercel (tự chạy, không đặt hộ): `cd web && vercel env add ABLY_API_KEY production` (và `preview` nếu muốn thử bản preview).
+- Task Scheduler (`scripts/run_record_session.ps1`) tự chạy `live-relay` song song khi `.env` có `ABLY_API_KEY` (kiểm tra bằng mã thoát, không in giá trị); log ở `out/relay_<ngày>.log`.

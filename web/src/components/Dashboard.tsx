@@ -5,7 +5,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Loaded } from "@/lib/data";
 import { dmy } from "@/lib/format";
 import type { Severity } from "@/lib/types";
+import { liveMode } from "@/lib/live";
 import { StatusBar } from "./StatusBar";
+import { useLive } from "./useLive";
 import { Alerts, Book, Foreign, Futures, Method, Overview, Ranking, Validation, type Filters } from "./tabs";
 import { Empty } from "./ui";
 
@@ -87,6 +89,9 @@ export function Dashboard({ initial, requestedDate, requestedIndex, initialTab }
   }, [requestedDate, requestedIndex]);
 
   const isSnapshot = Boolean(loaded.payload.meta.snapshot_at);
+  const live = useLive(!requestedDate); // chỉ khi xem phiên mới nhất
+  const mode = liveMode(live.state, now, live.connected, live.error);
+  const liveOn = mode.live ? live.state : null;
   useEffect(() => {
     if (requestedDate || isSnapshot) return; // phiên lịch sử và snapshot tĩnh không đổi: không poll
     const tick = () => {
@@ -116,7 +121,15 @@ export function Dashboard({ initial, requestedDate, requestedIndex, initialTab }
   const empty = meta.data_status.state === "error" || !p.pulse;
   return (
     <>
-      <StatusBar meta={meta} nowMs={now} notice={loaded.notice} pollError={pollError} />
+      <StatusBar
+        meta={meta}
+        nowMs={now}
+        notice={loaded.notice}
+        pollError={pollError}
+        live={liveOn ? { ts: (liveOn.tick ?? liveOn.pulse ?? liveOn.status)?.ts ?? null, latencyMs: liveOn.latencyMs,
+          simulated: (liveOn.tick ?? liveOn.pulse)?.is_simulated ?? false } : null}
+        liveNote={live.available && !mode.live && live.state.lastMsgAt !== null ? `${mode.reason} — đang hiển thị snapshot.` : null}
+      />
       <header className="mx-auto flex max-w-7xl flex-wrap items-end justify-between gap-3 px-4 pb-2 pt-4">
         <div>
           <h1 className="flex items-center gap-2 text-xl font-bold tracking-tight sm:text-2xl">
@@ -215,7 +228,7 @@ export function Dashboard({ initial, requestedDate, requestedIndex, initialTab }
             <p className="mb-1 font-medium text-fg">Chưa có dữ liệu để hiển thị</p>
             {meta.data_status.reason}
           </Empty>
-        ) : tab === "Tổng quan" ? <Overview p={p} f={filters} />
+        ) : tab === "Tổng quan" ? <Overview p={p} f={filters} live={liveOn} />
           : tab === "Sổ lệnh & thanh khoản" ? <Book p={p} f={filters} />
           : tab === "Khối ngoại" ? <Foreign p={p} f={filters} />
           : tab === "Phái sinh" ? <Futures p={p} />

@@ -117,3 +117,20 @@ html {
     transition: none !important;
   }
 }
+
+/* Nháy nền khi số trực tiếp đổi: 500ms; bị tắt khi người dùng chọn giảm chuyển động (quy tắc reduced-motion ở trên) */
+@keyframes flash-up {
+  from { background-color: color-mix(in srgb, var(--up) 28%, transparent); }
+  to { background-color: transparent; }
+}
+@keyframes flash-down {
+  from { background-color: color-mix(in srgb, var(--down) 28%, transparent); }
+  to { background-color: transparent; }
+}
+@keyframes flash-flat {
+  from { background-color: color-mix(in srgb, var(--warn) 24%, transparent); }
+  to { background-color: transparent; }
+}
+.flash-up { animation: flash-up 500ms ease-out; }
+.flash-down { animation: flash-down 500ms ease-out; }
+.flash-flat { animation: flash-flat 500ms ease-out; }
