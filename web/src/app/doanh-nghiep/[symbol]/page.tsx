@@ -4,7 +4,8 @@ import { dmy, num, ratioPct } from "@/lib/format";
 import { dmyTime } from "@/lib/fmt";
 import { CompanyLink } from "@/components/CompanyLink";
 import { CompanyPriceChart } from "@/components/CompanyCharts";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { SiteHeader } from "@/components/SiteHeader";
+
 import { Card, Note, Stat } from "@/components/ui";
 export const dynamic = "force-dynamic";
 
@@ -24,7 +25,7 @@ const ratioRows: [string, string, string][] = [
 const fmt = (v: number | null | undefined, unit = "") => v == null ? "—" : unit === "%" ? ratioPct(v, 1) : `${num(v, 1)}${unit ? ` ${unit}` : ""}`;
 function DataTable({ years, rows, caption }: { years: string[]; rows: { label: string; values: (number | null)[] }[]; caption: string }) {
   return <div className="scroll-x"><table className="w-full text-sm"><caption className="mb-3 text-left text-xs text-muted">{caption}</caption>
-    <thead><tr className="border-b-2 border-fg"><th scope="col" className="min-w-48 py-2 text-left">Chỉ tiêu</th>{years.map((y) => <th key={y} scope="col" className="min-w-24 px-3 py-2 text-right">{y}</th>)}</tr></thead>
+    <thead><tr className="border-b border-line"><th scope="col" className="min-w-48 py-2 text-left">Chỉ tiêu</th>{years.map((y) => <th key={y} scope="col" className="min-w-24 px-3 py-2 text-right">{y}</th>)}</tr></thead>
     <tbody>{rows.map((r) => <tr key={r.label} className="border-b border-line"><th scope="row" className="py-3 text-left font-normal">{r.label}</th>{r.values.map((v, i) => <td key={i} className="tnum px-3 py-3 text-right">{num(v, 1)}</td>)}</tr>)}</tbody>
   </table>{!rows.length ? <p className="py-4 text-muted">Chưa có số liệu cho phần này.</p> : null}</div>;
 }
@@ -35,14 +36,13 @@ export default async function CompanyPage({ params }: { params: Promise<{ symbol
   if (!p) {
     const entries = await companyIndex();
     const e = entries.find((r) => r.symbol === symbol);
-    return <main className="mx-auto max-w-2xl px-4 py-12"><Link href="/doanh-nghiep" className="text-accent underline">← Danh sách doanh nghiệp</Link>
-      <h1 className="mt-8 text-3xl font-bold">{e?.name ?? symbol}</h1><p className="mt-4 text-muted">Hồ sơ doanh nghiệp này chưa được cập nhật. Chưa có đủ dữ liệu để hiển thị báo cáo; bạn có thể xem các hồ sơ khác trong danh sách.</p></main>;
+    return <><SiteHeader area="company" crumbs={[{ label: "Doanh nghiệp", href: "/doanh-nghiep" }, { label: symbol }]} /><main className="mx-auto max-w-2xl px-4 py-12"><Link href="/doanh-nghiep" className="text-accent underline">← Danh sách doanh nghiệp</Link>
+      <h1 className="mt-8 text-3xl font-bold">{e?.name ?? symbol}</h1><p className="mt-4 text-muted">Hồ sơ doanh nghiệp này chưa được cập nhật. Chưa có đủ dữ liệu để hiển thị báo cáo; bạn có thể xem các hồ sơ khác trong danh sách.</p></main></>;
   }
   const latest = p.years.at(-1), r = latest ? p.ratios[latest] ?? {} : {};
   const ratios = ratioRows.filter(([key]) => p.years.some((y) => p.ratios[y]?.[key] != null));
-  return <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
-    <nav aria-label="Đường dẫn" className="mb-8 flex flex-wrap items-center justify-between gap-4 text-sm"><div className="flex gap-4"><Link className="text-accent underline" href="/">← Thị trường</Link><Link className="text-accent underline" href="/doanh-nghiep">Doanh nghiệp</Link></div><ThemeToggle /></nav>
-    <header className="border-b-2 border-fg pb-6">
+  return <><SiteHeader area="company" crumbs={[{ label: "Doanh nghiệp", href: "/doanh-nghiep" }, { label: p.symbol }]} /><div className="mx-auto max-w-6xl px-4 pb-8 sm:px-6">
+    <header className="rounded-3xl bg-surface p-6 shadow-sm sm:p-8">
       <p className="text-xs font-semibold uppercase tracking-widest text-muted">NeoPulse · Hồ sơ phân tích doanh nghiệp</p>
       <div className="mt-4 flex flex-wrap items-baseline justify-between gap-4"><div><p className="text-sm text-muted">{p.profile.exchange ?? "—"} · {p.profile.industry ?? "Chưa có phân ngành"}</p><h1 className="mt-1 text-4xl font-bold sm:text-6xl">{p.symbol}</h1><p className="mt-2 text-xl">{p.profile.name ?? p.symbol}</p></div>
         <div className="text-right"><p className="tnum text-3xl font-semibold">{num(p.price.last, 0)} <span className="text-sm font-normal text-muted">đồng/CP</span></p><p className="mt-1 text-xs text-muted">Giá ngày {dmy(p.price.date)} · không phải giá trực tiếp</p></div></div>
@@ -61,13 +61,14 @@ export default async function CompanyPage({ params }: { params: Promise<{ symbol
             <Note>Hai đường cùng quy về 100 ở ngày đầu có dữ liệu chung. Vùng giá đóng cửa của {p.price.n_sessions ?? "tối đa 250"} phiên có dữ liệu: {num(p.price.low_52w, 0)}–{num(p.price.high_52w, 0)} đồng/CP; không phải mức cao/thấp trong ngày.</Note>
             <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">{Object.entries(p.price.returns).map(([period, ret]) => <div key={period} className="rounded-lg bg-surface2 p-3 text-sm"><b>{period}</b><p>{symbol}: {fmt(ret.stock, "%")}</p><p className="text-muted">VN-Index: {fmt(ret.index, "%")}</p></div>)}</div></Card>
         </section>
+
         <section id="tai-chinh" className="scroll-mt-6 space-y-5"><h2 className="text-2xl font-bold">02 · Tài chính & kết quả kinh doanh</h2>
           <p className="text-sm text-muted">BCTC năm hợp nhất · tỷ đồng. “—” là chưa có dữ liệu, không phải bằng 0.</p>
           {!p.years.length ? <Card>Chưa có đủ báo cáo tài chính để phân tích.</Card> : null}
           {[["income", "Kết quả kinh doanh"], ["balance", "Tài sản & nguồn vốn"], ["cashflow", "Dòng tiền"]].map(([key, title]) => <Card key={key} title={title}><DataTable years={p.years} rows={p.tables[key] ?? []} caption={`${title} · tỷ đồng`} /></Card>)}
-          <Card title="Khả năng sinh lời, thanh khoản & hiệu quả"><div className="scroll-x"><table className="w-full text-sm"><thead><tr className="border-b-2 border-fg"><th className="min-w-56 py-2 text-left" scope="col">Tỷ số</th>{p.years.map((y) => <th scope="col" key={y} className="min-w-24 px-3 text-right">{y}</th>)}</tr></thead><tbody>{ratios.map(([key, label, unit]) => <tr key={key} className="border-b border-line"><th scope="row" className="py-3 text-left font-normal">{label}</th>{p.years.map((y) => <td key={y} className="tnum px-3 text-right">{fmt(p.ratios[y]?.[key], unit)}</td>)}</tr>)}</tbody></table></div></Card>
+          <Card title="Khả năng sinh lời, thanh khoản & hiệu quả"><div className="scroll-x"><table className="w-full text-sm"><thead><tr className="border-b border-line"><th className="min-w-56 py-2 text-left" scope="col">Tỷ số</th>{p.years.map((y) => <th scope="col" key={y} className="min-w-24 px-3 text-right">{y}</th>)}</tr></thead><tbody>{ratios.map(([key, label, unit]) => <tr key={key} className="border-b border-line"><th scope="row" className="py-3 text-left font-normal">{label}</th>{p.years.map((y) => <td key={y} className="tnum px-3 text-right">{fmt(p.ratios[y]?.[key], unit)}</td>)}</tr>)}</tbody></table></div></Card>
           {p.kind !== "bank" ? <Card title={`Phân rã ROE · DuPont ${latest ?? ""}`}><div className="grid gap-3 sm:grid-cols-3"><Stat label="Biên ròng" value={fmt(r.net_margin, "%")} /><Stat label="× Vòng quay tài sản" value={fmt(r.asset_turnover, "lần")} /><Stat label="× Đòn bẩy tài sản/vốn chủ" value={fmt(r.leverage, "lần")} /></div><Note>Tích ba thành phần bằng ROE {fmt(r.roe, "%")}, trước sai số làm tròn. Tỷ số không tự chứng minh chất lượng lợi nhuận.</Note></Card> : null}
-          <Card title="Đối chiếu doanh nghiệp"><p className="mb-3 text-xs text-muted">{p.peers.basis}. Chỉ là nhóm dữ liệu hiện có, không phải toàn ngành. Mỗi dòng ghi riêng năm BCTC.</p><div className="scroll-x"><table className="w-full text-sm"><thead><tr className="border-b-2 border-fg">{["Mã", "Năm", "Tăng trưởng", "ROE", "P/E", "P/B"].map((h) => <th key={h} className="min-w-20 py-2 text-left" scope="col">{h}</th>)}</tr></thead><tbody>{p.peers.rows.map((a) => <tr key={a.symbol} className="border-b border-line"><th scope="row" className="py-3 text-left"><CompanyLink symbol={a.symbol} /></th><td>{a.year ?? "—"}</td><td>{fmt(a.revenue_growth as number | null, "%")}</td><td>{fmt(a.roe as number | null, "%")}</td><td>{fmt(a.pe as number | null)}</td><td>{fmt(a.pb as number | null)}</td></tr>)}</tbody></table></div></Card>
+          <Card title="Đối chiếu doanh nghiệp"><p className="mb-3 text-xs text-muted">{p.peers.basis}. Chỉ là nhóm dữ liệu hiện có, không phải toàn ngành. Mỗi dòng ghi riêng năm BCTC.</p><div className="scroll-x"><table className="w-full text-sm"><thead><tr className="border-b border-line">{["Mã", "Năm", "Tăng trưởng", "ROE", "P/E", "P/B"].map((h) => <th key={h} className="min-w-20 py-2 text-left" scope="col">{h}</th>)}</tr></thead><tbody>{p.peers.rows.map((a) => <tr key={a.symbol} className="border-b border-line"><th scope="row" className="py-3 text-left"><CompanyLink symbol={a.symbol} /></th><td>{a.year ?? "—"}</td><td>{fmt(a.revenue_growth as number | null, "%")}</td><td>{fmt(a.roe as number | null, "%")}</td><td>{fmt(a.pe as number | null)}</td><td>{fmt(a.pb as number | null)}</td></tr>)}</tbody></table></div></Card>
         </section>
         <section id="tom-tat" className="scroll-mt-6 space-y-5"><h2 className="text-2xl font-bold">03 · Tóm tắt & điều cần theo dõi</h2>
           <ol className="space-y-4">{p.summary.map((s, i) => <li key={i} className="flex gap-4 rounded-xl border border-line bg-surface p-4"><span className="tnum text-xl text-muted">{String(i + 1).padStart(2, "0")}</span><p className="leading-relaxed">{s}</p></li>)}</ol>
@@ -86,5 +87,5 @@ export default async function CompanyPage({ params }: { params: Promise<{ symbol
         <footer className="border-t border-line pt-6"><h2 className="text-sm font-semibold">Nguồn & phương pháp</h2><ul className="mt-2 list-disc space-y-2 pl-5 text-xs text-muted">{p.notes.map((s, i) => <li key={i}>{s}</li>)}</ul><p className="mt-5 text-sm font-medium">Công cụ học thuật. Không phải lời khuyên đầu tư.</p></footer>
       </main>
     </div>
-  </div>;
+  </div></>;
 }

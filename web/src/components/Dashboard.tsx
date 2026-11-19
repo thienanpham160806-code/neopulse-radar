@@ -1,14 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { SiteHeader } from "./SiteHeader";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Loaded } from "@/lib/data";
 import { clock, dmy } from "@/lib/format";
 import type { Severity } from "@/lib/types";
 import { liveForSnapshot, liveMode } from "@/lib/live";
 import { StatusBar } from "./StatusBar";
-import { ThemeToggle } from "./ThemeToggle";
+
 import { useLive } from "./useLive";
 import { Overview } from "./Overview";
 import dynamic from "next/dynamic";
@@ -110,6 +110,7 @@ export function Dashboard({ initial, requestedDate, requestedIndex, initialTab }
   const empty = meta.data_status.state === "error" || !p.pulse;
   return (
     <>
+      <SiteHeader area="market" crumbs={[{ label: "Nhịp thị trường", ...(tab !== "Tổng quan" ? { href: `/?${new URLSearchParams({ ...(requestedDate ? { date: requestedDate } : {}), ...(requestedIndex ? { index: requestedIndex } : {}), tab: "tong-quan" })}`, onClick: () => setTab("Tổng quan") } : {}) }, ...(tab !== "Tổng quan" ? [{ label: tab }] : [])]} />
       <StatusBar
         meta={meta}
         nowMs={now}
@@ -119,10 +120,12 @@ export function Dashboard({ initial, requestedDate, requestedIndex, initialTab }
           simulated: (liveOn.tick ?? liveOn.pulse)?.is_simulated ?? false } : null}
         liveNote={live.available && !mode.live && live.state.lastMsgAt !== null ? `${mode.reason} — đang hiển thị snapshot.` : null}
       />
-      <header className="mx-auto max-w-6xl px-4 pt-5 text-center sm:px-6">
-        <nav aria-label="Khu vực" className="mb-6 flex justify-center gap-6 border-b border-line pb-3 text-sm"><span aria-current="page" className="font-semibold">Nhịp thị trường</span><Link href="/doanh-nghiep" className="text-accent underline underline-offset-4">Tìm hiểu doanh nghiệp →</Link></nav>
-        <h1 className="text-2xl font-bold tracking-tight sm:text-4xl">Bản tin Nhịp Thị Trường</h1>
-        <p className="mt-1 text-sm text-muted">NeoPulse Radar · nhịp thị trường, áp lực sổ lệnh, cảnh báo bất thường trong phiên</p>
+      <header className="mx-auto max-w-6xl px-4 pt-5 sm:px-6">
+        <div className="feature-hero rounded-3xl px-6 py-6 sm:px-8 sm:py-7">
+          <p className="hero-kicker">THỊ TRƯỜNG VIỆT NAM / {meta.index_code}</p>
+          <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Nhịp thị trường<span className="hero-highlight">.</span></h1>
+          <p className="hero-description mt-3 max-w-xl text-sm leading-relaxed">Theo dõi dòng tiền, đọc độ rộng và nhận diện những chuyển động đáng chú ý trong phiên.</p>
+        </div>
       </header>
 
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
@@ -130,7 +133,7 @@ export function Dashboard({ initial, requestedDate, requestedIndex, initialTab }
           className="mt-3 flex min-h-10 w-full items-center justify-between rounded-md border border-line bg-surface px-3 text-sm md:hidden">
           <span>Bộ lọc · {meta.index_code}{requestedDate ? ` · ${dmy(requestedDate)}` : " · mới nhất"}</span><span aria-hidden className="text-muted">{filtersOpen ? "▴" : "▾"}</span>
         </button>
-          <div id="filters" className={`mt-2 flex-wrap items-center gap-2 text-sm md:mt-3 md:flex md:justify-center ${filtersOpen ? "flex" : "hidden"}`}>
+          <div id="filters" className={`mt-2 flex-wrap items-center gap-2 text-sm md:mt-5 md:flex ${filtersOpen ? "flex" : "hidden"}`}>
             <label className="flex items-center gap-1.5">
               <span className="text-muted">Phiên</span>
               <select aria-label="Chọn phiên giao dịch" className="min-h-10 rounded-md border border-line bg-surface px-2"
@@ -158,12 +161,12 @@ export function Dashboard({ initial, requestedDate, requestedIndex, initialTab }
                 <option value="THẤP">Tất cả</option>
               </select>
             </label>
-            <ThemeToggle className="min-h-10" />
+
           </div>
 
         {/* desktop: mục lục kiểu chuyên mục báo; điện thoại dùng thanh tab đáy */}
-        <nav aria-label="Các mục" className="mt-3 hidden border-y-2 border-fg md:block">
-          <div role="tablist" className="scroll-x flex justify-center gap-1 py-1">
+        <nav aria-label="Các mục" className="mt-4 hidden rounded-2xl bg-surface p-1 shadow-sm md:block">
+          <div role="tablist" className="scroll-x flex gap-1 py-1">
             {TABS.map((t, i) => (
               <button key={t} id={`tab-${SLUGS[t]}`} role="tab" aria-selected={tab === t} aria-controls="tabpanel"
                 tabIndex={tab === t ? 0 : -1} onClick={() => setTab(t)}
@@ -176,7 +179,7 @@ export function Dashboard({ initial, requestedDate, requestedIndex, initialTab }
                   setTab(next);
                   document.getElementById(`tab-${SLUGS[next]}`)?.focus();
                 }}
-                className={`min-h-10 whitespace-nowrap px-3 text-sm ${tab === t ? "font-bold text-fg underline decoration-2 underline-offset-[10px]" : "text-muted hover:text-fg"}`}>
+                className={`min-h-10 whitespace-nowrap px-3 text-sm ${tab === t ? "rounded-xl bg-surface2 font-semibold text-accent" : "text-muted hover:text-fg"}`}>
                 {t}
               </button>
             ))}

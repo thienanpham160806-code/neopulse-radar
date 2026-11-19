@@ -3,13 +3,18 @@
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 :root {
-  --bg: #f8fafc;
+  color-scheme: light;
+  --hero-bg: #143246;
+  --hero-fg: #f5fbf4;
+  --hero-muted: #bfd8db;
+  --highlight: #e2ee76;
+  --bg: #eff7f8;
   --surface: #ffffff;
-  --surface-2: #eef2f7;
-  --line: #d6dde6;
-  --fg: #0f172a;
-  --muted: #4b5563;
-  --accent: #1d4ed8;
+  --surface-2: #e1eff0;
+  --line: #d6e5e7;
+  --fg: #143246;
+  --muted: #4c6673;
+  --accent: #176273;
   --on-accent: #ffffff;
   --up: #15803d;
   --down: #b91c1c;
@@ -24,14 +29,18 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0b1220;
-    --surface: #131c2e;
-    --surface-2: #1b2740;
-    --line: #2a3855;
-    --fg: #e6ebf5;
-    --muted: #9aa7bd;
-    --accent: #6ea0ff;
-    --on-accent: #0b1220;
+    --hero-bg: #1b4435;
+    --hero-fg: #fff4dc;
+    --hero-muted: #c0d0b8;
+    --highlight: #ffb273;
+    --bg: #0c241e;
+    --surface: #14372c;
+    --surface-2: #1c4437;
+    --line: #315245;
+    --fg: #f5efd9;
+    --muted: #b6c8b9;
+    --accent: #ffb273;
+    --on-accent: #0c241e;
     --up: #4ade80;
     --down: #f87171;
     --warn: #fbbf24;
@@ -42,15 +51,19 @@
   }
 }
 :root[data-theme="dark"] {
+  --hero-bg: #1b4435;
+  --hero-fg: #fff4dc;
+  --hero-muted: #c0d0b8;
+  --highlight: #ffb273;
   color-scheme: dark;
-  --bg: #0b1220;
-  --surface: #131c2e;
-  --surface-2: #1b2740;
-  --line: #2a3855;
-  --fg: #e6ebf5;
-  --muted: #9aa7bd;
-  --accent: #6ea0ff;
-  --on-accent: #0b1220;
+  --bg: #0c241e;
+  --surface: #14372c;
+  --surface-2: #1c4437;
+  --line: #315245;
+  --fg: #f5efd9;
+  --muted: #b6c8b9;
+  --accent: #ffb273;
+  --on-accent: #0c241e;
   --up: #4ade80;
   --down: #f87171;
   --warn: #fbbf24;
@@ -147,3 +160,12 @@ html {
   to { transform: rotate(0deg); }
 }
 .gauge-needle { animation: gauge-sweep 900ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+.brand-mark { display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; border-radius: 14px; background: var(--hero-bg); color: var(--highlight); font-size: 21px; font-weight: 700; letter-spacing: -3px; padding-right: 3px; }
+.brand-mark span { color: var(--hero-fg); }
+.feature-hero { position: relative; overflow: hidden; background: var(--hero-bg); color: var(--hero-fg); }
+.feature-hero::after { content: ''; position: absolute; width: 260px; height: 260px; right: -90px; bottom: -160px; border: 48px solid var(--highlight); border-radius: 50%; opacity: .13; pointer-events: none; }
+.hero-kicker { color: var(--hero-muted); font-size: 11px; font-weight: 600; letter-spacing: .16em; }
+.hero-description { color: var(--hero-muted); }
+.hero-highlight { color: var(--highlight); }
+.hero-button { background: var(--highlight); color: var(--hero-bg); }

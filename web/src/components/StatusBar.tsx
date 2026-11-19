@@ -30,7 +30,15 @@ export function StatusBar({ meta, nowMs, notice, pollError, live = null, liveNot
     : freshness(meta, nowMs);
   const excluded = meta.n_symbols_excluded;
   return (
-    <div className="sticky top-0 z-30 border-b border-line bg-surface/95 backdrop-blur">
+    <div className="mx-auto max-w-6xl rounded-2xl bg-surface/70 text-muted">
+      <details>
+        <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 text-xs">
+          <span className="flex items-center gap-2 font-semibold text-fg"><span className={`h-2 w-2 rounded-full ${DOT[f.level]}`} aria-hidden />{f.label}</span>
+          <span>{meta.source_label}</span>
+          <span className="tnum">{clock(live?.ts ?? meta.last_update)} · {dmy(meta.trading_date)}</span>
+          {meta.snapshot_at && !live ? <span className="rounded-full bg-surface2 px-2 py-1">Không phải thời gian thực</span> : null}
+          <span className="ml-auto font-medium text-accent">Chi tiết dữ liệu ▾</span>
+        </summary>
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2 text-xs sm:text-sm" role="status" aria-live="polite">
         <span className="flex items-center gap-2 font-semibold">
           <span className={`inline-block h-2.5 w-2.5 rounded-full ${DOT[f.level]}`} aria-hidden />
@@ -48,7 +56,7 @@ export function StatusBar({ meta, nowMs, notice, pollError, live = null, liveNot
             </span>
             <span className="tnum">
               <span className="text-muted">Độ trễ: </span>
-              {live.latencyMs === null ? "—" : `${(live.latencyMs / 1000).toFixed(1)} giây`}
+              {live.latencyMs === null ? "—" : `${(live.latencyMs / 1000).toLocaleString('vi-VN', { maximumFractionDigits: 1 })} giây`}
             </span>
           </>
         ) : meta.snapshot_at ? (
@@ -90,14 +98,13 @@ export function StatusBar({ meta, nowMs, notice, pollError, live = null, liveNot
           {meta.n_sessions}
         </span>
       </div>
+      </details>
       {meta.is_simulated || live?.simulated ? (
         <div className="border-y border-dashed border-sim bg-surface2 px-4 py-1.5 text-center text-xs text-sim sm:text-sm">
           <b>DỮ LIỆU MÔ PHỎNG</b>: số do bộ giả lập sinh ra để trình diễn, không phản ánh thị trường thật.
         </div>
       ) : null}
-      {f.level === "snapshot" ? (
-        <div className="bg-accent/10 px-4 py-1.5 text-center text-xs text-accent sm:text-sm">{f.detail}</div>
-      ) : f.level === "red" || f.level === "error" ? (
+      {f.level === "red" || f.level === "error" ? (
         <div role="alert" className="border-y border-fg bg-surface2 px-4 py-1.5 text-center text-xs font-semibold text-fg sm:text-sm">{f.detail}</div>
       ) : f.level === "closed" && !meta.is_simulated ? (
         <div className="bg-surface2 px-4 py-1.5 text-center text-xs text-muted sm:text-sm">{f.detail}</div>

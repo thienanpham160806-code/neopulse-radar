@@ -1,3 +1,9 @@
+## Cập nhật theo yêu cầu người dùng — 19/11/2026
+
+Ưu tiên bản thiết kế mới: giảm đường kẻ đậm; phân lớp bằng khoảng cách, nền mềm và hero có màu. Light xanh băng hà + navy + vàng chanh; dark xanh rừng + kem + cam. Giá tăng/giảm giữ màu chứng khoán riêng. Header và breadcrumb dùng chung cho Trang chủ > Nhịp thị trường > Tab, và Trang chủ > Doanh nghiệp > Mã. Trang chủ tại /trang-chu; giữ / cho thị trường để bảo toàn URL cũ. TradingView Lightweight Charts hiển thị dữ liệu NeoPulse và ghi nguồn rõ; iframe HOSE không được phép cung cấp MWG nên đã loại khỏi bản cuối.
+
+Bối cảnh thiết kế trước đây ở dưới được giữ làm lịch sử.
+
 # Bối cảnh thiết kế — NeoPulse Radar (web)
 
 Viết cho: người làm giao diện (người hoặc agent) trước khi chỉnh bất kỳ màn hình nào. Nguồn: yêu cầu của tác giả ngày 19/11/2026. Mục ghi "giả định" là chỗ tác giả chưa nói rõ.

@@ -60,3 +60,12 @@ neopulse company                          # dựng lại toàn bộ hồ sơ t�
 Dữ liệu công khai tải qua vnstock/Vietcap, cache tại `data/company/raw/`; JSON hiển thị tại `web/public/data/company/`, cả hai bị Git bỏ qua. Khi triển khai, phải kèm thư mục JSON này; không tự tải dữ liệu doanh nghiệp trên trình duyệt. Mỗi hồ sơ ghi ngày giá, năm BCTC và thời điểm lấy dữ liệu. Mã thiếu hiện thông báo chưa có hồ sơ.
 
 Python tính tỷ số, DuPont, so sánh cùng ICB và bảng độ nhạy DCF. Bội số dùng kết quả năm gần nhất đã tải, không phải TTM. DCF giữ FCFF hoạt động nền cố định 5 năm, WACC 10/12/14%, g 2/3/4%, thuế giả định 20%; đây là minh họa, không phải dự phóng riêng hay giá mục tiêu. Không áp dụng mô hình này cho ngân hàng, bảo hiểm, chứng khoán hoặc khi thiếu đầu vào. Các phân tích chiến lược/thị phần chưa có dữ liệu được ghi rõ, không tạo nội dung thay thế.
+
+
+## Giao diện & biểu đồ
+
+Trang chủ `/trang-chu` nối sang nhịp thị trường `/` và hồ sơ `/doanh-nghiep`. Header/breadcrumb dùng chung, hỗ trợ quay về cấp cha; breadcrumb thị trường giữ phiên/chỉ số đang chọn. Sáng: xanh băng hà/navy/vàng chanh; tối: xanh rừng/kem/cam. Màu giá chứng khoán vẫn theo quy ước tăng/giảm, độc lập bảng màu trang.
+
+Biểu đồ dùng **TradingView Lightweight Charts 5.3.0** với dữ liệu NeoPulse đã xuất (SSI hoặc Vietcap, tùy trang), không phải nguồn giá TradingView. Có zoom, pan, crosshair, đổi theme và attribution; giấy phép/NOTICE ở public/licenses. Hồ sơ dùng chuỗi so sánh quy về 100, thị trường dùng điểm chỉ số theo phút. Không dựng nến OHLC khi chỉ có giá đóng cửa.
+
+Không dùng iframe Advanced Chart cho HOSE: thử nghiệm MWG trả “This symbol is only available on TradingView”, tức widget không có quyền cung cấp mã đó. Người dùng có link mở mã trên trang TradingView. Xem https://www.tradingview.com/widget-docs/faq/data/ và https://tradingview.github.io/lightweight-charts/docs.

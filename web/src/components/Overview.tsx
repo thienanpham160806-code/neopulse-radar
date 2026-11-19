@@ -5,22 +5,19 @@
  * ("Hôm nay nghĩa là gì?"), sau đó mới tới biểu đồ, ngành và chi tiết. Mọi số do Python tính; web chỉ chọn câu
  * diễn giải theo dấu/độ lớn và hiển thị.
  */
-import dynamic from "next/dynamic";
+
+import { useMemo } from "react";
 import { isNum, priceTone, TONE_CLASS, TONE_MARK } from "@/lib/fmt";
-import { hm, num, ratioPct, signed } from "@/lib/format";
+import { num, ratioPct, signed } from "@/lib/format";
 import { mergeSeries, type LiveState } from "@/lib/live";
 import { alertDigest, componentMeaning, GLOSSARY, missingComponents, RULE_PLAIN, scoreMeaning } from "@/lib/plain";
 import type { AlertItem, Num, Payload, Severity } from "@/lib/types";
 import { Gauge, Guide, Term } from "./Explain";
 import { SectorCard } from "./SectorCard";
 import { CompanyLink } from "./CompanyLink";
+import { TradingViewChart } from "./TradingViewChart";
 import { type Filters } from "./tabs";
 import { Change, Note, SevTag, SignedMoney } from "./ui";
-
-// Recharts tải lười: không chặn lần vẽ đầu (Lighthouse TBT)
-const IndexChart = dynamic(() => import("./IndexChart"), {
-  ssr: false, loading: () => <div className="h-64 animate-pulse rounded bg-surface2" aria-hidden />,
-});
 
 const SEV_ORDER: Severity[] = ["CAO", "TRUNG BÌNH", "THẤP"];
 const ORDER = ["VNINDEX", "VN30", "HNXINDEX", "UPCOMINDEX"];
@@ -89,11 +86,10 @@ export function Overview({ p, f, live, onAlerts }: { p: Payload; f: Filters; liv
   const alerts = allAlerts.filter((a) => SEV_ORDER.indexOf(a.severity) <= SEV_ORDER.indexOf(f.minSev)
     && (!f.sym || a.symbol.includes(f.sym.toUpperCase())));
   const summary = p.pulse?.summary ?? [];
-  const pts = live?.points[code] ?? [];
-  const series = (pts.length ? mergeSeries((p.pulse?.series ?? []).map((r) => ({ t: r.t, value: r.index })), pts)
-    : (p.pulse?.series ?? []).filter((r) => r.index !== null).map((r) => ({ t: r.t, v: r.index as number })))
-    .map((q) => ({ t: hm(q.t), v: q.v }));
-  const ref = row?.ref ?? null;
+  const baseSeries = p.pulse?.series;
+  const livePoints = live?.points[code];
+  const series = useMemo(() => mergeSeries((baseSeries ?? []).map((r) => ({ t: r.t, value: r.index })), livePoints ?? [])
+    .map((q) => ({ time: q.t, value: q.v })), [baseSeries, livePoints]);
   const fs = p.foreign?.summary;
 
   // "Vì sao": hai thành phần ảnh hưởng nhiều nhất (|giá trị| x trọng số, cả hai do Python cho)
@@ -151,11 +147,12 @@ export function Overview({ p, f, live, onAlerts }: { p: Payload; f: Filters; liv
 
           <h3 className="text-xl font-bold">Chỉ số đi thế nào trong phiên</h3>
           <figure className="mt-2">
-            {series.length > 1 ? <IndexChart data={series} code={code} refValue={ref} /> : <p className="text-sm text-muted">Chưa đủ điểm dữ liệu để vẽ.</p>}
+            {series.length > 1 ? <TradingViewChart symbol={code} data={series} /> : <p className="text-sm text-muted">Chưa đủ điểm dữ liệu để vẽ.</p>}
             <figcaption className="mt-1 border-t border-line pt-1 text-sm text-muted">
-              <b className="text-fg">Hình 1.</b> {code} theo phút. Trên đường đứt màu vàng (giá tham chiếu) là đang tăng so với hôm qua, dưới là đang giảm. Rê chuột hoặc chạm để xem giá từng phút.
+              <b className="text-fg">Hình 1.</b> {code} theo phút. Dữ liệu theo phút từ NeoPulse. Rê chuột hoặc chạm để xem từng điểm; cuộn để thu phóng.
             </figcaption>
           </figure>
+
 
           <h3 className="mt-10 text-xl font-bold"><Term k="sector">Ngành nào kéo, ngành nào đè</Term></h3>
           <p className="mt-1 text-sm text-muted">Chạm vào một ngành để xem các mã trong ngành.</p>
