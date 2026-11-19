@@ -193,3 +193,11 @@ def test_cli_dry_run_and_missing_key(db_path, tmp_path, monkeypatch):
     lines = (tmp_path / "out" / "live_dryrun.jsonl").read_text(encoding="utf-8").splitlines()
     assert json.loads(lines[0])["name"] == "status" and (tmp_path / "out" / "ably_usage.json").exists()
     assert cli_main(["live-relay", "--source", "sim", "--until", "00:00"]) == 2
+
+
+def test_replay_first_loop_has_ticks_and_no_false_gap(db_path, tmp_path):
+    pub = Mem()
+    r, _ = make(db_path, tmp_path, pub, speed=10.0)
+    r.run(max_loops=1)
+    names = [n for n, _ in pub.msgs]
+    assert "tick" in names and all(d.get("event") != "data_gap" for n, d in pub.msgs if n == "status")

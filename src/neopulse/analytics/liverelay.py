@@ -283,7 +283,7 @@ class LiveRelay:
         if self._replay_base is None:
             first = db._con.execute("SELECT MIN(ts) FROM index_ticks WHERE trading_date=? AND source=?",
                                     (day, self.source)).fetchone()[0]
-            self._replay_base = pd.Timestamp(first)
+            self._replay_base = pd.Timestamp(first) + pd.Timedelta(minutes=2)  # đủ để mọi chỉ số đã có tick đầu
             self._replay_t0 = self.mono()
         return (self._replay_base + pd.Timedelta(seconds=(self.mono() - self._replay_t0) * self.replay_speed)).isoformat()
 
@@ -305,8 +305,9 @@ class LiveRelay:
         gap = age is None or age > GAP_AFTER_S
         if gap != self._gap:
             self.send("status", {"event": "data_gap" if gap else "data_ok", "age_s": _r(age, 0)})
-            log.log(logging.WARNING if gap else logging.INFO, "Bộ ghi %s (tin mới nhất cách %ss)",
-                    "KHÔNG ghi mới" if gap else "ghi lại bình thường", _r(age, 0))
+            log.log(logging.WARNING if gap else logging.INFO, "Bộ ghi %s (%s)",
+                    "KHÔNG ghi mới" if gap else "ghi lại bình thường",
+                    "chưa có tick nào hôm nay" if age is None else f"tin mới nhất cách {age:.0f} giây")
             self._gap = gap
 
     def build_pulse(self, db, day: str, as_of: str | None) -> dict | None:
