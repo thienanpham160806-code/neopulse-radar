@@ -236,12 +236,6 @@ export function Dashboard({ initial, requestedDate, requestedIndex, initialTab }
         </div>
       </nav>
 
-      <footer className="mx-auto max-w-7xl px-4 pb-24 pt-2 text-xs text-muted md:pb-8">
-        <p className="font-medium text-fg">{meta.disclaimer}</p>
-        <p className="mt-1">
-          Đồ án học phần Gói phần mềm ứng dụng cho tài chính 1 (UEL). Nguồn: {meta.source_label}. Bản JSON schema v{meta.schema_version}; Python tính, web chỉ hiển thị.
-        </p>
-      </footer>
     </>
   );
 }

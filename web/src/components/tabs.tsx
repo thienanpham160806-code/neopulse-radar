@@ -386,8 +386,8 @@ export function Method() {
     <div className="grid grid-cols-1 gap-3">
       <Card title="Chuỗi xử lý">
         <p className="text-sm leading-relaxed">
-          SSI FastConnect hoặc NEO API (REST + WebSocket) → chuẩn hóa &amp; kiểm tra chất lượng → SQLite (trên máy tác giả) → chỉ báo tài chính bằng Python → snapshot JSON tổng hợp (<code>neopulse publish-static</code>) → trang web này.
-          Web <b>chỉ hiển thị</b>; không có công thức tài chính nào chạy ở trình duyệt.
+          Dữ liệu thị trường từ SSI FastConnect hoặc NEO API được kiểm tra chất lượng, sau đó Python tính các chỉ báo tổng hợp. Web nhận cập nhật mới trong phiên và dùng dữ liệu đã lưu khi nguồn cập nhật tạm dừng. Hồ sơ doanh nghiệp và lịch sử giá lấy từ Vietcap.
+          Web <b>chỉ hiển thị kết quả</b>; các công thức chỉ báo và phân tích tài chính được tính bằng Python.
         </p>
       </Card>
       <Card title="Công thức chính">
@@ -414,7 +414,7 @@ export function Method() {
       </Card>
       <Card title="Giới hạn cần biết khi đọc số">
         <ul className="list-disc space-y-1.5 pl-5 text-sm leading-relaxed">
-          <li><b>Không phải thời gian thực.</b> Web hiển thị <i>snapshot tĩnh</i> do tác giả xuất từ máy ghi dữ liệu rồi triển khai; số liệu cố định tại thời điểm snapshot (thanh trạng thái ghi rõ giờ snapshot và &ldquo;cách đây&rdquo;). Snapshot cuối phiên không bị coi là &ldquo;cũ&rdquo;.</li>
+          <li><b>Phân biệt dữ liệu trực tiếp và dữ liệu đã lưu.</b> Xem nguồn và thời điểm cập nhật trên thanh trạng thái. Khi bộ ghi dừng, máy ngủ hoặc mất kết nối, số liệu mới sẽ ngừng đến; web hiển thị dữ liệu đã lưu và báo độ trễ. Phiên lịch sử là số liệu cố định của phiên được chọn.</li>
           <li><b>Chỉ 3 mức giá tốt nhất</b>: OBI và độ sâu bỏ sót lệnh ở xa và lệnh ẩn; trượt giá là cận dưới.</li>
           <li><b>Thời điểm dùng là lúc nhận</b>, không phải dấu thời gian sự kiện → độ trễ mạng lẫn vào chuỗi.</li>
           <li><b>Rổ theo dõi hữu hạn</b> (mặc định VN30): khối ngoại và sổ lệnh là của rổ, không phải toàn thị trường; độ rộng lấy từ số của sàn.</li>

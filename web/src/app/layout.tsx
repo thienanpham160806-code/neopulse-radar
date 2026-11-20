@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
+import { SiteFooter } from "@/components/SiteFooter";
 import "./globals.css";
 
 // Be Vietnam Pro (SIL OFL 1.1, xem fonts/OFL.txt) - dấu tiếng Việt chuẩn, số đều nhau khi bật tabular-nums
@@ -25,7 +26,7 @@ export const viewport: Viewport = { width: "device-width", initialScale: 1 };
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="vi" className={beVietnam.variable} suppressHydrationWarning>
-      <body className="min-h-dvh antialiased">{children}</body>
+      <body id="top" className="flex min-h-dvh flex-col antialiased"><div className="flex-1">{children}</div><SiteFooter /></body>
     </html>
   );
 }
