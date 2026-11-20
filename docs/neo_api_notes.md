@@ -54,6 +54,20 @@ Kênh `marketVolume` không đăng ký vì khối lượng lũy kế đã có tr
 - Ví dụ trong tài liệu có `indexColor: "green"` trong khi mô tả ghi `Up/Down/Nochange` → không dùng trường này.
 - Mã lỗi `NEOINP000021`: tối đa 10 mã mỗi lần gọi → client tự chia lô.
 
+## Lần thử kết nối thật (20/11/2026)
+
+Dùng tài khoản VPBankS thật của tác giả, chỉ gọi endpoint đọc `GET /market/marketStatus`, không gọi nhóm `/trading/*`.
+
+| Bước | Kết quả |
+|---|---|
+| `POST https://external.vpbanks.com.vn/auth/token` | 200, `IABNOT000`, nhận JWT `token_type: Bearer`, `scope: profile email`; `expires_in` thực tế 28800 giây (tài liệu ghi 10800) |
+| `GET https://neoapi.vpbanks.com.vn/neo-api/market/marketStatus` với `Authorization`, `x-device`, `x-devicetype` | 401, `NEOINP000401` (thử cả giá trị mẫu `my-app`/`chrome` của tài liệu) |
+| Cùng request nhưng bỏ `x-device` | 400, `NEOINP000003 Missing required header: x-device` - cổng API nhận đúng định dạng header |
+
+Endpoint, base URL và bộ header khớp từng chữ với tài liệu v1.0.0 (trang *Xác thực*, *Quy ước chung*, *4.4 Trạng thái thị trường*). Trang *Xác thực* ghi **"IP Whitelist: Bắt buộc - chỉ IP đã đăng ký"**: máy chủ đăng nhập không kiểm IP nên vẫn cấp token, còn cổng dữ liệu từ chối IP chưa đăng ký.
+
+Tác giả ở ký túc xá, mạng dùng IP động và không đăng ký được IP tĩnh; IP 4G thay đổi liên tục và dùng chung nhiều thuê bao. Vì vậy đồ án dùng **SSI FastConnect** làm nguồn dữ liệu thật (cùng lược đồ thô, xem `docs/ssi_notes.md`). Lớp `neo_api/` giữ nguyên, đã kiểm thử bằng máy chủ giả, và chạy được ngay khi có IP được whitelist: chỉ cần `NEOPULSE_SOURCE=neo`.
+
 ## Chưa xác minh được từ tài liệu
 
 Tài liệu không nói rõ các điểm sau; mã nguồn xử lý theo hướng chịu lỗi và ghi nhận để hiệu chỉnh:
