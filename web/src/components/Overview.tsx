@@ -10,7 +10,7 @@ import { useMemo } from "react";
 import { isNum, priceTone, TONE_CLASS, TONE_MARK } from "@/lib/fmt";
 import { num, ratioPct, signed } from "@/lib/format";
 import { mergeSeries, type LiveState } from "@/lib/live";
-import { alertDigest, componentMeaning, GLOSSARY, missingComponents, RULE_PLAIN, scoreMeaning } from "@/lib/plain";
+import { alertDigest, componentMeaning, GLOSSARY, marketSummary, missingComponents, RULE_PLAIN, scoreMeaning } from "@/lib/plain";
 import type { AlertItem, Num, Payload, Severity } from "@/lib/types";
 import { Gauge, Guide, Term } from "./Explain";
 import { SectorCard } from "./SectorCard";
@@ -96,7 +96,7 @@ export function Overview({ p, f, live, onAlerts }: { p: Payload; f: Filters; liv
   const drivers = comps.filter((c) => isNum(c.value))
     .sort((a, b) => Math.abs((b.value as number) * b.weight) - Math.abs((a.value as number) * a.weight)).slice(0, 2);
   const missing = missingComponents(comps);
-  const ix0 = ixs.find((x) => x.code === code) ?? ixs[0];
+  const ix0 = ixs.find((x) => x.code === code);
 
   return (
     <div>
@@ -114,22 +114,26 @@ export function Overview({ p, f, live, onAlerts }: { p: Payload; f: Filters; liv
         <div className="order-1 min-w-0">
           <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted">Toàn cảnh phiên · {code}</p>
           <h2 id="hero-title" className="text-[clamp(1.5rem,3.6vw,2.3rem)] font-bold leading-tight tracking-tight [text-wrap:balance]">
-            Thị trường {label.toLowerCase()}
+            {scoreMeaning(score).replace(/\.$/, "")}
           </h2>
           {ix0 ? (
             <p className="mt-1 text-base text-muted">{ix0.code} <b className={`tnum ${TONE_CLASS[priceTone(ix0.ch)]}`}>{num(ix0.v)}</b> <Change value={ix0.pct} />
               {isNum(ix0.adv) ? ` · ${num(ix0.adv, 0)} mã tăng, ${num(ix0.dec, 0)} mã giảm` : ""}</p>
           ) : null}
-          <h3 className="mt-4 text-sm font-bold uppercase tracking-wide">Hôm nay nghĩa là gì?</h3>
+          <h3 className="mt-4 text-sm font-bold uppercase tracking-wide">Đọc nhanh thị trường lúc này</h3>
           <ul className="mt-2 space-y-2 text-base leading-relaxed">
-            <li><b>Trạng thái.</b> {scoreMeaning(score)}</li>
-            {drivers.length ? <li><b>Vì sao.</b> {drivers.map((c) => componentMeaning(c.key, c.value).replace(/\.$/, "")).join("; ")}.
-              {missing.length ? <span className="text-muted"> Chưa có dữ liệu: {missing.join(", ")}; điểm chỉ tính trên các thành phần còn lại.</span> : null}</li> : null}
-            <li><b>Cần để ý.</b> {p.pulse?.divergence ? `${p.pulse.divergence} ` : ""}{nHigh
-              ? <>{nHigh} cảnh báo mức cao trong phiên{hot.length ? `; trong danh sách hiện có, tập trung ở ${hot.join(", ")}` : ""}.{" "}
+            <li><b>Đang diễn ra.</b> {marketSummary(code, ix0?.pct, ix0?.adv, ix0?.dec)}</li>
+            {drivers.length ? <li><b>Điều gì đang tác động?</b> {drivers.map((c) => componentMeaning(c.key, c.value)).join(" ")}</li> : null}
+            <li><b>Nên theo dõi.</b> {p.pulse?.divergence ? `${p.pulse.divergence} ` : ""}{nHigh
+              ? <>Hệ thống đã ghi nhận {nHigh} lượt cảnh báo mức cao trong phiên{hot.length ? `; ${hot.join(", ")} xuất hiện nhiều trong các cảnh báo đang hiển thị` : ""}. Một mã có thể có nhiều cảnh báo; mở chi tiết để xem từng biến động.{" "}
                 <button onClick={onAlerts} className="text-accent underline underline-offset-4">Xem cảnh báo</button></>
-              : "Chưa có cảnh báo mức cao."}</li>
+              : "Chưa ghi nhận cảnh báo mức cao trong phiên."}</li>
           </ul>
+          {missing.length ? <p className="mt-4 rounded-xl bg-surface2 px-3 py-2 text-sm leading-relaxed text-muted">
+            {missing.includes("Thanh khoản") ? "Chưa đủ dữ liệu để so sánh giá trị giao dịch với các phiên trước ở cùng thời điểm. " : ""}
+            {missing.filter((name) => name !== "Thanh khoản").length ? `Chưa đủ dữ liệu cho: ${missing.filter((name) => name !== "Thanh khoản").join(", ")}. ` : ""}
+            Điểm nhịp hiện chưa tính các phần này.
+          </p> : null}
         </div>
       </section>
 

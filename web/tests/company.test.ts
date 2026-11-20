@@ -53,4 +53,14 @@ describe("hồ sơ doanh nghiệp", () => {
     const html = renderToStaticMarkup(createElement(CompanyDirectory, { entries, vn100: ["MWG", "FPT"] }));
     expect(html).toContain("VN100 · báo cáo sẵn (1/100)");
   });
+  it("cho chọn trực tiếp mọi trang, tự đổi tổng trang theo bộ dữ liệu", () => {
+    const entries = Array.from({ length: 1519 }, (_, i) => ({ symbol: `A${i}`, name: null, industry: null }));
+    const render = (rows: typeof entries) => renderToStaticMarkup(createElement(CompanyDirectory, { entries: rows })).match(/<select aria-label="Đi đến trang doanh nghiệp"[\s\S]*?<\/select>/)?.[0] ?? "";
+    const menu = render(entries);
+    expect(menu.match(/<option /g)).toHaveLength(64);
+    expect(menu).toContain('value="20">20/64');
+    expect(menu).toContain('value="64">64/64');
+    expect(render(entries.slice(0, 100))).toContain('value="5">05/05');
+    expect(render([])).toContain('value="1" selected="">01/01');
+  });
 });

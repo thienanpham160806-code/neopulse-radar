@@ -3,6 +3,7 @@
  * (chọn câu theo dấu/độ lớn), không tính thêm chỉ báo nào.
  */
 import { isNum } from "./fmt";
+import { num } from "./format";
 import type { AlertItem, Num } from "./types";
 
 export const GLOSSARY: Record<string, { title: string; body: string }> = {
@@ -14,7 +15,7 @@ export const GLOSSARY: Record<string, { title: string; body: string }> = {
   momentum: { title: "Động lượng chỉ số", body: "Chỉ số đang đi mạnh hay yếu so với mức dao động thường ngày của chính nó." },
   book: { title: "Sổ lệnh (OBI)", body: "Bên mua hay bên bán đang đặt chờ dày hơn ở 3 mức giá tốt nhất. Dương: người mua chờ nhiều hơn." },
   foreign: { title: "Khối ngoại", body: "Nhà đầu tư nước ngoài đang mua ròng (dương) hay bán ròng (âm) trong rổ đang theo dõi." },
-  liquidity: { title: "Thanh khoản", body: "Tiền vào thị trường hôm nay nhiều hay ít so với các phiên trước ở cùng thời điểm." },
+  liquidity: { title: "Thanh khoản", body: "So sánh giá trị giao dịch đã thực hiện hôm nay với các phiên trước ở cùng thời điểm. Cần đủ dữ liệu quá khứ để đối chiếu." },
   basis: { title: "Basis phái sinh", body: "Chênh lệch giữa giá hợp đồng tương lai VN30 và chỉ số VN30. Dương: thị trường phái sinh kỳ vọng cao hơn hiện tại." },
   rvol: { title: "RVOL", body: "Khối lượng giao dịch so với mức bình thường của chính mã đó ở cùng giờ trong 20 phiên trước. 3 lần trở lên là bất thường." },
   sector: { title: "Đóng góp theo ngành", body: "Ngành đó kéo chỉ số lên hay đè xuống bao nhiêu điểm, ước lượng theo vốn hóa (chưa điều chỉnh free-float nên chỉ gần đúng)." },
@@ -23,17 +24,16 @@ export const GLOSSARY: Record<string, { title: string; body: string }> = {
 /** Thành phần đang nói gì: dựa vào dấu và độ lớn của giá trị (−1..1) do Python tính. */
 export function componentMeaning(key: string, v: Num): string {
   if (!isNum(v)) return "Chưa đủ dữ liệu để đánh giá.";
-  const strength = Math.abs(v) >= 0.5 ? "rõ" : Math.abs(v) >= 0.2 ? "vừa" : "nhẹ";
   const pos = v > 0.05, neg = v < -0.05;
   const t: Record<string, [string, string, string]> = {
-    breadth: ["Số mã tăng áp đảo số mã giảm", "Số mã giảm áp đảo số mã tăng", "Số mã tăng và giảm gần cân bằng"],
-    momentum: ["Chỉ số đang đi lên so với nhịp thường ngày", "Chỉ số đang đi xuống so với nhịp thường ngày", "Chỉ số gần như đứng yên"],
-    book: ["Người mua đặt chờ dày hơn người bán", "Người bán đặt chờ dày hơn người mua", "Lệnh chờ mua và bán gần cân bằng"],
-    foreign: ["Khối ngoại đang mua ròng", "Khối ngoại đang bán ròng", "Khối ngoại mua và bán gần cân bằng"],
-    liquidity: ["Tiền vào nhiều hơn các phiên trước cùng giờ", "Tiền vào ít hơn các phiên trước cùng giờ", "Thanh khoản như thường lệ"],
+    breadth: ["Số cổ phiếu tăng đang nhiều hơn số giảm", "Số cổ phiếu giảm đang nhiều hơn số tăng", "Số cổ phiếu tăng và giảm gần bằng nhau"],
+    momentum: ["Mức tăng của chỉ số đang góp phần nâng điểm nhịp", "Mức giảm của chỉ số đang kéo điểm nhịp xuống", "Biến động của chỉ số hiện ít tác động đến điểm nhịp"],
+    book: ["Nhìn chung, lệnh chờ mua đang trội hơn lệnh chờ bán", "Nhìn chung, lệnh chờ bán đang trội hơn lệnh chờ mua", "Lệnh chờ mua và bán gần cân bằng"],
+    foreign: ["Khối ngoại đang mua nhiều hơn bán trong rổ theo dõi", "Khối ngoại đang bán nhiều hơn mua trong rổ theo dõi", "Giá trị mua và bán của khối ngoại gần bằng nhau"],
+    liquidity: ["Giá trị giao dịch cao hơn các phiên trước ở cùng thời điểm", "Giá trị giao dịch thấp hơn các phiên trước ở cùng thời điểm", "Giá trị giao dịch gần với mức thường thấy ở cùng thời điểm"],
   };
   const [up, down, flat] = t[key] ?? ["Nghiêng tích cực", "Nghiêng tiêu cực", "Trung tính"];
-  return pos ? `${up} (mức ${strength}).` : neg ? `${down} (mức ${strength}).` : `${flat}.`;
+  return `${pos ? up : neg ? down : flat}.`;
 }
 
 /**
@@ -42,11 +42,23 @@ export function componentMeaning(key: string, v: Num): string {
  */
 export function scoreMeaning(score: Num): string {
   if (!isNum(score)) return "Chưa đủ dữ liệu để kết luận.";
-  if (score >= 65) return "Các tín hiệu cộng lại nghiêng rõ về phía tích cực.";
-  if (score >= 55) return "Các tín hiệu cộng lại nghiêng nhẹ về phía tích cực.";
-  if (score >= 45) return "Các tín hiệu gần cân bằng, chưa nghiêng hẳn về phía nào.";
-  if (score >= 35) return "Các tín hiệu cộng lại nghiêng nhẹ về phía tiêu cực.";
-  return "Các tín hiệu cộng lại nghiêng rõ về phía tiêu cực.";
+  if (score >= 65) return "Tín hiệu chung đang khá tích cực.";
+  if (score >= 55) return "Tín hiệu chung hơi nghiêng về chiều tích cực.";
+  if (score >= 45) return "Các tín hiệu đang khá cân bằng.";
+  if (score >= 35) return "Tín hiệu chung hơi nghiêng về chiều tiêu cực.";
+  return "Tín hiệu chung đang khá yếu.";
+}
+
+/** Describe supplied index/breadth facts; a score alone never establishes either. */
+export function marketSummary(code: string, change: Num | undefined, advances: Num | undefined, declines: Num | undefined): string {
+  const parts = [];
+  if (isNum(change)) parts.push(change === 0 ? `${code} đang ở mức tham chiếu.` : `${code} đang ${change > 0 ? "tăng" : "giảm"} ${num(Math.abs(change))}% so với mức tham chiếu.`);
+  if (isNum(advances) && isNum(declines)) {
+    parts.push(declines > advances
+      ? `Trong nhóm cổ phiếu của chỉ số này, có ${num(declines, 0)} mã giảm và ${num(advances, 0)} mã tăng.`
+      : `Trong nhóm cổ phiếu của chỉ số này, có ${num(advances, 0)} mã tăng và ${num(declines, 0)} mã giảm.`);
+  }
+  return parts.join(" ") || "Chưa đủ dữ liệu giá và số mã tăng, giảm để mô tả diễn biến lúc này.";
 }
 
 const alertTime = (t: string) => Date.parse(t);
