@@ -125,7 +125,7 @@ export function Overview({ p, f, live, onAlerts }: { p: Payload; f: Filters; liv
             <li><b>Đang diễn ra.</b> {marketSummary(code, ix0?.pct, ix0?.adv, ix0?.dec)}</li>
             {drivers.length ? <li><b>Điều gì đang tác động?</b> {drivers.map((c) => componentMeaning(c.key, c.value)).join(" ")}</li> : null}
             <li><b>Nên theo dõi.</b> {p.pulse?.divergence ? `${p.pulse.divergence} ` : ""}{nHigh
-              ? <>Hệ thống đã ghi nhận {nHigh} lượt cảnh báo mức cao trong phiên{hot.length ? `; ${hot.join(", ")} xuất hiện nhiều trong các cảnh báo đang hiển thị` : ""}. Một mã có thể có nhiều cảnh báo; mở chi tiết để xem từng biến động.{" "}
+              ? <>Hệ thống đã ghi nhận {nHigh} lượt cảnh báo mức cao trong phiên{hot.length ? `; trong các cảnh báo đã tải, ${hot.join(", ")} xuất hiện nhiều` : ""}. Một mã có thể có nhiều cảnh báo; mở chi tiết để xem từng biến động.{" "}
                 <button onClick={onAlerts} className="text-accent underline underline-offset-4">Xem cảnh báo</button></>
               : "Chưa ghi nhận cảnh báo mức cao trong phiên."}</li>
           </ul>
