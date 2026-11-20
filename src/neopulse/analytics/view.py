@@ -76,9 +76,10 @@ def pulse_timeseries(bars: pd.DataFrame, index: pd.DataFrame, sigma_pct: float, 
     if bars.empty or index.empty:
         return pd.DataFrame(columns=["bar", "score"])
     w = bars["total_value"].fillna(0)
-    book = (bars["obi3"] * w).groupby(bars["bar"]).sum() / w.where(bars["obi3"].notna()).groupby(bars["bar"]).sum()
+    book_weight = w.where(bars["obi3"].notna()).groupby(bars["bar"]).sum()
+    book = (bars["obi3"] * w).groupby(bars["bar"]).sum().astype(float) / book_weight.astype(float).where(book_weight > 0)
     fb, fs = bars.groupby("bar")["f_buy_val"].sum(), bars.groupby("bar")["f_sell_val"].sum()
-    foreign = ((fb - fs) / (fb + fs)).where((fb + fs) > 0)
+    foreign = (fb - fs).astype(float) / (fb + fs).astype(float).where((fb + fs) > 0)
     ix = fbreadth.add_breadth(index).assign(bar=lambda d: d["ts"].dt.floor(freq)).groupby("bar").last()
     df = pd.DataFrame({"breadth": ix["ad_ratio"], "momentum": np.tanh(ix["pct_change"] / max(sigma_pct, 1e-6)),
                        "book": book, "foreign": foreign, "index_value": ix["value"]}).dropna(subset=["index_value"])

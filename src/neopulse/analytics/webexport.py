@@ -327,6 +327,13 @@ def build_payload(db: Storage, source: str, trading_date: str | None = None, ind
         v = build_view(db, source, trading_date, index_code, order_value=order_value)
     except Exception as e:  # noqa: BLE001 - một phiên lỗi không được làm sập vòng publish
         return error_payload(source, f"Lỗi khi tính chỉ báo: {type(e).__name__}", trading_date, index_code, now)
+    return payload_from_view(v, db, order_value=order_value, extras=extras, now=now, snapshot=snapshot)
+
+
+def payload_from_view(v: SessionView, db: Storage, *, order_value: float = 500e6, extras: dict | None = None,
+                      now: datetime | None = None, snapshot: bool = False) -> dict:
+    """Serialize the relay's computed view without recalculating financial indicators."""
+    now = now or now_vn()
     meta = _meta(v, db, now, order_value)
     if snapshot:
         meta.update(snapshot_meta(v.trading_date, now))
@@ -338,8 +345,8 @@ def build_payload(db: Storage, source: str, trading_date: str | None = None, ind
         "sectors": _sectors(v),
     }
     from .charting import build_chart
-    payload["chart"] = build_chart(index_code, [[r["t"], r["index"]] for r in payload["pulse"]["series"] if r.get("index") is not None],
-                                   source=f"{source} · nội phiên đã ghi")
+    payload["chart"] = build_chart(v.index_code, [[r["t"], r["index"]] for r in payload["pulse"]["series"] if r.get("index") is not None],
+                                   source=f"{v.source} · nội phiên đã ghi")
     meta["rvol"] = {k: (_r(x) if isinstance(x, float) else x) for k, x in v.rvol_meta.items()}
     if extras:
         payload.update(extras)

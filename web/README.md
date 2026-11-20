@@ -64,6 +64,10 @@ Python tính tỷ số, DuPont, so sánh cùng ICB và bảng độ nhạy DCF. 
 
 ## Giao diện & biểu đồ
 
+Phiên mới nhất ưu tiên payload tổng hợp trong Redis (`neopulse:market:latest:<index>`). Bộ relay SSI ghi nền VN30/VNINDEX khoảng mỗi phút, dùng lại kết quả Python; Ably gửi tick khi chỉ số đổi và điểm nhịp khoảng 10–30 giây. Web kiểm tra nền mỗi 20 giây, kể cả khi trước đó chỉ có snapshot tĩnh, và làm mới khi nhận ngày giao dịch mới. Phiên lịch sử dùng khóa riêng theo ngày (giữ 7 ngày trên cloud) hoặc snapshot đã xuất, không trộn với tin live. Không đọc được cloud thì hiện dữ liệu đã lưu kèm thông báo; mất nguồn không được gắn nhãn trực tiếp.
+
+Bộ ghi/relay SSI hiện vẫn chạy trên máy đã cài lịch Windows; máy ngủ hoặc mất mạng thì dữ liệu mới dừng. Redis/Ably không tự lấy dữ liệu SSI. Bot Telegram vẫn chạy trên cloud độc lập.
+
 Trang chủ `/trang-chu` nối sang nhịp thị trường `/` và hồ sơ `/doanh-nghiep`. Header/breadcrumb dùng chung, hỗ trợ quay về cấp cha; breadcrumb thị trường giữ phiên/chỉ số đang chọn. Sáng: xanh băng hà/navy/vàng chanh; tối: xanh rừng/kem/cam. Màu giá chứng khoán vẫn theo quy ước tăng/giảm, độc lập bảng màu trang.
 
 Biểu đồ dùng **TradingView Lightweight Charts 5.3.0** với dữ liệu NeoPulse đã xuất (SSI hoặc Vietcap, tùy trang), không phải nguồn giá TradingView. Có zoom, pan, crosshair, đổi theme và attribution; giấy phép/NOTICE ở public/licenses. Hồ sơ dùng chuỗi so sánh quy về 100, thị trường dùng điểm chỉ số theo phút. Không dựng nến OHLC khi chỉ có giá đóng cửa.

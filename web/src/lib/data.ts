@@ -8,7 +8,7 @@ export interface Loaded {
   index: SessionIndex;
   /** static = snapshot tĩnh trong public/data (`neopulse publish-static`); blob = tùy chọn (`neopulse publish`);
    *  sample = dữ liệu MÔ PHỎNG đi kèm mã nguồn */
-  origin: "static" | "blob" | "sample";
+  origin: "static" | "blob" | "sample" | "cloud";
   notice: string | null;
 }
 
@@ -73,6 +73,27 @@ async function loadFrom(
  */
 export async function loadData(date?: string | null, code?: string | null): Promise<Loaded> {
   let notice: string | null = null;
+  const kvUrl = process.env.KV_REST_API_URL, kvToken = process.env.KV_REST_API_TOKEN;
+  if (kvUrl && kvToken && (!code || ["VN30", "VNINDEX", "HNXINDEX", "UPCOMINDEX"].includes(code)) && (!date || /^\d{4}-\d{2}-\d{2}$/.test(date))) {
+    try {
+      const key = date ? `neopulse:market:session:${date}:${code ?? "VN30"}` : `neopulse:market:latest:${code ?? "VN30"}`;
+      const response = await fetch(kvUrl, { method: "POST", headers: { Authorization: `Bearer ${kvToken}`, "Content-Type": "application/json" }, body: JSON.stringify(["GET", key]), next: { revalidate: REVALIDATE_S }, signal: AbortSignal.timeout(5000) });
+      if (!response.ok) throw new Error("cloud unavailable");
+      const stored = await response.json();
+      if (stored.error) throw new Error("cloud unavailable");
+      if (stored.result) {
+        const payload = parsePayload(JSON.parse(stored.result));
+        if (payload.meta.is_simulated || payload.meta.source !== "ssi" || payload.meta.index_code !== (code ?? "VN30") || (date && payload.meta.trading_date !== date)) throw new Error("invalid cloud session");
+        let index: SessionIndex = { schema_version: 1, generated_at: payload.meta.generated_at, sessions: [] };
+        try { index = parseIndex(await readStatic("index.json")); } catch { /* The cloud session can bootstrap without local data. */ }
+        const meta = payload.meta;
+        if (meta.trading_date && !index.sessions.some((s) => s.trading_date === meta.trading_date && s.index_code === meta.index_code && s.source === meta.source)) {
+          index.sessions.unshift({ source: meta.source, is_simulated: false, trading_date: meta.trading_date, index_code: meta.index_code, path: `sessions/${meta.source}_${meta.trading_date}_${meta.index_code}.json`, generated_at: meta.generated_at, pulse_score: payload.pulse?.score ?? null, n_symbols: meta.n_symbols_computed });
+        }
+        return { payload, index, origin: "cloud", notice: null };
+      }
+    } catch { notice = "Không tải được phiên mới trên cloud; đang dùng dữ liệu đã lưu. Kiểm tra thời điểm cập nhật."; }
+  }
   const base = blobBase();
   if (base) {
     try {

@@ -253,7 +253,7 @@ class LiveRelay:
     def __init__(self, db_path: str, source: str, publisher, usage: UsageGuard, *, index_code: str = "VN30",
                  tick_every: float = 1.0, until: time | None = None, replay_speed: float = 0.0,
                  clock: Callable[[], datetime] = now_vn, mono: Callable[[], float] = _time.monotonic,
-                 sleep: Callable[[float], None] = _time.sleep):
+                 sleep: Callable[[float], None] = _time.sleep, snapshot_publisher=None):
         self.db_path, self.source, self.pub, self.usage = db_path, source, publisher, usage
         self.index_code, self.tick_every, self.until, self.replay_speed = index_code, tick_every, until, replay_speed
         self.clock, self.mono, self.sleep = clock, mono, sleep
@@ -270,6 +270,7 @@ class LiveRelay:
         self._replay_base: pd.Timestamp | None = None
         # mã lần chạy: trình duyệt dùng để phân biệt relay khởi động lại với tin đến muộn (CX-009)
         self.run_id = uuid.uuid4().hex
+        self.snapshot_publisher = snapshot_publisher
 
     # -- tin
     def envelope(self, payload: dict) -> dict:
@@ -349,6 +350,11 @@ class LiveRelay:
         self.stats.build_view_s = _time.perf_counter() - t0
         if v.status == "no_data" or v.trading_date != day:
             return None
+        if self.snapshot_publisher:
+            try:
+                self.snapshot_publisher(v, db)
+            except Exception as e:  # noqa: BLE001 - cloud bootstrap failure must not stop live ticks
+                log.warning("Cập nhật phiên cloud lỗi: %s", type(e).__name__)
         return pulse_payload(v, self._sent_alerts)
 
     def run(self, max_loops: int | None = None) -> RelayStats:
@@ -435,8 +441,14 @@ def run_live_relay(settings, *, source: str, until: time | None, dry_run: bool =
     usage = UsageGuard.load(usage_path, viewers, month=to_vn(now_vn()).strftime("%Y-%m"))
     log.info("live-relay: nguồn=%s · kênh=%s · hạn mức ước tính đã dùng %.1f%%%s", source, CHANNEL, usage.ratio * 100,
              " · DRY-RUN" if dry_run else "")
-    relay = LiveRelay(settings.db_path, source, pub, usage, until=until, replay_speed=replay_speed)
-    st = relay.run(max_loops=max_loops)
+    from .marketstore import MarketSnapshots
+    snapshots = MarketSnapshots.from_env() if source != "sim" and not dry_run and not replay_speed else None
+    relay = LiveRelay(settings.db_path, source, pub, usage, until=until, replay_speed=replay_speed, snapshot_publisher=snapshots)
+    try:
+        st = relay.run(max_loops=max_loops)
+    finally:
+        if snapshots:
+            snapshots.close()
     log.info("live-relay kết thúc: %s · lỗi %d · bỏ qua vì không đổi %d · build_view %.2fs · pulse mỗi %.0fs",
              st.sent, st.failed, st.skipped_unchanged, st.build_view_s, st.pulse_every_s)
     return st

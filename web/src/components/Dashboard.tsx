@@ -77,12 +77,11 @@ export function Dashboard({ initial, requestedDate, requestedIndex, initialTab }
     }
   }, [requestedDate, requestedIndex]);
 
-  const isSnapshot = Boolean(loaded.payload.meta.snapshot_at);
   const live = useLive(!requestedDate); // chỉ khi xem phiên mới nhất
   const mode = liveMode(live.state, now, live.connected, live.error);
   const liveOn = mode.live ? liveForSnapshot(live.state, loaded.payload.meta) : null;
   useEffect(() => {
-    if (requestedDate || isSnapshot) return; // phiên lịch sử và snapshot tĩnh không đổi: không poll
+    if (requestedDate) return; // Historical sessions remain fixed; latest must discover the next session.
     const tick = () => {
       if (document.visibilityState === "visible") void refresh();
     };
@@ -92,7 +91,13 @@ export function Dashboard({ initial, requestedDate, requestedIndex, initialTab }
       clearInterval(id);
       document.removeEventListener("visibilitychange", tick);
     };
-  }, [refresh, requestedDate, isSnapshot]);
+  }, [refresh, requestedDate]);
+
+  const liveDay = live.state.tick?.day ?? live.state.pulse?.day;
+  useEffect(() => {
+    if (!requestedDate && liveDay && liveDay > (loaded.payload.meta.trading_date ?? "")) void refresh();
+    // Refresh once on session rollover; the interval retries if its full payload is still being published.
+  }, [liveDay, requestedDate, refresh, loaded.payload.meta.trading_date]);
 
   const { payload: p, index } = loaded;
   const meta = p.meta;
