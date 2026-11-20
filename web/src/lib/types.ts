@@ -168,6 +168,9 @@ export interface Futures {
 }
 export type IcRow = Record<string, string | number | null>;
 export interface Validation {
+  source?: string;
+  generated_at?: string;
+  data_until?: string | null;
   ic: { train: string[]; test: string[]; note: string | null; table: IcRow[] };
   ic_by_session: { trading_date: string; ic_mean: Num }[];
   simulated_signals_are_planted: boolean;

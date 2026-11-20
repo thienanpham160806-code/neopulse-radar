@@ -68,6 +68,8 @@ Phiên mới nhất ưu tiên payload tổng hợp trong Redis (`neopulse:market
 
 Bộ ghi/relay SSI hiện vẫn chạy trên máy đã cài lịch Windows; máy ngủ hoặc mất mạng thì dữ liệu mới dừng. Redis/Ably không tự lấy dữ liệu SSI. Bot Telegram vẫn chạy trên cloud độc lập.
 
+Khối Kiểm chứng & dữ liệu chạy nền trên một kết nối SQLite chỉ đọc riêng, tính lại khoảng 10 phút. Payload cloud của VN30/VNINDEX giữ kết quả thành công gần nhất cùng giờ tính và mốc dữ liệu; nếu lần tính sau lỗi thì giữ kết quả cũ, thử lại sớm và không chặn luồng giá. Hai phiên đầu vẫn có bảng thống kê nhưng được ghi rõ là ít dữ liệu, chưa đủ để đánh giá độ ổn định. Khi đổi nguồn/phiên, bộ nhớ kiểm chứng được tách lại.
+
 Trang chủ `/trang-chu` nối sang nhịp thị trường `/` và hồ sơ `/doanh-nghiep`. Header/breadcrumb dùng chung, hỗ trợ quay về cấp cha; breadcrumb thị trường giữ phiên/chỉ số đang chọn. Sáng: xanh băng hà/navy/vàng chanh; tối: xanh rừng/kem/cam. Màu giá chứng khoán vẫn theo quy ước tăng/giảm, độc lập bảng màu trang.
 
 Biểu đồ dùng **TradingView Lightweight Charts 5.3.0** với dữ liệu NeoPulse đã xuất (SSI hoặc Vietcap, tùy trang), không phải nguồn giá TradingView. Có zoom, pan, crosshair, đổi theme và attribution; giấy phép/NOTICE ở public/licenses. Hồ sơ dùng chuỗi so sánh quy về 100, thị trường dùng điểm chỉ số theo phút. Không dựng nến OHLC khi chỉ có giá đóng cửa.

@@ -7,6 +7,7 @@ import {
   ResponsiveContainer, Scatter, ScatterChart, Tooltip, Treemap, XAxis, YAxis, ZAxis,
 } from "recharts";
 import { dash, hm, money, num, pct, ratioPct, signed } from "@/lib/format";
+import { dmyTime } from "@/lib/fmt";
 import type { AlertItem, BookRow, Payload, Severity } from "@/lib/types";
 import { Card, Empty, Note, SevTag, SignedMoney, Stat, Td, Th, TOOLTIP_STYLE, signTone } from "./ui";
 
@@ -318,11 +319,16 @@ export function Ranking({ p, f }: { p: Payload; f: Filters }) {
 /* ------------------------------------------------------------------ Kiểm chứng */
 export function Validation({ p }: { p: Payload }) {
   const v = p.validation;
-  if (!v) return <Empty>Khối kiểm chứng chưa có trong bản dữ liệu này (được tính thưa, khoảng 10 phút một lần khi chạy trực tiếp).</Empty>;
+  if (!v) return <Empty>Chưa nhận được kết quả kiểm chứng từ bộ xử lý dữ liệu. Khi có kết quả, trang sẽ tự cập nhật. Mục này kiểm tra chất lượng dữ liệu và mối liên hệ giữa tín hiệu với biến động giá; không phải xác nhận tín hiệu chắc chắn dự báo đúng.</Empty>;
   const cols = v.ic.table.length ? Object.keys(v.ic.table[0]) : [];
   const dq = v.data_quality;
   return (
     <div className="grid grid-cols-1 gap-3">
+      <Card title="Kiểm chứng trên dữ liệu đã thu thập">
+        <p className="text-sm leading-relaxed">Hệ thống kiểm tra tín hiệu sổ lệnh có liên hệ với thay đổi giá sau đó hay không, đồng thời thống kê dữ liệu thiếu và gián đoạn. Kết quả được tính lại khoảng 10 phút một lần, tách khỏi luồng cập nhật giá.</p>
+        {v.generated_at ? <p className="mt-2 text-xs text-muted">Tính lúc {dmyTime(v.generated_at)}{v.data_until ? ` · Dữ liệu đến ${dmyTime(v.data_until)}` : ""} (giờ Việt Nam).</p> : null}
+        {dq.n_sessions < 5 ? <p className="mt-3 rounded-lg bg-surface2 p-3 text-sm">Mới ghi nhận {dq.n_sessions} phiên. Kết quả hiện chỉ để tham khảo; cần thu thập thêm phiên trước khi đánh giá độ ổn định của tín hiệu.</p> : null}
+      </Card>
       {v.simulated_signals_are_planted ? (
         <div role="note" className="rounded-xl border border-sim/40 bg-sim/10 p-3 text-sm text-sim">
           Trên dữ liệu MÔ PHỎNG, tín hiệu sổ lệnh được <b>cài sẵn</b> vào cơ chế sinh giá. Kết quả dưới đây chỉ xác nhận đường ống tính toán chạy đúng — <b>không</b> phải bằng chứng về thị trường thật.
