@@ -12,13 +12,14 @@ export function TechnicalChart({ symbol, intraday = [], reference, fallback, int
   const [ma, setMA] = useState(20), [ema, setEMA] = useState(50);
   const [showMA, setShowMA] = useState(true), [showEMA, setShowEMA] = useState(false), [showRef, setShowRef] = useState(false);
   useEffect(() => {
+    if (fallback?.symbol === symbol && fallback.data.length) { setHistory(fallback); setError(false); return; }
     const controller = new AbortController();
     fetch(`/data/charts/${encodeURIComponent(symbol)}.json`, { signal: controller.signal }).then((r) => {
       if (!r.ok) throw new Error("missing");
       return r.json();
     }).then((p: ChartData) => { if (p.symbol !== symbol || !Array.isArray(p.data) || !p.studies) throw new Error("invalid"); setHistory(p); setError(false); }).catch((e) => { if (e.name !== "AbortError") setError(true); });
     return () => controller.abort();
-  }, [symbol]);
+  }, [symbol, fallback]);
   const isIntraday = range === "Phiên" || !history?.data.length;
   const data = isIntraday ? intraday : history!.data;
   const visible = useMemo(() => {

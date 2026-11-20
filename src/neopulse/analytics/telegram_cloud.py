@@ -15,11 +15,14 @@ from urllib.parse import urlparse
 import httpx
 
 BASE = "https://neopulse-radar.vercel.app"
-HELP = ("NeoPulse · nhận tin tự nguyện\n/start: đăng ký cảnh báo mức CAO\n"
+HELP = ("NEOPULSE RADAR — TRỢ LÝ THEO DÕI THỊ TRƯỜNG\n\n"
+        "Bot gửi cảnh báo bất thường, tin doanh nghiệp và tin chính sách theo lựa chọn của bạn. Không đặt lệnh, không khuyến nghị mua/bán.\n\n"
+        f"Mở website: {BASE}\nChọn nhóm tin: {BASE}/thong-bao\nXem doanh nghiệp: {BASE}/doanh-nghiep\n\n"
+        "BẮT ĐẦU\n/start: đăng ký cảnh báo mức CAO\n/help: xem hướng dẫn này\n"
         "/news on hoặc off: tin doanh nghiệp\n/laws on hoặc off: tin chính sách từ Chính phủ\n"
         "/watch MWG,FPT: lọc mã (tối đa 30)\n/all: toàn bộ VN30\n/status: xem cài đặt\n"
         "/stop hoặc /delete: hủy và xóa đăng ký\n"
-        "Kiểm tra theo đợt khoảng 15 phút; lịch cloud có thể trễ. Không phải lời khuyên đầu tư.")
+        "Tin tự động gửi theo đợt khoảng 15 phút; lịch cloud có thể trễ. Nguồn giá cần được NeoPulse cập nhật để có cảnh báo mới. Không phải lời khuyên đầu tư.")
 
 
 class Telegram:
@@ -84,6 +87,8 @@ def command(state: dict, update: dict, valid: set[str], now: float) -> tuple[str
         return cid, HELP
     if cmd == "/help":
         return cid, HELP
+    if cmd in {"/web", "/website"}:
+        return cid, f"NeoPulse Radar\n{BASE}\nHồ sơ doanh nghiệp: {BASE}/doanh-nghiep\nNhóm tin: {BASE}/thong-bao"
     user = state["users"].get(cid)
     if not user:
         return (cid, "Bạn chưa đăng ký. Gửi /start nếu muốn nhận thông báo.") if cmd.startswith("/") else None
@@ -102,7 +107,9 @@ def command(state: dict, update: dict, valid: set[str], now: float) -> tuple[str
         user["symbols"] = []
     elif cmd != "/status":
         return cid, HELP
-    return cid, (f"Cảnh báo: {user['alerts']} · tin doanh nghiệp: {user['news']} · chính sách: {user['laws']}\n"
+    def flag(key):
+        return "Bật" if user[key] else "Tắt"
+    return cid, (f"Cài đặt nhận tin NeoPulse\nCảnh báo: {flag('alerts')}\nTin doanh nghiệp: {flag('news')}\nChính sách: {flag('laws')}\n"
                  f"Mã theo dõi: {', '.join(user['symbols']) or 'Toàn bộ VN30'}\n/stop để hủy và xóa đăng ký.")
 
 
@@ -154,10 +161,16 @@ def run(path: Path, token: str, key: str, *, client: httpx.Client, now: float | 
     now = time.time() if now is None else now
     state = load_state(path, key)
     api = Telegram(token, client)
-    index = client.get(BASE + "/data/company/index.json")
+    store = None
+    if os.environ.get("KV_REST_API_URL") and os.environ.get("KV_REST_API_TOKEN"):
+        from .telegram_store import RedisUsers
+        store = RedisUsers.from_env(client)
+        state["users"] = store.users()
+    index = client.get(BASE + ("/data/company/catalog.json" if store else "/data/company/index.json"))
     index.raise_for_status()
     valid = {r["symbol"] for r in index.json()["symbols"]}
-    updates = api.call("getUpdates", {"offset": state["offset"], "timeout": 0, "limit": 100, "allowed_updates": ["message"]})
+    # Khi webhook đã bật, Telegram không cho dùng getUpdates; webhook sở hữu lệnh và đăng ký.
+    updates = [] if store else api.call("getUpdates", {"offset": state["offset"], "timeout": 0, "limit": 100, "allowed_updates": ["message"]})
     for update in updates:
         reply = command(state, update, valid, now)
         # Lưu đăng ký/hủy trước xác nhận; không để lỗi gửi làm mất /stop.
@@ -202,6 +215,11 @@ def run(path: Path, token: str, key: str, *, client: httpx.Client, now: float | 
         user_sent = 0
         user["delivered"] = {k: v for k, v in user["delivered"].items() if v >= now - 7 * 86400}
         for event in sorted(events, key=lambda e: e["at"]):
+            if store:
+                current = store.read(cid).get("user")
+                if not current:
+                    break  # /stop có hiệu lực trước những lần gửi tiếp theo
+                user = current
             if not user["symbols"] and event["category"] != "laws" and not set(event["symbols"]) & basket:
                 continue
             if not should_send(user, event, now):
@@ -209,9 +227,20 @@ def run(path: Path, token: str, key: str, *, client: httpx.Client, now: float | 
             result = api.send(cid, event["text"])
             if isinstance(result, dict) and result.get("blocked"):
                 state["users"].pop(cid, None)
+                if store:
+                    store.update(cid, lambda r: {**r, "user": None})
                 save_state(path, key, state)
                 break
             user["delivered"][event["id"]] = now
+            if store:
+                def acknowledge(record, identity=event["id"]):
+                    if not record.get("user"):
+                        return None
+                    delivered = record["user"].setdefault("delivered", {})
+                    delivered[identity] = now
+                    record["user"]["delivered"] = {k: v for k, v in delivered.items() if v >= now - 7 * 86400}
+                    return record
+                store.update(cid, acknowledge)
             save_state(path, key, state)
             sent += 1
             user_sent += 1

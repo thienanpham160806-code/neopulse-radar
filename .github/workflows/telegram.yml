@@ -37,6 +37,8 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_STATE_KEY: ${{ secrets.TELEGRAM_STATE_KEY }}
+          KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
+          KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
       - name: Persist encrypted state even after a delivery failure
         if: always()
         uses: actions/upload-artifact@v4

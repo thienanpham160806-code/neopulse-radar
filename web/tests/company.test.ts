@@ -29,9 +29,15 @@ describe("hồ sơ doanh nghiệp", () => {
     expect(await companyReport("MWG")).toBeNull();
   });
   it("danh sách chỉ dùng mã hợp lệ và chịu được dữ liệu thiếu", async () => {
-    const read = vi.spyOn(fs, "readFile").mockResolvedValueOnce(JSON.stringify({ symbols: [{ symbol: "MWG", name: "MWG" }, { symbol: "../escape" }] }));
+    const read = vi.spyOn(fs, "readFile").mockResolvedValueOnce(JSON.stringify({ symbols: [{ symbol: "MWG", name: "MWG" }, { symbol: "../escape" }] })).mockRejectedValueOnce(new Error("missing catalog"));
     expect((await companyIndex()).map((e) => e.symbol)).toEqual(["MWG"]);
     read.mockRejectedValueOnce(new Error("missing"));
     expect(await companyIndex()).toEqual([]);
+  });
+  it("toàn thị trường phân biệt báo cáo có sẵn và mã tải khi mở", async () => {
+    vi.spyOn(fs, "readFile")
+      .mockResolvedValueOnce(JSON.stringify({ symbols: [{ symbol: "MWG" }] }))
+      .mockResolvedValueOnce(JSON.stringify({ symbols: [{ symbol: "MWG", exchange: "HOSE" }, { symbol: "VND", exchange: "HOSE" }, { symbol: "../bad" }] }));
+    expect(await companyIndex()).toEqual([{ symbol: "MWG", exchange: "HOSE", has_report: true }, { symbol: "VND", exchange: "HOSE", has_report: false }]);
   });
 });

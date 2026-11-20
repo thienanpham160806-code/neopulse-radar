@@ -1,7 +1,7 @@
 import { promises as fs } from "fs";
 import path from "path";
 
-export interface CompanyEntry { symbol: string; name: string | null; industry: string | null }
+export interface CompanyEntry { symbol: string; name: string | null; industry: string | null; exchange?: string; has_report?: boolean }
 type N = number | null;
 export interface CompanyReport {
   schema: number; symbol: string; kind: string; source: string; fetched_at: string | null;
@@ -14,6 +14,7 @@ export interface CompanyReport {
   ratios: Record<string, Record<string, N>>;
   peers: { basis: string; rows: ({ symbol: string; year: string | null } & Record<string, string | N>)[]; median: Record<string, N> };
   summary: string[]; notes: string[];
+  technical?: import("@/components/TechnicalChart").ChartData;
   dcf?: { reason?: string; base_fcff: N; tax_rate?: number; cases: { wacc: number; growth: number; value: N }[] };
 }
 
@@ -34,7 +35,13 @@ export async function companyUniverse(): Promise<{ symbols: string[]; date: stri
 export async function companyIndex(): Promise<CompanyEntry[]> {
   try {
     const data = JSON.parse(await fs.readFile(path.join(dir(), "index.json"), "utf8"));
-    return Array.isArray(data.symbols) ? data.symbols.filter((e: CompanyEntry) => typeof e.symbol === "string" && validSymbol(e.symbol)) : [];
+    const ready: CompanyEntry[] = Array.isArray(data.symbols) ? data.symbols.filter((e: CompanyEntry) => typeof e.symbol === "string" && validSymbol(e.symbol)).map((e: CompanyEntry) => ({ ...e, has_report: true })) : [];
+    try {
+      const catalog = JSON.parse(await fs.readFile(path.join(dir(), "catalog.json"), "utf8"));
+      if (!Array.isArray(catalog.symbols)) return ready;
+      const cached = new Map(ready.map((e) => [e.symbol, e]));
+      return catalog.symbols.filter((e: CompanyEntry) => e && validSymbol(e.symbol)).map((e: CompanyEntry) => ({ ...e, has_report: cached.has(e.symbol) }));
+    } catch { return ready; }
   } catch { return []; }
 }
 export async function companyReport(symbol: string): Promise<CompanyReport | null> {

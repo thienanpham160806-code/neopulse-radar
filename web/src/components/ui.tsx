@@ -6,6 +6,7 @@ import { pct, signed } from "@/lib/format";
 export const TOOLTIP_STYLE = {
   contentStyle: { background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, fontSize: 12, color: "var(--fg)" },
   labelStyle: { color: "var(--muted)" },
+  itemStyle: { color: "var(--fg)" },
 } as const;
 
 export function Card({ title, children, className = "", action }: { title?: ReactNode; children: ReactNode; className?: string; action?: ReactNode }) {

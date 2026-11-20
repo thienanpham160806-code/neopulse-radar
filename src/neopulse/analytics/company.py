@@ -23,7 +23,7 @@ import time
 from pathlib import Path
 
 from ..timeutil import iso_vn, now_vn
-from .explain import vn_digits
+from .formatting import vn_digits
 
 log = logging.getLogger(__name__)
 SCHEMA = 1
