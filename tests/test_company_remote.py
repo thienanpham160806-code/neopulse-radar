@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import httpx
 
 from neopulse.analytics import company_remote
@@ -30,7 +32,12 @@ def test_provider_price_units_and_date_are_preserved(monkeypatch):
         return {"profile": {"about": "Test"}, "notes": []}
 
     monkeypatch.setattr(company_remote, "build_report", build)
+    monkeypatch.setattr(company_remote, "now_vn", lambda: datetime(2026, 11, 21, tzinfo=company_remote.VN_TZ))
     with httpx.Client(transport=httpx.MockTransport(respond)) as client:
         report = company_remote.fetch_report("VND", {"name": "Test"}, {}, client)
     assert inputs[-1]["prices"] == [["2026-11-20", 14.25]]
     assert report["technical"]["data"] == [{"time": "2026-11-20", "value": 14250}]
+    monkeypatch.setattr(company_remote, "now_vn", lambda: datetime(2026, 11, 20, 10, tzinfo=company_remote.VN_TZ))
+    with httpx.Client(transport=httpx.MockTransport(respond)) as client:
+        forming = company_remote.fetch_report("VND", {"name": "Test"}, {}, client)
+    assert forming["technical"]["data"] == []

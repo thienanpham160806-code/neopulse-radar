@@ -69,6 +69,10 @@ def fetch_report(symbol: str, entry: dict, aliases: dict, client: httpx.Client, 
             prices = prices.get("data", [])
         row = prices[0] if prices else {}
         raw["prices"] = [[datetime.fromtimestamp(float(t), VN_TZ).date().isoformat(), float(v) / 1000] for t, v in zip(row.get("t", []), row.get("c", []), strict=False)]
+        # A daily candle returned during trading is not a completed closing price.
+        current = now_vn()
+        cutoff = current.date().isoformat()
+        raw["prices"] = [p for p in raw["prices"] if p[0] < cutoff or (p[0] == cutoff and (current.hour, current.minute) >= (15, 15))]
         if raw["prices"]:
             report = build_report(raw, index_prices or [], {}, {symbol: {"board": entry.get("exchange"), "icb_name": entry.get("industry")}})
     except (httpx.HTTPError, ValueError, TypeError, KeyError, IndexError):
