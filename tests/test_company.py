@@ -68,6 +68,16 @@ def test_general_ratios_dupont_and_working_capital():
     assert "Doanh thu thuần năm 2025 đạt 1.000 tỷ đồng (+25,0% so với 2024)" in rep["summary"][0]
 
 
+def test_partial_refresh_preserves_prepared_reports_in_index(tmp_path):
+    reports = co.build_all({"AAA": _general("AAA"), "BBB": _general("BBB")}, [])
+    co.write_reports(reports, tmp_path)
+    before = (tmp_path / "BBB.json").read_bytes()
+    co.write_reports({"AAA": reports["AAA"]}, tmp_path)
+    index = json.loads((tmp_path / "index.json").read_text(encoding="utf-8"))
+    assert {e["symbol"] for e in index["symbols"]} == {"AAA", "BBB"}
+    assert (tmp_path / "BBB.json").read_bytes() == before
+
+
 def test_bank_uses_bank_ratios():
     rep = co.build_all({"BNK": _bank()}, [])["BNK"]
     r = rep["ratios"]["2025"]

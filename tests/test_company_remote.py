@@ -14,7 +14,11 @@ def test_latest_annual_rows_and_missing_values():
 
 
 def test_provider_price_units_and_date_are_preserved(monkeypatch):
+    requested = []
     def respond(request):
+        requested.append(str(request.url))
+        if "section=INCOME_STATEMENT" in str(request.url) and "language=vi" not in str(request.url):
+            raise httpx.ReadTimeout("temporary statement timeout", request=request)
         if request.method == "POST":
             return httpx.Response(200, json=[{"t": ["1795132800"], "c": [14250]}])
         if "details" in str(request.url):
@@ -37,6 +41,7 @@ def test_provider_price_units_and_date_are_preserved(monkeypatch):
         report = company_remote.fetch_report("VND", {"name": "Test"}, {}, client)
     assert inputs[-1]["prices"] == [["2026-11-20", 14.25]]
     assert report["technical"]["data"] == [{"time": "2026-11-20", "value": 14250}]
+    assert any("section=INCOME_STATEMENT&language=vi" in url for url in requested)
     monkeypatch.setattr(company_remote, "now_vn", lambda: datetime(2026, 11, 20, 10, tzinfo=company_remote.VN_TZ))
     with httpx.Client(transport=httpx.MockTransport(respond)) as client:
         forming = company_remote.fetch_report("VND", {"name": "Test"}, {}, client)

@@ -4,18 +4,18 @@ import type { CompanyEntry } from "@/lib/company";
 import { CompanyLink } from "./CompanyLink";
 import { dmy } from "@/lib/format";
 const searchText = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").toLowerCase();
-export function CompanyDirectory({ entries, vn30 = [], universeDate = null }: { entries: CompanyEntry[]; vn30?: string[]; universeDate?: string | null }) {
+export function CompanyDirectory({ entries, vn30 = [], universeDate = null, vn100 = [], vn100Date = null }: { entries: CompanyEntry[]; vn30?: string[]; universeDate?: string | null; vn100?: string[]; vn100Date?: string | null }) {
   const [query, setQuery] = useState(""), [group, setGroup] = useState("market"), [exchange, setExchange] = useState("");
   const [page, setPage] = useState(1);
-  const ready = entries.filter((e) => e.has_report).length;
+  const ready = vn100.filter((s) => entries.some((e) => e.symbol === s && e.has_report)).length;
   const covered = vn30.filter((s) => entries.some((e) => e.symbol === s && e.has_report)).length;
   const q = searchText(query.trim());
-  const rows = entries.filter((e) => (group !== "vn30" || vn30.includes(e.symbol)) && (group !== "ready" || e.has_report)
+  const rows = entries.filter((e) => (group !== "vn30" || vn30.includes(e.symbol)) && (group !== "vn100" || vn100.includes(e.symbol))
     && (!exchange || e.exchange === exchange) && searchText(`${e.symbol} ${e.name ?? ""} ${e.industry ?? ""}`).includes(q));
   const maxPage = Math.max(1, Math.ceil(rows.length / 24)), current = Math.min(page, maxPage);
   return <>
-    <div className="mt-6 flex flex-wrap gap-2" aria-label="Nhóm doanh nghiệp">{[["market", `Toàn thị trường (${entries.length})`], ["vn30", `VN30 (${covered}/30)`], ["ready", `Báo cáo có sẵn (${ready})`]].map(([key, text]) => <button key={key} onClick={() => { setGroup(key); setPage(1); }} aria-pressed={group === key} className={`min-h-11 rounded-full px-4 text-sm ${group === key ? "bg-accent text-on-accent" : "bg-surface"}`}>{text}</button>)}</div>
-    <p className="mt-3 max-w-3xl text-xs leading-relaxed text-muted">Danh mục cổ phiếu HOSE/HNX/UPCoM từ Vietcap; không bao gồm toàn bộ doanh nghiệp tư nhân tại Việt Nam. {ready} báo cáo đã chuẩn bị sẵn; các mã khác tải BCTC khi mở hồ sơ. Rổ VN30 theo dữ liệu phiên {dmy(universeDate)}.</p>
+    <div className="mt-6 flex flex-wrap gap-2" aria-label="Nhóm doanh nghiệp">{[["market", `Toàn thị trường (${entries.length})`], ["vn30", `VN30 (${covered}/30)`], ["vn100", `VN100 · báo cáo sẵn (${ready}/100)`]].map(([key, text]) => <button key={key} onClick={() => { setGroup(key); setPage(1); }} aria-pressed={group === key} className={`min-h-11 rounded-full px-4 text-sm ${group === key ? "bg-accent text-on-accent" : "bg-surface"}`}>{text}</button>)}</div>
+    <p className="mt-3 max-w-3xl text-xs leading-relaxed text-muted">Danh mục cổ phiếu HOSE/HNX/UPCoM từ Vietcap; không bao gồm toàn bộ doanh nghiệp tư nhân tại Việt Nam. {ready}/100 mã VN100 có báo cáo sẵn; những mã chưa lưu sẽ tải BCTC khi mở hồ sơ. Rổ VN100 đối chiếu ngày {dmy(vn100Date)}; rổ VN30 theo dữ liệu phiên {dmy(universeDate)}.</p>
     <div className="mt-6 flex flex-wrap items-end gap-3"><label className="block w-full max-w-xl"><span className="mb-2 block text-sm font-medium">Tìm mã, tên doanh nghiệp hoặc ngành</span><input value={query} onChange={(e) => { setQuery(e.target.value); setPage(1); }} placeholder="Ví dụ: VND, Hòa Phát, ngân hàng…" className="min-h-12 w-full rounded-xl border border-line bg-surface px-4" /></label>
       <label className="block text-sm"><span className="mb-2 block">Sàn giao dịch</span><select aria-label="Sàn giao dịch" value={exchange} onChange={(e) => { setExchange(e.target.value); setPage(1); }} className="min-h-12 rounded-xl border border-line bg-surface px-4"><option value="">Tất cả sàn</option>{["HOSE", "HNX", "UPCOM"].map((e) => <option key={e}>{e}</option>)}</select></label></div>
     <p role="status" className="my-4 text-sm text-muted">{rows.length} cổ phiếu khớp bộ lọc{rows.length ? ` · hiển thị ${(current - 1) * 24 + 1}–${Math.min(current * 24, rows.length)}` : ""}</p>

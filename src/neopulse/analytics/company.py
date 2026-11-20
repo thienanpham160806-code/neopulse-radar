@@ -489,8 +489,18 @@ def write_reports(reports: dict[str, dict], out_dir: str | Path) -> Path:
         if not re.fullmatch(r"[A-Z][A-Z0-9]{1,9}", sym):
             raise ValueError("Mã doanh nghiệp không hợp lệ")
         (out / f"{sym}.json").write_text(json.dumps(rep, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    saved = dict(reports)
+    for path in out.glob("*.json"):
+        if path.stem in saved or not re.fullmatch(r"[A-Z][A-Z0-9]{1,9}", path.stem):
+            continue
+        try:
+            report = json.loads(path.read_text(encoding="utf-8"))
+            if report.get("schema") == SCHEMA and report.get("symbol") == path.stem and report.get("profile"):
+                saved[path.stem] = report
+        except (ValueError, OSError):
+            continue
     idx = {"schema": SCHEMA, "generated_at": iso_vn(now_vn()),
-           "symbols": [{"symbol": k, "name": reports[k]["profile"].get("short_name") or reports[k]["profile"].get("name"),
-             "industry": reports[k]["profile"].get("industry")} for k in sorted(reports)]}
+           "symbols": [{"symbol": k, "name": saved[k]["profile"].get("short_name") or saved[k]["profile"].get("name"),
+             "industry": saved[k]["profile"].get("industry")} for k in sorted(saved)]}
     (out / "index.json").write_text(json.dumps(idx, ensure_ascii=False), encoding="utf-8")
     return out

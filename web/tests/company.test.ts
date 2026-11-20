@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { promises as fs } from "fs";
-import { companyIndex, companyReport, companyUniverse } from "../src/lib/company";
+import { companyIndex, companyReport, companyUniverse, companyVN100 } from "../src/lib/company";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { CompanyLink } from "../src/components/CompanyLink";
+import { CompanyDirectory } from "../src/components/CompanyDirectory";
 
 afterEach(() => vi.restoreAllMocks());
 describe("hồ sơ doanh nghiệp", () => {
@@ -39,5 +40,17 @@ describe("hồ sơ doanh nghiệp", () => {
       .mockResolvedValueOnce(JSON.stringify({ symbols: [{ symbol: "MWG" }] }))
       .mockResolvedValueOnce(JSON.stringify({ symbols: [{ symbol: "MWG", exchange: "HOSE" }, { symbol: "VND", exchange: "HOSE" }, { symbol: "../bad" }] }));
     expect(await companyIndex()).toEqual([{ symbol: "MWG", exchange: "HOSE", has_report: true }, { symbol: "VND", exchange: "HOSE", has_report: false }]);
+  });
+  it("VN100 chỉ chấp nhận rổ có đúng 100 mã duy nhất", async () => {
+    const symbols = Array.from({ length: 100 }, (_, i) => `A${i}`);
+    const read = vi.spyOn(fs, "readFile").mockResolvedValueOnce(JSON.stringify({ symbols, as_of: "2026-11-20" }));
+    expect((await companyVN100()).symbols).toHaveLength(100);
+    read.mockResolvedValueOnce(JSON.stringify({ symbols: [...symbols.slice(0, 99), symbols[0]] }));
+    expect((await companyVN100()).symbols).toEqual([]);
+  });
+  it("đếm báo cáo VN100 theo thành viên thật, không cộng báo cáo ngoài rổ", () => {
+    const entries = [{ symbol: "MWG", name: "MWG", industry: null, has_report: true }, { symbol: "VND", name: "VND", industry: null, has_report: true }];
+    const html = renderToStaticMarkup(createElement(CompanyDirectory, { entries, vn100: ["MWG", "FPT"] }));
+    expect(html).toContain("VN100 · báo cáo sẵn (1/100)");
   });
 });

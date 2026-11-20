@@ -20,6 +20,14 @@ export interface CompanyReport {
 
 export const validSymbol = (s: string) => /^[A-Z][A-Z0-9]{1,9}$/.test(s);
 const dir = () => path.join(process.cwd(), "public", "data", "company");
+export async function companyVN100(): Promise<{ symbols: string[]; date: string | null }> {
+  try {
+    const data = JSON.parse(await fs.readFile(path.join(dir(), "vn100.json"), "utf8"));
+    const symbols = [...new Set<string>((Array.isArray(data.symbols) ? data.symbols : []).filter((s: unknown) => typeof s === "string" && validSymbol(s)))].sort();
+    if (symbols.length === 100) return { symbols, date: typeof data.as_of === "string" ? data.as_of : null };
+  } catch { /* An incomplete basket must not be presented as the VN100. */ }
+  return { symbols: [], date: null };
+}
 /** Rổ thực sự có trong snapshot VN30; không dùng danh sách tham chiếu chứa cả mã cũ. */
 export async function companyUniverse(): Promise<{ symbols: string[]; date: string | null }> {
   for (const file of ["latest_VN30.json", "latest.json"]) {

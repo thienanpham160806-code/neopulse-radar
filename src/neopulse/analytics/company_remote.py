@@ -35,7 +35,12 @@ def fetch_report(symbol: str, entry: dict, aliases: dict, client: httpx.Client, 
     headers = {"User-Agent": "Mozilla/5.0", "Referer": "https://trading.vietcap.com.vn/"}
 
     def read(path):
-        r = client.get(BASE + path, headers=headers)
+        try:
+            r = client.get(BASE + path, headers=headers)
+        except httpx.ReadTimeout:
+            if "financial-statement?" not in path:
+                raise
+            r = client.get(BASE + path + "&language=vi", headers=headers)
         r.raise_for_status()
         data = r.json().get("data")
         if data is None:

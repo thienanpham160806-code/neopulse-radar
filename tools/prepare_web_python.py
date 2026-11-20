@@ -3,7 +3,7 @@ import shutil
 from pathlib import Path
 
 root = Path(__file__).resolve().parents[1]
-for name in ("catalog.json", "field-aliases.json"):
+for name in ("catalog.json", "field-aliases.json", "vn100.json"):
     public = root / "web/public/data/company" / name
     public.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(root / "web/reference" / name, public)
