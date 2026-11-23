@@ -1,8 +1,8 @@
 """Hồ sơ doanh nghiệp cho web: tổng quan + phân tích tài chính theo khung báo cáo phân tích cổ phiếu (giới thiệu
 doanh nghiệp và ngành, diễn biến giá, kết quả kinh doanh, tỷ số tài chính, DuPont, dòng tiền, so sánh cùng ngành).
 
-Nguồn: BCTC năm hợp nhất, hồ sơ, cổ đông, lãnh đạo, sự kiện và giá ngày qua thư viện vnstock (nguồn Vietcap),
-chỉ dữ liệu công khai. Mọi tỷ số do Python tính ở đây; web chỉ hiển thị.
+Nguồn: BCTC năm hợp nhất, hồ sơ, cổ đông, lãnh đạo, sự kiện và giá ngày qua thư viện vnstock (nguồn Vietcap);
+tin tức kèm link bài gốc Vietstock qua API công khai của KBS. Chỉ dữ liệu công khai. Mọi tỷ số do Python tính ở đây; web chỉ hiển thị.
 
 Cố ý KHÔNG đưa: khuyến nghị MUA/BÁN, giá mục tiêu, xếp hạng của công ty chứng khoán (Vietcap trả kèm `rating`,
 `target_price`... trong overview: chỉ lấy các trường trong _OVERVIEW_KEEP). DCF chỉ có bảng độ nhạy minh họa,
@@ -21,6 +21,8 @@ import re
 import statistics
 import time
 from pathlib import Path
+
+import httpx
 
 from ..timeutil import iso_vn, now_vn
 from .formatting import vn_digits
@@ -132,15 +134,47 @@ def fetch_raw(symbol: str, *, start: str, end: str, pause: float = 3.5) -> dict:
     out["shareholders"] = [{"name": r["share_holder"], "pct": r["share_own_percent"]} for r in _df_records(sh)[:8]] if sh is not None else []
     of = call("officers", st.company.officers)
     out["officers"] = [{"name": r["officer_name"], "position": r["officer_position"]} for r in _df_records(of)[:8]] if of is not None else []
-    ev = call("events", st.company.events)
-    out["events"] = [{"date": (r.get("public_date") or "")[:10], "title": r.get("event_title_vi")} for r in _df_records(ev)[:8]] if ev is not None else []
-    nw = call("news", st.company.news)
-    out["news"] = [{"date": (r.get("public_date") or "")[:10], "title": r.get("news_title")} for r in _df_records(nw)[:6]] if nw is not None else []
+    with httpx.Client(timeout=20) as client:
+        out.update(fetch_disclosures(symbol, client))
     for key, fn in (("income", st.finance.income_statement), ("balance", st.finance.balance_sheet), ("cashflow", st.finance.cash_flow)):
         df = call(key, lambda fn=fn: fn(period="year", lang="vi"))
         out[key] = _statement(df) if df is not None else {"years": [], "items": {}}
     h = call("history", lambda: st.quote.history(start=start, end=end, interval="1D"))
     out["prices"] = [[str(r["time"])[:10], float(r["close"])] for r in _df_records(h)] if h is not None else []
+    return out
+
+
+_EVENT_CODES = "DIV,ISS,DDIND,DDINS,DDRP,AGME,AGMR,EGME,AIS,MA,MOVE,NLIS,OTHE,RETU,SUSP"  # mọi nhóm sự kiện Vietcap
+_NEWS_PATH = re.compile(r"/\d{4}/\d{2}/[a-z0-9-]+\.htm")
+
+
+def fetch_disclosures(symbol: str, client: httpx.Client) -> dict:
+    """Toàn bộ sự kiện doanh nghiệp 10 năm (Vietcap) và 30 tin mới nhất kèm link bài gốc trên Vietstock (qua KBS).
+    Nguồn nào lỗi thì danh sách đó rỗng; không bịa thay."""
+    out: dict = {"events": [], "news": []}
+    end = now_vn().date()
+    try:
+        r = client.get("https://iq.vietcap.com.vn/api/iq-insight-service/v1/events",
+                       headers={"User-Agent": "Mozilla/5.0", "Referer": "https://trading.vietcap.com.vn/"},
+                       params={"ticker": symbol, "fromDate": f"{end.year - 10}0101", "toDate": end.strftime("%Y%m%d"),
+                               "eventCode": _EVENT_CODES, "page": 0, "size": 500})
+        r.raise_for_status()
+        rows = [{"date": (e.get("publicDate") or e.get("displayDate1") or "")[:10], "title": e["eventTitleVi"].strip(),
+                 "type": e.get("eventNameVi")} for e in r.json()["data"]["content"] if e.get("eventTitleVi")]
+        out["events"] = sorted(rows, key=lambda e: e["date"], reverse=True)
+    except (httpx.HTTPError, ValueError, KeyError, TypeError, AttributeError) as e:
+        log.warning("%s sự kiện lỗi: %s", symbol, type(e).__name__)
+    try:
+        r = client.get(f"https://kbbuddywts.kbsec.com.vn/iis-server/investment/stockinfo/news/{symbol}",
+                       headers={"User-Agent": "Mozilla/5.0"}, params={"l": 1, "page": 1, "size": 30})
+        r.raise_for_status()
+        data = r.json()
+        out["news"] = [{"date": n["PublishTime"][:10], "title": " ".join(n["Title"].split()),
+                        "url": "https://vietstock.vn" + n["URL"], "source": "Vietstock"}
+                       for n in (data if isinstance(data, list) else [])
+                       if isinstance(n, dict) and n.get("Title") and _NEWS_PATH.fullmatch(n.get("URL") or "")]
+    except (httpx.HTTPError, ValueError, KeyError, TypeError, AttributeError) as e:
+        log.warning("%s tin tức lỗi: %s", symbol, type(e).__name__)
     return out
 
 

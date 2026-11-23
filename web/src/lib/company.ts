@@ -7,7 +7,7 @@ export interface CompanyReport {
   schema: number; symbol: string; kind: string; source: string; fetched_at: string | null;
   profile: { name: string | null; short_name: string | null; about: string | null; exchange: string | null; industry: string | null; listing_date: string | null; shares: N; foreign_pct: N; foreign_room: N; state_pct: N; free_float_pct: N };
   shareholders: { name: string; pct: N }[]; officers: { name: string; position: string }[];
-  events: { date: string; title: string }[]; news: { date: string; title: string }[];
+  events: { date: string; title: string; type?: string | null }[]; news: { date: string; title: string; url?: string; source?: string }[];
   price: { last: N; date: string | null; high_52w: N; low_52w: N; n_sessions?: number; series: [string, number, number][]; returns: Record<string, { stock: N; index: N }> };
   valuation: { market_cap: N; pe: N; pb: N; ev_ebitda: N };
   years: string[]; tables: Record<string, { label: string; values: N[] }[]>;

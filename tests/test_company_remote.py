@@ -46,3 +46,24 @@ def test_provider_price_units_and_date_are_preserved(monkeypatch):
     with httpx.Client(transport=httpx.MockTransport(respond)) as client:
         forming = company_remote.fetch_report("VND", {"name": "Test"}, {}, client)
     assert forming["technical"]["data"] == []
+
+
+def test_disclosures_keep_all_events_and_only_vietstock_links():
+    def respond(request):
+        if "events" in request.url.path:
+            return httpx.Response(200, json={"data": {"content": [
+                {"publicDate": "2025-01-02T00:00:00", "eventTitleVi": "Cũ", "eventNameVi": "Cổ tức"},
+                {"publicDate": "2026-05-01T00:00:00", "eventTitleVi": " Mới ", "eventNameVi": "Niêm yết thêm"},
+                {"publicDate": "2026-06-01T00:00:00", "eventTitleVi": None}]}})
+        return httpx.Response(200, json=[
+            {"Title": "Tin  thật", "PublishTime": "2026-11-20T10:00:00", "URL": "/2026/11/tin-that-830-1.htm"},
+            {"Title": "Lạ", "PublishTime": "2026-11-20T10:00:00", "URL": "javascript:alert(1)"},
+            {"Title": "Ngoài", "PublishTime": "2026-11-20T10:00:00", "URL": "//evil.example/2026/11/x.htm"}])
+
+    with httpx.Client(transport=httpx.MockTransport(respond)) as client:
+        got = company_remote.fetch_disclosures("HAG", client)
+    assert [e["title"] for e in got["events"]] == ["Mới", "Cũ"]
+    assert got["news"] == [{"date": "2026-11-20", "title": "Tin thật", "url": "https://vietstock.vn/2026/11/tin-that-830-1.htm", "source": "Vietstock"}]
+
+    with httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(500))) as client:
+        assert company_remote.fetch_disclosures("HAG", client) == {"events": [], "news": []}

@@ -11,7 +11,7 @@ import httpx
 
 from ..timeutil import VN_TZ, iso_vn, now_vn
 from .charting import build_chart
-from .company import _OVERVIEW_KEEP, build_report
+from .company import _OVERVIEW_KEEP, build_report, fetch_disclosures
 
 BASE = "https://iq.vietcap.com.vn/api/iq-insight-service/v1/company"
 
@@ -85,5 +85,6 @@ def fetch_report(symbol: str, entry: dict, aliases: dict, client: httpx.Client, 
     # Overview cung cấp giá tham khảo nhưng không có ngày giá: không gán ngày tải thành ngày giao dịch.
     report["technical"] = build_chart(symbol, raw["prices"], source="Vietcap · giá đóng cửa ngày", unit="đồng/CP", scale=1000)
     report["profile"]["about"] = report["profile"]["about"] or entry.get("name")
-    report["notes"].append("Hồ sơ tải theo yêu cầu: chưa có cổ đông, lãnh đạo hoặc tin/sự kiện trong lần tải này; không thay dữ liệu thiếu bằng 0.")
+    report.update(fetch_disclosures(symbol, client))
+    report["notes"].append("Hồ sơ tải theo yêu cầu: chưa có cổ đông và lãnh đạo trong lần tải này; không thay dữ liệu thiếu bằng 0.")
     return report
