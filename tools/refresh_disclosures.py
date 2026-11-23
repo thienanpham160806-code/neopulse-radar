@@ -39,7 +39,7 @@ def main():
                 tmp.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
                 tmp.replace(target)
             print(f"[{i}/{len(paths)}] {path.stem}: {len(got['events'])} sự kiện, {len(got['news'])} tin", flush=True)
-            time.sleep(0.5)
+            time.sleep(2)  # Vietcap trả 418 khi gọi dồn
 
 
 if __name__ == "__main__":
