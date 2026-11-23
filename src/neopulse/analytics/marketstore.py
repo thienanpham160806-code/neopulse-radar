@@ -6,6 +6,7 @@ import os
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 import httpx
 
@@ -30,11 +31,19 @@ def calculate_validation(db_path, source):
 
 
 TICK_URL = "https://neopulse-radar.vercel.app/api/telegram_tick"
+TICK_SECRET_FILE = Path("out/telegram_tick_secret.txt")  # gitignore; bộ ghi chạy tại thư mục gốc repo
+
+
+def _secret_file() -> str:
+    try:
+        return TICK_SECRET_FILE.read_text(encoding="utf-8").strip()
+    except OSError:
+        return ""
 
 
 def trigger_telegram() -> threading.Thread | None:
     """Báo endpoint gửi tin Telegram có dữ liệu mới. Chạy nền, mọi lỗi bị bỏ qua: không bao giờ chặn bộ phát."""
-    secret = os.environ.get("TELEGRAM_TICK_SECRET")
+    secret = os.environ.get("TELEGRAM_TICK_SECRET") or _secret_file()
     if not secret:
         return None
 

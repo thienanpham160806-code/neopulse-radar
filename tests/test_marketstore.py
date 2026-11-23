@@ -80,6 +80,7 @@ def test_validation_is_nonblocking_cached_for_ten_minutes_and_scoped_to_session(
 def test_telegram_trigger_is_optional_and_sends_secret(monkeypatch):
     calls = []
     monkeypatch.delenv("TELEGRAM_TICK_SECRET", raising=False)
+    monkeypatch.setattr(ms, "TICK_SECRET_FILE", ms.Path("khong-ton-tai.txt"))
     assert ms.trigger_telegram() is None
     monkeypatch.setenv("TELEGRAM_TICK_SECRET", "s3")
     monkeypatch.setattr(ms.httpx, "post", lambda url, headers, timeout: calls.append((url, headers)))
