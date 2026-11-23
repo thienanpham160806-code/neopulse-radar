@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 import os
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 
@@ -26,6 +27,26 @@ def calculate_validation(db_path, source):
         return block
     finally:
         db.close()
+
+
+TICK_URL = "https://neopulse-radar.vercel.app/api/telegram_tick"
+
+
+def trigger_telegram() -> threading.Thread | None:
+    """Báo endpoint gửi tin Telegram có dữ liệu mới. Chạy nền, mọi lỗi bị bỏ qua: không bao giờ chặn bộ phát."""
+    secret = os.environ.get("TELEGRAM_TICK_SECRET")
+    if not secret:
+        return None
+
+    def call():
+        try:
+            httpx.post(os.environ.get("TELEGRAM_TICK_URL", TICK_URL), headers={"Authorization": "Bearer " + secret}, timeout=55)
+        except httpx.HTTPError:
+            pass
+
+    thread = threading.Thread(target=call, daemon=True, name="telegram-tick")
+    thread.start()
+    return thread
 
 
 class MarketSnapshots:
@@ -84,6 +105,7 @@ class MarketSnapshots:
         response.raise_for_status()
         if any(r.get("error") for r in response.json()):
             raise RuntimeError("Market snapshot store rejected update")
+        trigger_telegram()
 
     def close(self):
         self._pool.shutdown(wait=False, cancel_futures=True)

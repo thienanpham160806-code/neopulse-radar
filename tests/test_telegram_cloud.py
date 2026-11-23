@@ -3,7 +3,9 @@ from datetime import datetime, timezone
 
 import httpx
 import pytest
+from cryptography.fernet import Fernet
 
+from neopulse.analytics import telegram_cloud as tc
 from neopulse.analytics.telegram_cloud import (
     Telegram,
     command,
@@ -103,3 +105,19 @@ def test_delivery_ack_is_only_added_after_send_succeeds(tmp_path):
         run(p, "TEST", key, client=c, now=110)
     assert not load_state(p, key)["users"]["123"]["delivered"]
     assert "PRIVATE" not in json.dumps(load_state(p, key))
+
+
+def test_redis_lock_skips_concurrent_run(monkeypatch, tmp_path, capsys):
+    monkeypatch.setenv("KV_REST_API_URL", "https://redis.test")
+    monkeypatch.setenv("KV_REST_API_TOKEN", "t")
+    monkeypatch.setenv("TELEGRAM_STATE_KEY", Fernet.generate_key().decode())
+    seen = []
+
+    def redis(request):
+        cmd = json.loads(request.content)
+        seen.append(cmd[0])
+        return httpx.Response(200, json={"result": None})  # SET NX thất bại: lượt khác giữ khóa
+
+    with httpx.Client(transport=httpx.MockTransport(redis)) as c:
+        tc.run(tmp_path / "s.enc", "tok", Fernet.generate_key().decode(), client=c)
+    assert seen == ["SET"] and "bỏ qua" in capsys.readouterr().out

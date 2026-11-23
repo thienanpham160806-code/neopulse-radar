@@ -157,14 +157,31 @@ def should_send(user: dict, event: dict, now: float) -> bool:
             and (event["category"] == "laws" or not user["symbols"] or bool(set(user["symbols"]) & set(event["symbols"]))))
 
 
-def run(path: Path, token: str, key: str, *, client: httpx.Client, now: float | None = None):
-    now = time.time() if now is None else now
-    state = load_state(path, key)
-    api = Telegram(token, client)
+LOCK_KEY = "neopulse:telegram:lock"
+
+
+def run(path: Path, token: str, key: str, *, client: httpx.Client, now: float | None = None, budget_s: float | None = None):
+    """Một lượt xử lý. Có Redis thì giữ khóa để cron, relay và GitHub không gửi trùng cùng lúc."""
     store = None
     if os.environ.get("KV_REST_API_URL") and os.environ.get("KV_REST_API_TOKEN"):
         from .telegram_store import RedisUsers
         store = RedisUsers.from_env(client)
+        if not store.call("SET", LOCK_KEY, "1", "NX", "EX", "120"):
+            print("Một lượt khác đang chạy; bỏ qua lượt này.")
+            return
+    try:
+        _run(path, token, key, client=client, now=now, store=store,
+             deadline=None if budget_s is None else time.monotonic() + budget_s)
+    finally:
+        if store:
+            store.call("DEL", LOCK_KEY)
+
+
+def _run(path: Path, token: str, key: str, *, client: httpx.Client, now: float | None, store, deadline: float | None):
+    now = time.time() if now is None else now
+    state = load_state(path, key)
+    api = Telegram(token, client)
+    if store:
         state["users"] = store.users()
     index = client.get(BASE + ("/data/company/catalog.json" if store else "/data/company/index.json"))
     index.raise_for_status()
@@ -245,6 +262,10 @@ def run(path: Path, token: str, key: str, *, client: httpx.Client, now: float | 
             sent += 1
             user_sent += 1
             time.sleep(1.1)  # giới hạn Telegram theo từng cuộc trò chuyện
+            if deadline is not None and time.monotonic() > deadline:  # hàm serverless có giới hạn thời gian
+                save_state(path, key, state)
+                print(f"Hết thời gian lượt; đã gửi {sent} tin, phần còn lại gửi ở lượt sau.")
+                return
             if sent >= 100:  # ngân sách mỗi lượt, phần còn lại được retry ở lượt sau
                 state["cursor"] = (cursor + position + 1) % max(1, len(recipients))
                 save_state(path, key, state)
