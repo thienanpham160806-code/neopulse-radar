@@ -14,15 +14,7 @@ from urllib.parse import urlparse
 
 import httpx
 
-BASE = "https://neopulse-radar.vercel.app"
-HELP = ("NeoPulse Radar · Trợ lý theo dõi thị trường\n\n"
-        "NeoPulse gửi cảnh báo bất thường, tin doanh nghiệp và tin chính sách theo lựa chọn của bạn. Không đặt lệnh, không khuyến nghị mua/bán.\n\n"
-        f"Mở website: {BASE}\nChọn nhóm tin: {BASE}/thong-bao\nXem doanh nghiệp: {BASE}/doanh-nghiep\n\n"
-        "Các lệnh\n/start: đăng ký cảnh báo mức cao\n/help: xem hướng dẫn này\n"
-        "/news on hoặc off: tin doanh nghiệp\n/laws on hoặc off: tin chính sách từ Chính phủ\n"
-        "/watch MWG,FPT: lọc mã (tối đa 30)\n/all: toàn bộ VN30\n/status: xem cài đặt\n"
-        "/stop hoặc /delete: hủy và xóa đăng ký\n"
-        "Tin được gửi theo đợt khoảng 15 phút một lần; lịch chạy có thể trễ vài phút. Cảnh báo mới chỉ có khi dữ liệu thị trường của NeoPulse được cập nhật.\nCông cụ phân tích học thuật. Không phải lời khuyên đầu tư.")
+from .telegram_ui import BASE, HELP, normalize  # noqa: F401 - BASE/HELP giữ cho mã gọi cũ
 
 
 class Telegram:
@@ -67,7 +59,7 @@ def command(state: dict, update: dict, valid: set[str], now: float) -> tuple[str
     if chat.get("type") != "private" or not isinstance(chat.get("id"), int):
         return None
     cid = str(chat["id"])
-    args = (m.get("text") or "").strip().split(maxsplit=1)
+    args = normalize(m.get("text") or "").split(maxsplit=1)
     if not args:
         return None
     cmd, value = args[0].split("@")[0].lower(), args[1].strip() if len(args) > 1 else ""
@@ -84,7 +76,7 @@ def command(state: dict, update: dict, valid: set[str], now: float) -> tuple[str
                 user[topic] = topic in topics
                 if user[topic]:
                     user.setdefault("enabled_since", {})[topic] = requested_at
-        return cid, HELP
+        return cid, start_text(state["users"][cid])
     if cmd == "/help":
         return cid, HELP
     if cmd in {"/web", "/website"}:
@@ -105,12 +97,22 @@ def command(state: dict, update: dict, valid: set[str], now: float) -> tuple[str
         user["symbols"] = symbols
     elif cmd == "/all":
         user["symbols"] = []
-    elif cmd != "/status":
+    elif cmd not in {"/status", "/watchlist"}:
         return cid, HELP
     def flag(key):
         return "Bật" if user[key] else "Tắt"
-    return cid, (f"Cài đặt nhận tin NeoPulse\nCảnh báo: {flag('alerts')}\nTin doanh nghiệp: {flag('news')}\nChính sách: {flag('laws')}\n"
-                 f"Mã theo dõi: {', '.join(user['symbols']) or 'Toàn bộ VN30'}\n/stop để hủy và xóa đăng ký.")
+    scope = ", ".join(user["symbols"]) or "chưa lọc mã: cảnh báo của các mã trong rổ VN30 đang theo dõi"
+    return cid, (f"Cài đặt nhận tin NeoPulse\nCảnh báo mức cao: {flag('alerts')}\nTin doanh nghiệp: {flag('news')}\n"
+                 f"Tin chính sách: {flag('laws')}\nMã theo dõi: {scope}\n\n"
+                 "Đổi mã: /watch MWG,FPT · Bỏ lọc: /all\nBật/tắt: /alerts, /news, /laws kèm on hoặc off\n/stop để hủy và xóa đăng ký.")
+
+
+def start_text(user: dict) -> str:
+    names = {"alerts": "cảnh báo mức cao", "news": "tin doanh nghiệp", "laws": "tin chính sách"}
+    on = [names[k] for k in ("alerts", "news", "laws") if user.get(k)]
+    return ("Đã đăng ký NeoPulse Radar.\n"
+            f"Đang nhận: {', '.join(on) or 'chưa bật nhóm tin nào'}. Chỉ gửi tin phát sinh sau thời điểm bạn bật.\n"
+            "Dùng menu bên dưới để xem nhịp thị trường, cảnh báo, tra doanh nghiệp hoặc đổi cài đặt.\n\n" + HELP)
 
 
 def timestamp(value: str) -> float | None:

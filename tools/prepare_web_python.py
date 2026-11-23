@@ -9,7 +9,8 @@ for name in ("catalog.json", "field-aliases.json", "vn100.json"):
     shutil.copyfile(root / "web/reference" / name, public)
 target = root / "web" / "serverpkg" / "neopulse"
 for relative in ["__init__.py", "timeutil.py", "analytics/__init__.py", "analytics/company.py",
-                 "analytics/formatting.py", "analytics/charting.py", "analytics/telegram_cloud.py", "analytics/telegram_store.py", "analytics/company_remote.py"]:
+                 "analytics/formatting.py", "analytics/charting.py", "analytics/telegram_cloud.py", "analytics/telegram_store.py", "analytics/company_remote.py",
+                 "analytics/telegram_ui.py"]:
     source = root / "src" / "neopulse" / relative
     output = target / relative
     output.parent.mkdir(parents=True, exist_ok=True)

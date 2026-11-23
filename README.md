@@ -226,7 +226,7 @@ Giấy phép MIT ([`LICENSE`](LICENSE)). Thư viện chính: httpx, websockets, 
 <details>
 <summary>Tái sử dụng từ dự án cũ của tác giả</summary>
 
-Chỉ đọc thư mục nguồn, chép có chọn lọc và ghi rõ đã sửa gì. Không lấy gì từ `Kumo_VN_bot` (đồ án nhóm). Không mang sang tín hiệu MACD/RSI/Ichimoku hay khuyến nghị MUA/BÁN.
+Chỉ đọc thư mục nguồn, chép có chọn lọc và ghi rõ đã sửa gì. Không chép mã từ `Kumo_VN_bot` (đồ án nhóm); bot Telegram chỉ tham khảo cách tổ chức handlers, menu và formatters của Kumo (`src/neopulse/analytics/telegram_ui.py`), viết lại trên dữ liệu và kiến trúc webhook của NeoPulse. Không mang sang tín hiệu MACD/RSI/Ichimoku hay khuyến nghị MUA/BÁN.
 
 | Tệp trong repo này | Lấy từ | Đã sửa |
 |---|---|---|

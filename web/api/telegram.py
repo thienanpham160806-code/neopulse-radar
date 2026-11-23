@@ -10,8 +10,8 @@ from pathlib import Path
 import httpx
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "serverpkg"))
-from neopulse.analytics.telegram_cloud import BASE  # noqa: E402
 from neopulse.analytics.telegram_store import RedisUsers, handle_update  # noqa: E402
+from neopulse.analytics.telegram_ui import BASE, markup_for, normalize, readonly_answer  # noqa: E402
 
 
 class handler(BaseHTTPRequestHandler):
@@ -25,19 +25,36 @@ class handler(BaseHTTPRequestHandler):
                 return self.reply(400, {"ok": False})
             update = json.loads(self.rfile.read(length))
             catalog = json.loads((Path(__file__).resolve().parents[1] / "serverpkg/data/catalog.json").read_text(encoding="utf-8"))
-            valid = {r["symbol"] for r in catalog["symbols"]}
+            entries = {r["symbol"]: r for r in catalog["symbols"]}
+            message = update.get("message") or {}
+            chat = message.get("chat") or {}
+            text = message.get("text") or ""
             with httpx.Client(timeout=12) as client:
-                response = handle_update(RedisUsers.from_env(client), update, valid, time.time())
+                # Câu hỏi chỉ đọc (nhịp thị trường, cảnh báo, tra mã) không đụng tới đăng ký.
+                if chat.get("type") == "private" and isinstance(chat.get("id"), int):
+                    def load_payload():
+                        r = client.get(BASE + "/api/data")
+                        r.raise_for_status()
+                        return r.json()["payload"]
+                    answer = readonly_answer(text, entries, load_payload)
+                    if answer:
+                        return self.send(chat["id"], answer[0], answer[1])
+                response = handle_update(RedisUsers.from_env(client), update, set(entries), time.time())
             if response:
-                return self.reply(200, {"method": "sendMessage", "chat_id": response[0], "text": response[1],
-                                        "link_preview_options": {"is_disabled": True},
-                                        "reply_markup": {"inline_keyboard": [[{"text": "Mở NeoPulse", "url": BASE}, {"text": "Chọn nhóm tin", "url": BASE + "/thong-bao"}]]}})
+                command = normalize(text).split(maxsplit=1)[0].split("@")[0].lower() if text.strip() else ""
+                return self.send(response[0], response[1], markup_for(command))
             return self.reply(200, {"ok": True})
         except (ValueError, TypeError, KeyError):
             return self.reply(400, {"ok": False})
         except Exception:
             # Telegram sẽ retry; không trả 200 giả khi chưa lưu được thay đổi đăng ký.
             return self.reply(503, {"ok": False, "error": "temporary_unavailable"})
+
+    def send(self, chat_id, text, markup):
+        body = {"method": "sendMessage", "chat_id": chat_id, "text": text[:4000], "link_preview_options": {"is_disabled": True}}
+        if markup:
+            body["reply_markup"] = markup
+        return self.reply(200, body)
 
     def reply(self, status, body):
         self.send_response(status)
