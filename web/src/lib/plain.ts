@@ -83,10 +83,10 @@ export function missingComponents(comps: { name: string; value: Num }[]): string
 
 /** Cảnh báo bằng lời thường (số thống kê để trong phần chi tiết). */
 export const RULE_PLAIN: Record<string, string> = {
-  volume_spike: "Khối lượng khớp tăng vọt so với bình thường",
-  spread_blowout: "Chênh lệch giá mua – bán bỗng giãn rộng (khó mua bán sát giá)",
+  volume_spike: "Khối lượng khớp cao bất thường so với cùng khung giờ",
+  spread_blowout: "Độ chênh giá mua-bán giãn rộng bất thường",
   price_jump: "Giá đổi đột ngột trong một phút",
-  foreign_flow: "Khối ngoại mua hoặc bán dồn dập bất thường",
-  book_pressure: "Sổ lệnh lệch hẳn về một phía nhiều phút liền",
+  foreign_flow: "Khối ngoại mua ròng hoặc bán ròng bất thường",
+  book_pressure: "Mất cân bằng sổ lệnh kéo dài về một phía",
   near_limit: "Giá đang sát trần hoặc sát sàn",
 };

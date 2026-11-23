@@ -38,5 +38,5 @@ it("cloud failure falls back with an explicit notice", async () => {
   vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
   const data = await loadData();
   expect(data.origin).not.toBe("cloud");
-  expect(data.notice).toContain("cloud");
+  expect(data.notice).toContain("phiên mới nhất");
 });

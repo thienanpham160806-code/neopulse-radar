@@ -37,7 +37,7 @@ export function useLive(enabled: boolean): { state: LiveState; connected: boolea
         if (!r.ok) throw new Error(`token HTTP ${r.status}`);
         tok = (await r.json()) as TokenDetails;
       } catch (e) {
-        setError(e instanceof Error ? e.message : "không lấy được token");
+        setError(e instanceof Error ? e.message : "không mở được kênh trực tiếp");
         failures += 1;
         schedule(nextBackoffMs(failures));
         return;

@@ -52,7 +52,7 @@ export function freshness(meta: Meta, nowMs: number): Freshness {
   }
   if (meta.snapshot_at && !meta.is_simulated) return snapshotFreshness(meta, nowMs);
   if (meta.is_simulated) {
-    return { level: "sim", label: "MÔ PHỎNG", detail: "Dữ liệu mô phỏng — không phải dữ liệu thị trường.", ageSeconds: null };
+    return { level: "sim", label: "MÔ PHỎNG", detail: "Dữ liệu mô phỏng, không phải dữ liệu thị trường.", ageSeconds: null };
   }
   const phaseNow = sessionPhase(nowMs);
   if (phaseNow !== "open") {
@@ -65,7 +65,7 @@ export function freshness(meta: Meta, nowMs: number): Freshness {
     return {
       level: "red",
       label: "Dữ liệu cũ",
-      detail: "Đang trong giờ giao dịch nhưng bản đẩy lên web đã cũ — máy ghi hoặc `neopulse publish` có thể đã dừng.",
+      detail: "Dữ liệu chưa được cập nhật dù đang trong giờ giao dịch. Bộ ghi có thể đã tạm dừng; số liệu hiển thị là bản gần nhất.",
       ageSeconds: ageGen,
     };
   }
@@ -86,14 +86,14 @@ export function freshness(meta: Meta, nowMs: number): Freshness {
  */
 export function snapshotFreshness(meta: Meta, nowMs: number): Freshness {
   const age = ageSince(meta.snapshot_at ?? null, nowMs);
-  const base = "Không phải thời gian thực: số liệu cố định tại thời điểm snapshot.";
+  const base = "Không phải thời gian thực: số liệu cố định tại thời điểm lập bản dữ liệu.";
   if (meta.snapshot_kind === "intraday") {
     return {
       level: "amber",
-      label: "Snapshot giữa phiên",
-      detail: `${base} Thị trường có thể đã thay đổi sau lúc snapshot.`,
+      label: "Bản dữ liệu giữa phiên",
+      detail: `${base} Thị trường có thể đã thay đổi sau thời điểm lập bản dữ liệu.`,
       ageSeconds: age,
     };
   }
-  return { level: "snapshot", label: "Snapshot cuối phiên", detail: base, ageSeconds: age };
+  return { level: "snapshot", label: "Bản dữ liệu cuối phiên", detail: base, ageSeconds: age };
 }

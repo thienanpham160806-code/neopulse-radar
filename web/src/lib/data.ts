@@ -92,27 +92,27 @@ export async function loadData(date?: string | null, code?: string | null): Prom
         }
         return { payload, index, origin: "cloud", notice: null };
       }
-    } catch { notice = "Không tải được phiên mới trên cloud; đang dùng dữ liệu đã lưu. Kiểm tra thời điểm cập nhật."; }
+    } catch { notice = "Không tải được phiên mới nhất; trang đang dùng dữ liệu đã lưu. Xem thời điểm cập nhật trên thanh trạng thái."; }
   }
   const base = blobBase();
   if (base) {
     try {
       return { ...(await loadFrom((rel) => fetchJson(base, rel), date, code)), origin: "blob", notice: null };
     } catch (e) {
-      notice = `Không đọc được Blob (${e instanceof Error ? e.message : "lỗi không xác định"}).`;
+      notice = `Không đọc được dữ liệu đã xuất bản (${e instanceof Error ? e.message : "lỗi không xác định"}).`;
     }
   }
   if (await hasStatic()) {
     try {
       return { ...(await loadFrom(readStatic, date, code)), origin: "static", notice };
     } catch (e) {
-      notice = `${notice ?? ""} Không đọc được snapshot tĩnh (${e instanceof Error ? e.message : "lỗi không xác định"}).`.trim();
+      notice = `${notice ?? ""} Không đọc được bản dữ liệu tĩnh (${e instanceof Error ? e.message : "lỗi không xác định"}).`.trim();
     }
   }
   const r = await loadFrom(readSample, date, code);
   return {
     ...r,
     origin: "sample",
-    notice: `${notice ? notice + " " : ""}Chưa có snapshot dữ liệu thật (public/data trống): đang hiển thị dữ liệu MẪU MÔ PHỎNG đi kèm mã nguồn.`,
+    notice: `${notice ? notice + " " : ""}Chưa có dữ liệu thị trường thật. Trang đang hiển thị dữ liệu MÔ PHỎNG đi kèm mã nguồn.`,
   };
 }

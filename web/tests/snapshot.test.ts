@@ -14,7 +14,7 @@ function snap(over: Partial<Meta> = {}, snapAt = at(15, 30), kind: Meta["snapsho
     n_symbols_computed: 30, n_symbols_excluded: 0, excluded_reason: null, n_sessions: 5, n_history_sessions: 4,
     available_dates: [], order_value_vnd: 5e8, disclaimer: "d",
     snapshot_at: iso(snapAt), snapshot_kind: kind,
-    snapshot_label: kind === "end_of_session" ? "Snapshot cuối phiên" : "Snapshot giữa phiên", snapshot_realtime: false,
+    snapshot_label: kind === "end_of_session" ? "Bản dữ liệu cuối phiên" : "Bản dữ liệu giữa phiên", snapshot_realtime: false,
     ...over,
   };
 }
@@ -24,7 +24,7 @@ describe("trạng thái snapshot tĩnh", () => {
     for (const days of [0, 1, 7, 60]) {
       const f = freshness(snap(), at(15, 30) + days * 86_400_000);
       expect(f.level).toBe("snapshot");
-      expect(f.label).toBe("Snapshot cuối phiên");
+      expect(f.label).toBe("Bản dữ liệu cuối phiên");
       expect(f.detail).toMatch(/Không phải thời gian thực/);
     }
   });

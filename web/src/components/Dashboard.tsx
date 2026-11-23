@@ -124,7 +124,7 @@ export function Dashboard({ initial, requestedDate, requestedIndex, initialTab }
         pollError={pollError}
         live={liveOn ? { ts: (liveOn.tick ?? liveOn.pulse ?? liveOn.status)?.ts ?? null, latencyMs: liveOn.latencyMs,
           simulated: (liveOn.tick ?? liveOn.pulse)?.is_simulated ?? false } : null}
-        liveNote={live.available && !mode.live && live.state.lastMsgAt !== null ? `${mode.reason} — đang hiển thị snapshot.` : null}
+        liveNote={live.available && !mode.live && live.state.lastMsgAt !== null ? `${mode.reason}; đang hiển thị bản dữ liệu gần nhất.` : null}
       />
       <header className="mx-auto max-w-6xl px-4 pt-5 sm:px-6">
         <div className="feature-hero flex flex-wrap items-center justify-between gap-5 rounded-3xl px-6 py-5 sm:px-8">

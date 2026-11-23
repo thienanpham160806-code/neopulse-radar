@@ -99,8 +99,8 @@ export function Book({ p, f }: { p: Payload; f: Filters }) {
               <tr>
                 <th scope="col" className="px-2 py-1.5 text-left text-xs font-medium text-muted">Mã</th>
                 {head("Giá", "last")}{head("% đổi", "pct_change")}{head("OBI₃", "obi3")}{head("Spread (bps)", "spread_bps")}
-                {head("Độ sâu 3 mức", "depth_value")}{head("GT khớp", "total_value")}{head("Trượt giá (bps)", "slippage_bps")}
-                {head("Tỷ lệ khớp", "fill_ratio")}{head("Điểm TK", "liq_score")}
+                {head("Độ sâu 3 mức", "depth_value")}{head("Giá trị khớp", "total_value")}{head("Trượt giá (bps)", "slippage_bps")}
+                {head("Tỷ lệ khớp", "fill_ratio")}{head("Điểm thanh khoản", "liq_score")}
               </tr>
             </thead>
             <tbody>
@@ -124,7 +124,7 @@ export function Book({ p, f }: { p: Payload; f: Filters }) {
 
       {cur ? (
         <Card
-          title="Soi một mã"
+          title="Chi tiết một mã"
           action={
             <select aria-label="Chọn mã" value={cur.symbol} onChange={(e) => setPick(e.target.value)} className="rounded-md border border-line bg-surface px-2 py-1 text-sm">
               {rows.map((r) => <option key={r.symbol}>{r.symbol}</option>)}
@@ -139,7 +139,7 @@ export function Book({ p, f }: { p: Payload; f: Filters }) {
           </div>
           {cur.auction ? <Note>Đang trong phiên định kỳ (ATO/ATC): giá mức 1 không phải giá giới hạn nên chỉ báo sổ lệnh có thể trống.</Note> : null}
           {ser && ser.t.length > 1 ? (
-            <div className="mt-3 h-64 w-full" role="img" aria-label={`Giá giữa và OBI₃ của ${cur.symbol}`}>
+            <div className="mt-3 h-64 w-full" role="img" aria-label={`Giá giữa và mất cân bằng sổ lệnh (OBI₃) của ${cur.symbol}`}>
               <ResponsiveContainer>
                 <ComposedChart data={ser.t.map((t, i) => ({ t, mid: ser.mid[i], obi3: ser.obi3[i] }))} margin={{ left: 0, right: 0, top: 8, bottom: 0 }}>
                   <CartesianGrid {...gridProps} />
@@ -172,7 +172,7 @@ export function Foreign({ p, f }: { p: Payload; f: Filters }) {
   return (
     <div className="grid grid-cols-1 gap-3">
       <div className="grid gap-3 lg:grid-cols-2">
-        <Card title="Mua/bán ròng theo mã (mạnh nhất hai phía)">
+        <Card title="Khối ngoại mua/bán ròng theo mã (lớn nhất mỗi phía)">
           <div className="h-[28rem] w-full" role="img" aria-label="Biểu đồ khối ngoại mua bán ròng theo mã">
             <ResponsiveContainer>
               <BarChart data={bar} layout="vertical" margin={{ left: 8, right: 8 }}>
@@ -193,11 +193,11 @@ export function Foreign({ p, f }: { p: Payload; f: Filters }) {
             <ResponsiveContainer>
               <ScatterChart margin={{ left: 0, right: 12, top: 8, bottom: 8 }}>
                 <CartesianGrid {...gridProps} vertical />
-                <XAxis type="number" dataKey="x" name="Tỷ trọng NN" tickFormatter={(v: number) => ratioPct(v)} domain={[0, "auto"]} />
+                <XAxis type="number" dataKey="x" name="Tỷ trọng khối ngoại" tickFormatter={(v: number) => ratioPct(v)} domain={[0, "auto"]} />
                 <YAxis type="number" dataKey="y" name="Ròng/tổng" domain={[-1, 1]} width={40} />
                 <ZAxis type="number" dataKey="z" range={[40, 260]} />
                 <ReferenceLine y={0} stroke="var(--muted)" strokeDasharray="3 3" />
-                <Tooltip {...TOOLTIP_STYLE} cursor={{ strokeDasharray: "3 3" }} formatter={(v: number, n: string) => (n === "Tỷ trọng NN" ? ratioPct(v, 1) : num(v, 2))} labelFormatter={() => ""} />
+                <Tooltip {...TOOLTIP_STYLE} cursor={{ strokeDasharray: "3 3" }} formatter={(v: number, n: string) => (n === "Tỷ trọng khối ngoại" ? ratioPct(v, 1) : num(v, 2))} labelFormatter={() => ""} />
                 <Scatter data={scatter} fill="var(--accent)" fillOpacity={0.7} isAnimationActive={false} />
               </ScatterChart>
             </ResponsiveContainer>
@@ -208,7 +208,7 @@ export function Foreign({ p, f }: { p: Payload; f: Filters }) {
       <Card title="Bảng khối ngoại">
         <div className="scroll-x max-h-96 overflow-y-auto">
           <table className="w-full min-w-[640px] border-collapse">
-            <thead className="sticky top-0 bg-surface"><tr><Th right={false}>Mã</Th><Th><Term k="foreign">NN mua</Term></Th><Th><Term k="foreign">NN bán</Term></Th><Th><Term k="foreign">Ròng</Term></Th><Th><Term k="foreign">Ròng/tổng</Term></Th><Th><Term k="foreign">Tỷ trọng NN</Term></Th><Th><Term k="room">Room đã dùng</Term></Th></tr></thead>
+            <thead className="sticky top-0 bg-surface"><tr><Th right={false}>Mã</Th><Th><Term k="foreign">Khối ngoại mua</Term></Th><Th><Term k="foreign">Khối ngoại bán</Term></Th><Th><Term k="foreign">Ròng</Term></Th><Th><Term k="foreign">Ròng/tổng</Term></Th><Th><Term k="foreign">Tỷ trọng khối ngoại</Term></Th><Th><Term k="room">Room khối ngoại đã dùng</Term></Th></tr></thead>
             <tbody>
               {rows.map((r) => (
                 <tr key={r.symbol} className="border-t border-line">
@@ -228,19 +228,19 @@ export function Foreign({ p, f }: { p: Payload; f: Filters }) {
 export function Futures({ p }: { p: Payload }) {
   const fu = p.futures;
   if (!fu || !fu.available || !fu.state) {
-    return <Empty>Chưa có dữ liệu hợp đồng tương lai khớp được với chỉ số VN30 trong phiên này. Basis chỉ tính khi chọn chỉ số VN30 và bộ ghi có nhận dữ liệu HĐTL (cần điền NEOPULSE_FUTURES khi dùng SSI).</Empty>;
+    return <Empty>Chưa có dữ liệu hợp đồng tương lai khớp được với chỉ số VN30 trong phiên này. Chênh lệch cơ sở chỉ tính khi chọn chỉ số VN30 và bộ ghi có nhận dữ liệu hợp đồng tương lai.</Empty>;
   }
   const s = fu.state;
   return (
     <div className="grid grid-cols-1 gap-3">
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat label={s.symbol ?? "HĐTL"} value={num(fu.future ?? null, 1)} sub={`cơ sở ${num(fu.spot ?? null, 2)}`} />
-        <Stat label={<Term k="basis">Basis</Term>} value={`${signed(s.basis)} điểm`} sub={pct(s.basis_pct)} tone={signTone(s.basis)} />
+        <Stat label={<Term k="basis">Chênh lệch cơ sở</Term>} value={`${signed(s.basis)} điểm`} sub={pct(s.basis_pct)} tone={signTone(s.basis)} />
         <Stat label={<Term k="maturity">Ngày tới đáo hạn</Term>} value={num(s.dtm, 0)} sub={s.label ?? undefined} />
         <Stat label={<Term k="maturity">Lệch so với giá trị hợp lý</Term>} value={`${signed(s.mispricing)} điểm`} sub={s.z !== null ? <Term k="basis_z">z basis = {signed(s.z, 1)}</Term> : "chưa đủ dữ liệu cho z"} />
       </div>
-      <Card title="Basis (F − S) theo phút">
-        <div className="h-64 w-full" role="img" aria-label="Đồ thị basis hợp đồng tương lai theo phút">
+      <Card title="Chênh lệch cơ sở (basis, F − S) theo phút">
+        <div className="h-64 w-full" role="img" aria-label="Đồ thị chênh lệch cơ sở của hợp đồng tương lai theo phút">
           <ResponsiveContainer>
             <AreaChart data={fu.series.map((r) => ({ ...r, t: hm(r.t) }))} margin={{ left: 0, right: 0, top: 8, bottom: 0 }}>
               <CartesianGrid {...gridProps} />
@@ -248,11 +248,11 @@ export function Futures({ p }: { p: Payload }) {
               <YAxis width={44} domain={["auto", "auto"]} />
               <Tooltip {...TOOLTIP_STYLE} />
               <ReferenceLine y={0} stroke="var(--muted)" strokeDasharray="3 3" />
-              <Area dataKey="basis" name="Basis (điểm)" stroke="var(--warn)" fill="var(--warn)" fillOpacity={0.2} isAnimationActive={false} />
+              <Area dataKey="basis" name="Chênh lệch cơ sở (điểm)" stroke="var(--warn)" fill="var(--warn)" fillOpacity={0.2} isAnimationActive={false} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
-        <Note>Basis thường tiến về mức thanh toán khi gần đáo hạn; các ảnh chụp nội phiên không bảo đảm chênh lệch bằng 0. Giá trị hợp lý dùng lãi suất giả định 4,5%/năm và cổ tức bằng 0. Dấu basis còn phản ánh chi phí vốn và cổ tức; không tự cho biết hướng giá tiếp theo.</Note>
+        <Note>Chênh lệch cơ sở thường tiến về mức thanh toán khi gần đáo hạn; các ảnh chụp nội phiên không bảo đảm chênh lệch bằng 0. Giá trị hợp lý dùng lãi suất giả định 4,5%/năm và cổ tức bằng 0. Dấu của chênh lệch cơ sở còn phản ánh chi phí vốn và cổ tức; không tự cho biết hướng giá tiếp theo.</Note>
       </Card>
     </div>
   );
@@ -267,7 +267,7 @@ export function Alerts({ p, f }: { p: Payload; f: Filters }) {
   return (
     <div className="grid grid-cols-1 gap-3">
       <div className="grid grid-cols-3 gap-3">
-        {SEV_ORDER.map((s) => <Stat key={s} label={`${s === "CAO" ? "◆" : s === "TRUNG BÌNH" ? "◇" : "·"} ${s}`} value={al.by_severity[s] ?? 0} tone={s === "THẤP" ? "text-muted" : "text-fg"} />)}
+        {SEV_ORDER.map((s) => <Stat key={s} label={`${s === "CAO" ? "◆" : s === "TRUNG BÌNH" ? "◇" : "·"} ${s === "CAO" ? "Cao" : s === "TRUNG BÌNH" ? "Trung bình" : "Thấp"}`} value={al.by_severity[s] ?? 0} tone={s === "THẤP" ? "text-muted" : "text-fg"} />)}
       </div>
       <Card
         title={`${items.length} / ${al.total} cảnh báo`}
@@ -280,7 +280,7 @@ export function Alerts({ p, f }: { p: Payload; f: Filters }) {
       >
         {items.length ? <ul>{items.map((a, i) => <AlertRow key={`${a.t}-${a.symbol}-${a.rule}-${i}`} a={a} />)}</ul> : <Empty>Không có cảnh báo khớp bộ lọc.</Empty>}
         {al.items.length < al.total ? <Note>Chỉ hiển thị {al.items.length} cảnh báo ưu tiên cao nhất trong số {al.total}.</Note> : null}
-        <Note>Đây là số lượt cảnh báo, không phải số mã. Mỗi quy tắc có điều kiện riêng: <Term k="rvol">khối lượng tương đối</Term>, <Term k="anomaly">z nội phiên</Term>, <Term k="book">lệch sổ lệnh</Term> hoặc <Term k="band">sát trần/sàn</Term>. Cảnh báo không xác nhận nguyên nhân và không phải khuyến nghị.</Note>
+        <Note>Đây là số lượt cảnh báo, không phải số mã. Mỗi quy tắc có điều kiện riêng: <Term k="rvol">khối lượng tương đối</Term>, <Term k="anomaly">điểm z trong phiên</Term>, <Term k="book">mất cân bằng sổ lệnh</Term> hoặc <Term k="band">sát trần/sàn</Term>. Cảnh báo không xác nhận nguyên nhân và không phải khuyến nghị.</Note>
       </Card>
     </div>
   );
@@ -303,7 +303,7 @@ export function Ranking({ p, f }: { p: Payload; f: Filters }) {
       <div className="scroll-x mt-2 max-h-[34rem] overflow-y-auto">
         <table className="w-full min-w-[820px] border-collapse">
           <thead className="sticky top-0 bg-surface">
-            <tr><Th>Hạng</Th><Th right={false}>Mã</Th><Th><Term k="ranking">Điểm</Term></Th><Th><Term k="price">Giá</Term></Th><Th>% đổi</Th><Th><Term k="book">OBI₃</Term></Th><Th><Term k="foreign">NN ròng/tổng</Term></Th><Th><Term k="spread">Spread</Term></Th>{zs.map(([, n]) => <Th key={n}><Term k="ranking">z {n}</Term></Th>)}</tr>
+            <tr><Th>Hạng</Th><Th right={false}>Mã</Th><Th><Term k="ranking">Điểm</Term></Th><Th><Term k="price">Giá</Term></Th><Th>% đổi</Th><Th><Term k="book">OBI₃</Term></Th><Th><Term k="foreign">Khối ngoại ròng/tổng</Term></Th><Th><Term k="spread">Spread</Term></Th>{zs.map(([, n]) => <Th key={n}><Term k="ranking">z {n}</Term></Th>)}</tr>
           </thead>
           <tbody>
             {rows.map((r) => (
@@ -416,8 +416,8 @@ export function Method() {
                 ["OBI₃", "(ΣKL mua − ΣKL bán) / (ΣKL mua + ΣKL bán), 3 mức", "> 0: bên mua dày hơn"],
                 ["Microprice", "(bán₁·KLmua₁ + mua₁·KLbán₁) / (KLmua₁ + KLbán₁)", "giá giữa có trọng số độ sâu"],
                 ["A/D", "(tăng − giảm) / (tăng + giảm)", "độ lan tỏa"],
-                ["NN ròng/tổng", "(mua − bán) / (mua + bán)", "mức độ một chiều của khối ngoại"],
-                ["Basis", "F − S; quy năm (F/S − 1)·365/ngày còn lại", "định giá HĐTL so với cơ sở"],
+                ["Khối ngoại ròng/tổng", "(mua − bán) / (mua + bán)", "mức độ một chiều của khối ngoại"],
+                ["Chênh lệch cơ sở", "F − S; quy năm (F/S − 1)·365/ngày còn lại", "định giá HĐTL so với cơ sở"],
                 ["z bền vững", "0,6745·(x − median)/MAD, cửa sổ 60 thanh trước", "bất thường khi |z| ≥ 3,5"],
                 ["Điểm nhịp", "50 + 50·Σwᵢcᵢ; w = 30/25/20/15/10%", "trạng thái tổng hợp 0–100"],
               ].map(([a, b, c]) => (
@@ -432,13 +432,13 @@ export function Method() {
         <ul className="list-disc space-y-1.5 pl-5 text-sm leading-relaxed">
           <li><b>Phân biệt dữ liệu trực tiếp và dữ liệu đã lưu.</b> Xem nguồn và thời điểm cập nhật trên thanh trạng thái. Khi bộ ghi dừng, máy ngủ hoặc mất kết nối, số liệu mới sẽ ngừng đến; web hiển thị dữ liệu đã lưu và báo độ trễ. Phiên lịch sử là số liệu cố định của phiên được chọn.</li>
           <li><b>Chỉ 3 mức giá tốt nhất</b>: OBI và độ sâu bỏ sót lệnh ở xa và lệnh ẩn; trượt giá là cận dưới.</li>
-          <li><b>Thời điểm dùng là lúc nhận</b>, không phải dấu thời gian sự kiện → độ trễ mạng lẫn vào chuỗi.</li>
+          <li><b>Thời điểm dùng là lúc nhận</b>, không phải dấu thời gian sự kiện, nên độ trễ mạng lẫn vào chuỗi.</li>
           <li><b>Rổ theo dõi hữu hạn</b> (mặc định VN30): khối ngoại và sổ lệnh là của rổ, không phải toàn thị trường; độ rộng lấy từ số của sàn.</li>
           <li><b>Giá trị giao dịch lũy kế từ SSI là ước lượng</b> (giá trung bình × khối lượng), nên các chỉ báo theo giá trị kém chính xác hơn.</li>
           <li><b>Trọng số điểm nhịp là lựa chọn thiết kế</b>, không phải ước lượng; xem độ nhạy ở tab Tổng quan. Điểm mô tả hiện trạng, không dự báo.</li>
-          <li><b>IC chưa trừ spread và phí</b>; t-stat chưa hiệu chỉnh tự tương quan. Kết quả yếu hoặc không có ý nghĩa được báo đúng như vậy.</li>
-          <li>Phiên định kỳ (ATO/ATC): giá mức 1 không phải giá giới hạn → chỉ báo sổ lệnh để trống.</li>
-          <li>Sản phẩm <b>không đặt lệnh</b>; endpoint giao dịch/tài khoản bị chặn trong mã nguồn.</li>
+          <li><b>IC chưa trừ độ chênh giá mua-bán và phí</b>; t-stat chưa hiệu chỉnh tự tương quan. Kết quả yếu hoặc không có ý nghĩa được báo đúng như vậy.</li>
+          <li>Phiên định kỳ (ATO/ATC): giá mức 1 không phải giá giới hạn, nên chỉ báo sổ lệnh để trống.</li>
+          <li>Sản phẩm <b>không đặt lệnh</b>; các API giao dịch và tài khoản bị chặn trong mã nguồn.</li>
         </ul>
         <p className="mt-3 rounded-md bg-surface2 p-2 text-sm font-medium">Đây là công cụ phân tích học thuật, không phải lời khuyên đầu tư.</p>
         <p className="mt-3 text-sm"><a href="https://github.com/thienanpham160806-code/neopulse-radar/blob/main/docs/market-design-references.md" target="_blank" rel="noreferrer" className="text-accent underline underline-offset-4">Nguồn tham khảo thiết kế và cách áp dụng trong dự án ↗</a></p>

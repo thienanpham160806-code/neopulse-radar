@@ -35,7 +35,7 @@ export function SiteFooter() {
         </section>
       </div>
       <div className="mt-7 flex flex-wrap items-end justify-between gap-4 border-t border-line pt-5">
-        <div className="max-w-3xl text-xs leading-relaxed text-muted"><p>© {new Date().getFullYear()} NeoPulse Radar · Phát triển bởi {SITE_CONTACT.name}.</p><p className="mt-1">Công cụ phân tích học thuật. Thông tin tham khảo, không phải khuyến nghị đầu tư.</p></div>
+        <div className="max-w-3xl text-xs leading-relaxed text-muted"><p>© {new Date().getFullYear()} NeoPulse Radar · Phát triển bởi {SITE_CONTACT.name}.</p><p className="mt-1">Công cụ phân tích học thuật. Không phải lời khuyên đầu tư.</p></div>
         <a href="#top" aria-label="Quay về đầu trang" className="inline-flex min-h-11 items-center gap-2 rounded-full bg-surface2 px-4 text-sm font-medium hover:text-accent">Về đầu trang <span aria-hidden>↑</span></a>
       </div>
     </div>

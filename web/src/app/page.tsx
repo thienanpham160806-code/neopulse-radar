@@ -22,7 +22,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
   try {
     loaded = await loadData(sp.date, sp.index);
   } catch (e) {
-    const msg = e instanceof ParseError ? e.message : "Không đọc được dữ liệu mẫu hay dữ liệu trực tiếp.";
+    const msg = e instanceof ParseError ? e.message : "Không tải được dữ liệu thị trường. Nguồn có thể đang cập nhật; vui lòng tải lại trang sau ít phút.";
     return <Message title="Không tải được dữ liệu">{msg}</Message>;
   }
   return <Dashboard key={`${sp.date ?? ""}|${sp.index ?? ""}`} initial={loaded} requestedDate={sp.date ?? null} requestedIndex={sp.index ?? null} initialTab={sp.tab ?? null} />;

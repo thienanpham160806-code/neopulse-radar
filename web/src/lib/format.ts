@@ -19,10 +19,10 @@ export function ratioPct(x: Num | undefined, d = 0): string {
 export function money(x: Num | undefined): string {
   if (x === null || x === undefined) return dash;
   const a = Math.abs(x);
-  if (a >= 1e12) return `${nf(1).format(x / 1e12)} nghìn tỷ`;
-  if (a >= 1e9) return `${nf(1).format(x / 1e9)} tỷ`;
-  if (a >= 1e6) return `${nf(1).format(x / 1e6)} triệu`;
-  return nf(0).format(x);
+  if (a >= 1e12) return `${nf(1).format(x / 1e12)} nghìn tỷ đồng`;
+  if (a >= 1e9) return `${nf(1).format(x / 1e9)} tỷ đồng`;
+  if (a >= 1e6) return `${nf(1).format(x / 1e6)} triệu đồng`;
+  return `${nf(0).format(x)} đồng`;
 }
 export function dmy(isoDate: string | null): string {
   if (!isoDate) return dash;

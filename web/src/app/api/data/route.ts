@@ -11,7 +11,7 @@ export async function GET(req: Request) {
     const d = await loadData(sp.get("date"), sp.get("index"));
     return NextResponse.json(d, { headers: { "Cache-Control": "no-store" } });
   } catch (e) {
-    const msg = e instanceof ParseError ? e.message : "Không đọc được dữ liệu.";
+    const msg = e instanceof ParseError ? e.message : "Không đọc được dữ liệu phiên. Vui lòng tải lại trang sau ít phút.";
     return NextResponse.json({ error: msg }, { status: 502 });
   }
 }

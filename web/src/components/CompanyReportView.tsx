@@ -75,7 +75,7 @@ export function CompanyReportView({ p }: { p: CompanyReport }) {
               <Note>FCFF = EBIT hoạt động × (1 − thuế) + khấu hao − chi TSCĐ − thay đổi vốn lưu động hoạt động. EBIT hoạt động = lãi gộp − chi bán hàng − chi quản lý, loại thu nhập tài chính. Vốn lưu động ở đây = phải thu + tồn kho − phải trả nhà cung cấp. Không dùng CFO − CapEx thay cho FCFF. Mô hình giản lược chưa dự phóng riêng doanh thu/biên lợi nhuận; không xem các con số này là định giá chính thức.</Note></> : <p className="text-sm text-muted">{p.dcf?.reason ?? "Chưa có đủ đầu vào dòng tiền và giả định để dựng DCF có thể kiểm chứng."}</p>}
           </Card>
         </section>
-        <footer className="border-t border-line pt-6"><h2 className="text-sm font-semibold">Nguồn & phương pháp</h2><ul className="mt-2 list-disc space-y-2 pl-5 text-xs text-muted">{p.notes.map((s, i) => <li key={i}>{s}</li>)}</ul><p className="mt-5 text-sm font-medium">Công cụ học thuật. Không phải lời khuyên đầu tư.</p></footer>
+        <footer className="border-t border-line pt-6"><h2 className="text-sm font-semibold">Nguồn & phương pháp</h2><ul className="mt-2 list-disc space-y-2 pl-5 text-xs text-muted">{p.notes.map((s, i) => <li key={i}>{s}</li>)}</ul><p className="mt-5 text-sm font-medium">Công cụ phân tích học thuật. Không phải lời khuyên đầu tư.</p></footer>
       </main>
     </div>
   </div></>;

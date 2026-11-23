@@ -126,7 +126,7 @@ export function Overview({ p, f, live, onNavigate }: { p: Payload; f: Filters; l
           <ul className="mt-2 space-y-2 text-base leading-relaxed">
             <li><b>Đang diễn ra.</b> {marketSummary(code, ix0?.pct, ix0?.adv, ix0?.dec)}</li>
             {drivers.length ? <li><b>Điều gì đang tác động?</b> {drivers.map((c) => componentMeaning(c.key, c.value)).join(" ")}</li> : null}
-            <li><b>Nên theo dõi.</b> {p.pulse?.divergence ? `${p.pulse.divergence} ` : ""}{nHigh
+            <li><b>Cần lưu ý.</b> {p.pulse?.divergence ? `${p.pulse.divergence} ` : ""}{nHigh
               ? <>Hệ thống đã ghi nhận {nHigh} lượt cảnh báo mức cao trong phiên{hot.length ? `; trong các cảnh báo đã tải, ${hot.join(", ")} xuất hiện nhiều` : ""}. Một mã có thể có nhiều cảnh báo; mở chi tiết để xem từng biến động.{" "}
                 <button onClick={onAlerts} className="text-accent underline underline-offset-4">Xem cảnh báo</button></>
               : "Chưa ghi nhận cảnh báo mức cao trong phiên."}</li>
@@ -165,13 +165,13 @@ export function Overview({ p, f, live, onNavigate }: { p: Payload; f: Filters; l
           </figure>
 
 
-          <h3 className="mt-10 text-xl font-bold"><Term k="sector">Ngành nào kéo, ngành nào đè</Term></h3>
+          <h3 className="mt-10 text-xl font-bold"><Term k="sector">Đóng góp của các ngành vào chỉ số</Term></h3>
           <p className="mt-1 text-sm text-muted">Chạm vào một ngành để xem các mã trong ngành.</p>
           <div className="mt-2"><SectorCard sectors={p.sectors} live={lp?.sec ?? null} indexCode={code} /></div>
 
           {summary.length ? (
             <details className="mt-8 rounded-xl border border-line bg-surface p-3">
-              <summary className="cursor-pointer font-semibold">Bản tóm tắt số liệu đầy đủ{lp ? " (theo ảnh chụp gần nhất)" : ""}</summary>
+              <summary className="cursor-pointer font-semibold">Bản tóm tắt số liệu đầy đủ{lp ? " (theo bản dữ liệu gần nhất)" : ""}</summary>
               <ul className="mt-2 max-w-[68ch] list-disc space-y-1.5 pl-5">{summary.map((s, i) => <li key={i}>{s}</li>)}</ul>
               <Note>Câu chữ dựng từ mẫu câu gắn với số liệu, không phải dự báo hay khuyến nghị.</Note>
             </details>

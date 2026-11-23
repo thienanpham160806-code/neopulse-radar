@@ -29,7 +29,7 @@ export async function GET() {
       cache: "no-store",
     });
     if (!res.ok) {
-      return NextResponse.json({ error: `Ably từ chối cấp token (HTTP ${res.status}).` }, { status: 502 });
+      return NextResponse.json({ error: `Máy chủ kênh trực tiếp tạm từ chối kết nối (mã ${res.status}).` }, { status: 502 });
     }
     const t = (await res.json()) as { token: string; expires: number; issued: number; capability: string; keyName: string };
     // chỉ trả trường TokenDetails cần cho ably-js; không có khóa gốc
@@ -38,6 +38,6 @@ export async function GET() {
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch {
-    return NextResponse.json({ error: "Không liên lạc được Ably." }, { status: 502 });
+    return NextResponse.json({ error: "Không liên lạc được máy chủ kênh trực tiếp." }, { status: 502 });
   }
 }

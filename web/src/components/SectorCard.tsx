@@ -82,7 +82,7 @@ export function SectorCard({ sectors, live, indexCode }: {
         </table>
       </div>
       <Note>
-        {sectors?.note ?? "Đóng góp điểm là ước lượng theo vốn hóa niêm yết, chưa điều chỉnh free-float."}
+        {sectors?.note ?? "Đóng góp điểm là ước lượng theo vốn hóa niêm yết, chưa điều chỉnh theo tỷ lệ cổ phiếu tự do chuyển nhượng."}
         {!live?.length && isNum(sectors?.contrib_sum) && isNum(sectors?.index_change)
           ? ` Tổng ước lượng ${num(sectors?.contrib_sum ?? null)} điểm so với thay đổi thật ${num(sectors?.index_change ?? null)} điểm.`
           : ""}

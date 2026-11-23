@@ -55,8 +55,8 @@ describe("định dạng", () => {
     expect(dmy(null)).toBe("—");
   });
   it("tiền theo tỷ/triệu và ngày dd/mm/yyyy", () => {
-    expect(money(2.5e9)).toBe("2,5 tỷ");
-    expect(money(3.2e6)).toBe("3,2 triệu");
+    expect(money(2.5e9)).toBe("2,5 tỷ đồng");
+    expect(money(3.2e6)).toBe("3,2 triệu đồng");
     expect(money(-1.5e12)).toContain("nghìn tỷ");
     expect(dmy("2026-11-19")).toBe("19/11/2026");
     expect(pct(1.234)).toBe("+1,23%");

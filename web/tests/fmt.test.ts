@@ -15,10 +15,10 @@ describe("fmt (tái sử dụng từ invest-system-phase2, có bổ sung trần/
     expect(new Set(Object.values(TONE_MARK)).size).toBe(5);
   });
   it("tiền và ngày kiểu Việt Nam", () => {
-    expect(bnLabel(1.6853e12)).toBe("1,7 nghìn tỷ");
-    expect(bnLabel(345e9)).toBe("345 tỷ");
+    expect(bnLabel(1.6853e12)).toBe("1,7 nghìn tỷ đồng");
+    expect(bnLabel(345e9)).toBe("345 tỷ đồng");
     expect(bnLabel(null)).toBe("—");
-    expect(dmyTime("2026-11-19T10:05:30+07:00")).toBe("19/11/2026 10:05");
+    expect(dmyTime("2026-11-19T10:05:30+07:00")).toBe("10:05, 19/11/2026");
     expect(dmyTime("2026-11-19")).toBe("19/11/2026");
   });
 });
