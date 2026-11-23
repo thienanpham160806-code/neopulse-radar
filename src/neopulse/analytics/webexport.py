@@ -316,7 +316,7 @@ def snapshot_meta(trading_date: str | None, now: datetime) -> dict:
     Snapshot KHÔNG phải thời gian thực: số liệu dừng ở thời điểm `snapshot_at`."""
     today = to_vn(now).date().isoformat()
     eod = (trading_date is not None and trading_date < today) or session_phase(now) == "closed"
-    label = "Snapshot cuối phiên" if eod else f"Snapshot giữa phiên (dừng lúc {to_vn(now).strftime('%H:%M')})"
+    label = "Bản dữ liệu cuối phiên" if eod else f"Bản dữ liệu giữa phiên (dừng lúc {to_vn(now).strftime('%H:%M')})"
     return {"snapshot_at": iso_vn(now), "snapshot_kind": "end_of_session" if eod else "intraday",
             "snapshot_label": label, "snapshot_realtime": False}
 

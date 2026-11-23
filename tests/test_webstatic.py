@@ -41,7 +41,7 @@ def test_publish_static_writes_files_with_snapshot_meta(db_path, tmp_path):
     m = _read(tmp_path / "latest.json")["meta"]
     assert m["trading_date"] == "2026-11-13" and m["is_simulated"] is True and m["source_label"] == "MÔ PHỎNG"
     assert m["snapshot_at"].endswith("+07:00") and m["snapshot_realtime"] is False
-    assert m["snapshot_kind"] == "end_of_session" and m["snapshot_label"] == "Snapshot cuối phiên"   # phiên 13/11 đã qua
+    assert m["snapshot_kind"] == "end_of_session" and m["snapshot_label"] == "Bản dữ liệu cuối phiên"   # phiên 13/11 đã qua
     idx = _read(tmp_path / "index.json")
     assert {s["index_code"] for s in idx["sessions"]} == {"VN30", "VNINDEX"}
     assert all((tmp_path / s["path"]).exists() and s["snapshot_kind"] == "end_of_session" for s in idx["sessions"])
@@ -138,7 +138,7 @@ def test_cli_publish_static(db_path, tmp_path, capsys, monkeypatch):
     out = capsys.readouterr().out
     assert "MÔ PHỎNG" in out and "Chưa triển khai" in out and (tmp_path / "o" / "latest.json").exists()
     assert cli_main(["publish-static", "--source", "ssi", "--out", "o2"]) == 1
-    assert "LỖI" in capsys.readouterr().out
+    assert "Lỗi" in capsys.readouterr().out
     assert cli_main(["publish-static", "--source", "sim", "--date", "2026-11-12", "--out", "o3", "--no-validation"]) == 0
 
 

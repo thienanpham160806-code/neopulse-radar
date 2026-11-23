@@ -15,14 +15,14 @@ from urllib.parse import urlparse
 import httpx
 
 BASE = "https://neopulse-radar.vercel.app"
-HELP = ("NEOPULSE RADAR — TRỢ LÝ THEO DÕI THỊ TRƯỜNG\n\n"
-        "Bot gửi cảnh báo bất thường, tin doanh nghiệp và tin chính sách theo lựa chọn của bạn. Không đặt lệnh, không khuyến nghị mua/bán.\n\n"
+HELP = ("NeoPulse Radar · Trợ lý theo dõi thị trường\n\n"
+        "NeoPulse gửi cảnh báo bất thường, tin doanh nghiệp và tin chính sách theo lựa chọn của bạn. Không đặt lệnh, không khuyến nghị mua/bán.\n\n"
         f"Mở website: {BASE}\nChọn nhóm tin: {BASE}/thong-bao\nXem doanh nghiệp: {BASE}/doanh-nghiep\n\n"
-        "BẮT ĐẦU\n/start: đăng ký cảnh báo mức CAO\n/help: xem hướng dẫn này\n"
+        "Các lệnh\n/start: đăng ký cảnh báo mức cao\n/help: xem hướng dẫn này\n"
         "/news on hoặc off: tin doanh nghiệp\n/laws on hoặc off: tin chính sách từ Chính phủ\n"
         "/watch MWG,FPT: lọc mã (tối đa 30)\n/all: toàn bộ VN30\n/status: xem cài đặt\n"
         "/stop hoặc /delete: hủy và xóa đăng ký\n"
-        "Tin tự động gửi theo đợt khoảng 15 phút; lịch cloud có thể trễ. Nguồn giá cần được NeoPulse cập nhật để có cảnh báo mới. Không phải lời khuyên đầu tư.")
+        "Tin được gửi theo đợt khoảng 15 phút một lần; lịch chạy có thể trễ vài phút. Cảnh báo mới chỉ có khi dữ liệu thị trường của NeoPulse được cập nhật.\nCông cụ phân tích học thuật. Không phải lời khuyên đầu tư.")
 
 
 class Telegram:
@@ -74,7 +74,7 @@ def command(state: dict, update: dict, valid: set[str], now: float) -> tuple[str
     requested_at = min(now, float(m.get("date", now)))
     if cmd in {"/stop", "/delete"}:
         state["users"].pop(cid, None)
-        return cid, "Đã hủy và xóa đăng ký NeoPulse. Bot sẽ không gửi thêm tin. /start để đăng ký lại."
+        return cid, "Đã hủy và xóa đăng ký NeoPulse. Bạn sẽ không nhận thêm tin. Gửi /start để đăng ký lại."
     if cmd == "/start":
         state["users"].setdefault(cid, {"since": requested_at, "alerts": True, "news": False, "laws": False, "symbols": [], "delivered": {}, "enabled_since": {"alerts": requested_at}})
         topics = value.split("_")
@@ -198,7 +198,7 @@ def run(path: Path, token: str, key: str, *, client: httpx.Client, now: float | 
             if at and a["severity"] == "CAO":
                 identity = f"{a['t']}|{a['symbol']}|{a['rule']}"
                 events.append({"id": hashlib.sha256(identity.encode()).hexdigest(), "category": "alerts", "at": at,
-                               "symbols": [a["symbol"]], "text": f"[CẢNH BÁO CAO] {a['symbol']} · {a['t']}\n{a['message']}\n{BASE}/doanh-nghiep/{a['symbol']}\nKhông phải khuyến nghị đầu tư."})
+                               "symbols": [a["symbol"]], "text": f"[Cảnh báo mức cao] {a['symbol']} · {a['t']}\n{a['message']}\n{BASE}/doanh-nghiep/{a['symbol']}\nCông cụ phân tích học thuật. Không phải lời khuyên đầu tư."})
     for category, url, host in [("news", "https://cafef.vn/thi-truong-chung-khoan.rss", "cafef.vn"),
                                 ("laws", "https://baochinhphu.vn/home.rss", "baochinhphu.vn")]:
         try:

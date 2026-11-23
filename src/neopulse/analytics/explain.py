@@ -81,7 +81,7 @@ def template_summary(v: SessionView) -> list[str]:
         out.append(f"Điểm nhịp thị trường {p.score:.1f}/100 - {p.label}. Thành phần chi phối: {top}.")
         if p.missing:
             out.append("Thiếu dữ liệu cho: " + ", ".join(COMPONENT_NAMES[m] for m in p.missing)
-                       + " - điểm được tính trên các thành phần còn lại.")
+                       + "; điểm được tính trên các thành phần còn lại.")
     if r.get("value") is not None:
         out.append(f"{v.index_code} ở {r['value']:,.2f} ({r.get('pct_change', float('nan')):+.2f}%), "
                    f"{r.get('advances', 0):.0f} mã tăng / {r.get('declines', 0):.0f} mã giảm, "
@@ -97,13 +97,13 @@ def template_summary(v: SessionView) -> list[str]:
                    f"mua ròng mạnh nhất {v.foreign.index[0]}, bán ròng mạnh nhất {v.foreign.index[-1]}.")
     bs = v.basis_state
     if bs and not math.isnan(bs.get("basis", float("nan"))):
-        z = f", z = {bs['z']:+.1f} so với trong phiên" if not math.isnan(bs.get("z", float("nan"))) else ""
-        out.append(f"{bs['symbol']}: basis {bs['basis']:+.2f} điểm ({bs['basis_pct']:+.2f}%) - {bs['label']}, "
+        z = f", điểm z trong phiên {bs['z']:+.1f}" if not math.isnan(bs.get("z", float("nan"))) else ""
+        out.append(f"{bs['symbol']}: chênh lệch cơ sở {bs['basis']:+.2f} điểm ({bs['basis_pct']:+.2f}%) - {bs['label']}, "
                    f"còn {bs['dtm']:.0f} ngày tới đáo hạn{z}.")
     if len(v.alerts):
         hi = v.alerts[v.alerts["severity"] == "CAO"]
         names = ", ".join(hi["symbol"].value_counts().head(5).index) if len(hi) else "không có"
-        out.append(f"{len(v.alerts)} cảnh báo trong phiên, {len(hi)} mức CAO (mã: {names}).")
+        out.append(f"{len(v.alerts)} cảnh báo trong phiên, {len(hi)} cảnh báo mức cao (mã: {names}).")
     return [vn_digits(x) for x in out]
 
 

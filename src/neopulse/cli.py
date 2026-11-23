@@ -12,7 +12,7 @@
   refdata    phân ngành + KL trung bình 20 phiên (REST SSI, dự phòng Vietcap) cho RVOL và ngành trong phiên
   live-relay phát số liệu tổng hợp trực tiếp lên Ably (chỉ đọc SQLite; --dry-run để thử cục bộ)
   publish-static  xuất snapshot tĩnh vào web/public/data/ (+ --deploy lên Vercel) - cách khuyên dùng
-  publish    TÙY CHỌN, tốn hạn mức: đẩy JSON lên Vercel Blob theo chu kỳ (--dry-run để thử cục bộ)
+  publish    tùy chọn, tốn hạn mức: đẩy JSON lên Vercel Blob theo chu kỳ (--dry-run để thử cục bộ)
 """
 from __future__ import annotations
 
@@ -42,7 +42,7 @@ def _source(args, settings: Settings, db) -> str:
 def _check_ssi(s: Settings) -> int:
     from .ssi.client import SsiApiError, SsiClient
     if not s.has_ssi_credentials:
-        print("\nLỖI: thiếu SSI_API_KEY/SSI_API_SECRET trong .env (tạo tại https://developers.ssi.com.vn).")
+        print("\nLỗi: thiếu SSI_API_KEY/SSI_API_SECRET trong .env (tạo tại https://developers.ssi.com.vn).")
         return 2
     try:
         with SsiClient(s) as c:
@@ -51,7 +51,7 @@ def _check_ssi(s: Settings) -> int:
             print(f"\nKết nối REST SSI: OK. Rổ {s.universe_index}: {len(members)} mã. Số request đã gửi: {c.request_count}")
         return 0
     except SsiApiError as e:
-        print(f"\nLỖI SSI API: {e}")
+        print(f"\nLỗi SSI API: {e}")
         return 1
 
 
@@ -66,7 +66,7 @@ def cmd_check(args, s: Settings) -> int:
     if s.source == "ssi":
         return _check_ssi(s)
     if not s.has_neo_credentials:
-        print("\nLỖI: thiếu NEO_USERNAME/NEO_PASSWORD (hoặc NEO_ACCESS_TOKEN) trong .env.")
+        print("\nLỗi: thiếu NEO_USERNAME/NEO_PASSWORD (hoặc NEO_ACCESS_TOKEN) trong .env.")
         return 2
     try:
         with NeoClient(s) as c:
@@ -76,7 +76,7 @@ def cmd_check(args, s: Settings) -> int:
             print(f"Rổ {s.universe_index}: {len(members)} mã. Tổng số request đã gửi: {c.request_count}")
         return 0
     except NeoApiError as e:
-        print(f"\nLỖI NEO API: {e}")
+        print(f"\nLỗi NEO API: {e}")
         return 1
 
 
@@ -188,7 +188,7 @@ def cmd_validate(args, s: Settings) -> int:
         return 1
     pd.set_option("display.width", 200)
     bars = make_bars(quotes, args.freq)
-    print(f"== KIỂM CHỨNG · nguồn={src}{' (MÔ PHỎNG)' if src == 'sim' else ''} · thanh={args.freq} ==")
+    print(f"== Kiểm chứng · nguồn={src}{' (MÔ PHỎNG)' if src == 'sim' else ''} · thanh={args.freq} ==")
     dq = validation.data_quality_report(db, src)
     print(f"\n[1] Dữ liệu: {dq['n_quotes']:,} ảnh chụp · {dq['n_symbols']} mã · {dq['n_sessions']} phiên · "
           f"{len(dq['gaps'])} khoảng trống bất thường")
@@ -197,7 +197,7 @@ def cmd_validate(args, s: Settings) -> int:
     print(f"\n[2] Tín hiệu sổ lệnh -> lợi suất kế tiếp (bps). Trong mẫu: {res['train']} · Ngoài mẫu: {res['test']}")
     print(res["table"].round(4).to_string(index=False))
     if res["note"]:
-        print("LƯU Ý:", res["note"])
+        print("Lưu ý:", res["note"])
     print("\n[3] IC theo từng phiên (obi3, 1 thanh):")
     print(validation.per_session_ic(bars).round(4).to_string(index=False))
     al = alerting.detect(bars, source=src)
@@ -205,7 +205,7 @@ def cmd_validate(args, s: Settings) -> int:
     if src == "sim":
         ev = alerting.evaluate_against_truth(al, db.table("sim_truth"))
         print("Đối chiếu với sự kiện cài sẵn (chỉ có ở dữ liệu mô phỏng):", json.dumps(ev, ensure_ascii=False, default=float))
-        print("\nNHẮC LẠI: dữ liệu mô phỏng có tín hiệu được cài sẵn - các con số trên chỉ xác nhận mã nguồn tính đúng.")
+        print("\nNhắc lại: dữ liệu mô phỏng có tín hiệu được cài sẵn; các con số trên chỉ xác nhận mã nguồn tính đúng.")
     if args.out:
         res["table"].to_csv(args.out, index=False)
         print(f"Đã lưu bảng IC: {args.out}")
@@ -256,7 +256,7 @@ def cmd_publish_static(args, s: Settings) -> int:
                                 all_dates=args.all_dates, with_validation=not args.no_validation,
                                 order_value=args.order_value_mn * 1e6, deploy=args.deploy, web_dir=args.web_dir)
     except ws.StaticPublishError as e:
-        print(f"LỖI: {e}")
+        print(f"Lỗi: {e}")
         return 1
     for e in res.entries:
         print(f"{res.out_dir / e['path']}  (phiên {e['trading_date']}, {e['index_code']}, {e.get('snapshot_kind')})")
@@ -363,7 +363,7 @@ def cmd_live_relay(args, s: Settings) -> int:
         st = lr.run_live_relay(s, source=src, until=_parse_until(args.until), dry_run=args.dry_run, viewers=args.viewers,
                                replay_speed=speed)
     except lr.LiveRelayError as e:
-        print(f"LỖI: {e}")
+        print(f"Lỗi: {e}")
         return 2
     except KeyboardInterrupt:
         print("Đã dừng live-relay.")
@@ -380,7 +380,7 @@ def cmd_publish(args, s: Settings) -> int:
         stats = wp.run_publish(s, source=src, every=args.every, until=_parse_until(args.until), index_codes=codes,
                                work_dir=args.out, dry_run=args.dry_run)
     except wp.BlobPutError as e:
-        print(f"LỖI: {e}")
+        print(f"Lỗi: {e}")
         return 2
     except KeyboardInterrupt:
         print("Đã dừng publish.")
@@ -391,7 +391,7 @@ def cmd_publish(args, s: Settings) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="neopulse", description="NeoPulse Radar - radar nhịp thị trường trên NEO API")
+    p = argparse.ArgumentParser(prog="neopulse", description="NeoPulse Radar: radar nhịp thị trường nội phiên cho cổ phiếu Việt Nam (nguồn SSI FastConnect hoặc NEO API)")
     p.add_argument("--log-level", default="INFO")
     p.add_argument("--env-file", default=None)
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -476,7 +476,7 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--order-value-mn", type=float, default=500.0)
     sp.add_argument("--deploy", action="store_true", help="chạy `vercel --prod --yes` trong web/ và in URL")
     sp.set_defaults(fn=cmd_publish_static)
-    sp = sub.add_parser("publish", help="TÙY CHỌN, tốn hạn mức: đẩy JSON lên Vercel Blob theo chu kỳ (Hobby chỉ 2.000 thao tác/tháng)")
+    sp = sub.add_parser("publish", help="tùy chọn, tốn hạn mức: đẩy JSON lên Vercel Blob theo chu kỳ (Hobby chỉ 2.000 thao tác/tháng)")
     sp.add_argument("--source", choices=["neo", "ssi", "sim"], help="mặc định: nguồn thật đang cấu hình, hoặc sim")
     sp.add_argument("--index", default="VN30")
     sp.add_argument("--indexes")

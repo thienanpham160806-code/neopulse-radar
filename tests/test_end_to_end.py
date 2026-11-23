@@ -6,6 +6,7 @@ import pytest
 
 from neopulse.analytics import alerts
 from neopulse.analytics.briefing import render_briefing
+from neopulse.analytics.formatting import vn_digits
 from neopulse.analytics.view import build_view, elapsed_minutes
 from neopulse.data.recorder import poll, rest_cycle
 from neopulse.data.storage import Storage
@@ -78,7 +79,7 @@ def test_planted_anomalies_are_recovered(db):
 def test_briefing_renders_with_disclaimers(db, tmp_path):
     v = build_view(db, "sim")
     html = render_briefing(v, tmp_path / "b.html")
-    assert "DỮ LIỆU MÔ PHỎNG" in html and "không phải khuyến nghị đầu tư" in html and f"{v.pulse.score:,.1f}" in html
+    assert "DỮ LIỆU MÔ PHỎNG" in html and "Không phải lời khuyên đầu tư" in html and vn_digits(f"{v.pulse.score:,.1f}") in html
     assert "<script" not in html and (tmp_path / "b.html").exists()
     empty = render_briefing(build_view(db, "neo"))
     assert "Chưa có dữ liệu" in empty

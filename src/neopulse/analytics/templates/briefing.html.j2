@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>NeoPulse Radar · Bản tin phiên {{ v.trading_date }}</title>
+<title>NeoPulse Radar · Bản tin phiên {{ v.trading_date|dmy }}</title>
 <style>
 :root{--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;--bg:#f8fafc;--card:#fff;--up:#15803d;--down:#b91c1c;--accent:#1d4ed8}
 *{box-sizing:border-box}body{margin:0;font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--bg)}
@@ -29,9 +29,9 @@ footer{color:var(--muted);font-size:12.5px;margin-top:24px;border-top:1px solid 
 </style>
 </head>
 <body><main>
-<h1>NeoPulse Radar · Bản tin phiên {{ v.trading_date }}</h1>
+<h1>NeoPulse Radar · Bản tin phiên {{ v.trading_date|dmy }}</h1>
 <div class="sub">Chỉ số theo dõi: {{ v.index_code }} · Nguồn dữ liệu: {{ "MÔ PHỎNG" if v.is_simulated else ("SSI FastConnect" if v.source == "ssi" else "NEO API (VPBankS)") }} ·
-Dữ liệu cập nhật lần cuối: {{ v.last_update.strftime("%H:%M:%S %d/%m/%Y") if v.last_update else "—" }} (giờ Việt Nam) · Lập lúc {{ generated }}</div>
+Dữ liệu cập nhật lần cuối: {{ v.last_update.strftime("%H:%M:%S, %d/%m/%Y") if v.last_update else "—" }} (giờ Việt Nam) · Lập lúc {{ generated }}</div>
 {% if v.is_simulated %}<div class="banner">DỮ LIỆU MÔ PHỎNG — mọi con số dưới đây do bộ giả lập sinh ra để trình diễn, không phản ánh thị trường thật.</div>{% endif %}
 {% if v.status == "no_data" %}<div class="card">{{ v.status_message }}</div>{% else %}
 
@@ -41,15 +41,15 @@ Dữ liệu cập nhật lần cuối: {{ v.last_update.strftime("%H:%M:%S %d/%m
   <div class="card"><h2>{{ v.index_code }}</h2>
     <div class="kpi {{ 'up' if v.index_row.pct_change >= 0 else 'down' }}">{{ v.index_row.value|num }}</div>
     <div>{{ v.index_row.change|signed }} ({{ v.index_row.pct_change|signed }}%)</div></div>
-  <div class="card"><h2>Độ rộng</h2>
+  <div class="card"><h2>Độ rộng thị trường</h2>
     <div class="kpi"><span class="up">{{ v.index_row.advances|num(0) }}</span> / <span class="down">{{ v.index_row.declines|num(0) }}</span></div>
     <div>trần {{ v.index_row.n_ceiling|num(0) }} · sàn {{ v.index_row.n_floor|num(0) }}</div></div>
-  <div class="card"><h2>Khối ngoại (rổ)</h2>
+  <div class="card"><h2>Khối ngoại trong rổ</h2>
     <div class="kpi {{ 'up' if v.foreign_summary.net_val >= 0 else 'down' }}">{{ v.foreign_summary.net_val|money }}</div>
     <div>{{ v.foreign_summary.n_net_buy }} mã mua ròng · {{ v.foreign_summary.n_net_sell }} mã bán ròng</div></div>
 </div>
 
-<div class="card"><h2>Nhận định (sinh từ số liệu, không phải khuyến nghị)</h2>
+<div class="card"><h2>Nhận định tự động từ số liệu</h2>
 <ul>{% for s in summary %}<li>{{ s }}</li>{% endfor %}</ul></div>
 
 <div class="two">
@@ -67,41 +67,41 @@ nhãn trạng thái giữ nguyên trong {{ (v.sensitivity.label_stability*100)|n
 
 <div class="two">
 <div class="card"><h2>Xếp hạng đa yếu tố (đầu bảng)</h2>
-<table><tr><th>Mã</th><th>Điểm</th><th>%</th><th>OBI₃</th><th>NN ròng/tổng</th><th>Spread (bps)</th></tr>
+<table><tr><th>Mã</th><th>Điểm</th><th>%</th><th>OBI₃</th><th>Khối ngoại ròng/tổng</th><th>Độ chênh giá mua-bán (bps)</th></tr>
 {% for r in top_rank %}<tr><td>{{ r.symbol }}</td><td>{{ r.score|signed }}</td><td class="{{ 'up' if r.pct_change >= 0 else 'down' }}">{{ r.pct_change|signed }}</td>
 <td>{{ r.obi3|signed }}</td><td>{{ r.net_ratio|signed }}</td><td>{{ r.spread_bps|num(1) }}</td></tr>{% endfor %}</table></div>
 <div class="card"><h2>Thanh khoản yếu nhất trong rổ</h2>
-<table><tr><th>Mã</th><th>Điểm TK</th><th>Spread (bps)</th><th>Độ sâu 3 mức</th><th>Trượt giá 500tr (bps)</th></tr>
+<table><tr><th>Mã</th><th>Điểm thanh khoản</th><th>Độ chênh giá mua-bán (bps)</th><th>Độ sâu 3 mức</th><th>Trượt giá lệnh 500 triệu đồng (bps)</th></tr>
 {% for r in illiquid %}<tr><td>{{ r.symbol }}</td><td>{{ r.liq_score|num(1) }}</td><td>{{ r.spread_bps|num(1) }}</td><td>{{ r.depth_value|money }}</td><td>{{ r.slippage_bps|num(1) }}</td></tr>{% endfor %}</table></div>
 </div>
 
 <div class="two">
 <div class="card"><h2>Khối ngoại mua ròng mạnh nhất</h2>
-<table><tr><th>Mã</th><th>Ròng</th><th>Ròng/tổng</th><th>Tỷ trọng NN</th><th>Room đã dùng</th></tr>
+<table><tr><th>Mã</th><th>Ròng</th><th>Ròng/tổng</th><th>Tỷ trọng khối ngoại</th><th>Room khối ngoại đã dùng</th></tr>
 {% for r in f_buy %}<tr><td>{{ r.symbol }}</td><td class="up">{{ r.net_val|money }}</td><td>{{ r.net_ratio|signed }}</td><td>{{ (r.participation*100)|num(1) }}%</td><td>{{ (r.room_used*100)|num(1) }}%</td></tr>{% endfor %}</table></div>
 <div class="card"><h2>Khối ngoại bán ròng mạnh nhất</h2>
-<table><tr><th>Mã</th><th>Ròng</th><th>Ròng/tổng</th><th>Tỷ trọng NN</th><th>Room đã dùng</th></tr>
+<table><tr><th>Mã</th><th>Ròng</th><th>Ròng/tổng</th><th>Tỷ trọng khối ngoại</th><th>Room khối ngoại đã dùng</th></tr>
 {% for r in f_sell %}<tr><td>{{ r.symbol }}</td><td class="down">{{ r.net_val|money }}</td><td>{{ r.net_ratio|signed }}</td><td>{{ (r.participation*100)|num(1) }}%</td><td>{{ (r.room_used*100)|num(1) }}%</td></tr>{% endfor %}</table></div>
 </div>
 
 {% if v.basis_state and v.basis_state.symbol %}
-<div class="card"><h2>Phái sinh · {{ v.basis_state.symbol }}</h2>{{ basis_svg|safe }}
-<div>Basis {{ v.basis_state.basis|signed }} điểm ({{ v.basis_state.basis_pct|signed }}%) — {{ v.basis_state.label }};
+<div class="card"><h2>Hợp đồng tương lai VN30 · {{ v.basis_state.symbol }}</h2>{{ basis_svg|safe }}
+<div>Chênh lệch cơ sở {{ v.basis_state.basis|signed }} điểm ({{ v.basis_state.basis_pct|signed }}%) — {{ v.basis_state.label }};
 còn {{ v.basis_state.dtm|num(0) }} ngày tới đáo hạn; lệch so với giá trị hợp lý (chi phí lưu giữ) {{ v.basis_state.mispricing|signed }} điểm.</div></div>
 {% endif %}
 
-<div class="card"><h2>Cảnh báo đáng chú ý ({{ v.alerts|length }} trong phiên)</h2>
+<div class="card"><h2>Cảnh báo trong phiên ({{ v.alerts|length }})</h2>
 {% if alerts %}<table><tr><th>Giờ</th><th>Mã</th><th>Mức</th><th style="text-align:left">Nội dung</th></tr>
 {% for a in alerts %}<tr><td>{{ a.ts.strftime("%H:%M") }}</td><td>{{ a.symbol }}</td>
-<td><span class="tag {{ 'CAO' if a.severity == 'CAO' else ('TB' if a.severity == 'TRUNG BÌNH' else 'THAP') }}">{{ a.severity }}</span></td>
-<td style="text-align:left">{{ a.message }}</td></tr>{% endfor %}</table>{% else %}Không có cảnh báo nào trong phiên.{% endif %}</div>
+<td><span class="tag {{ 'CAO' if a.severity == 'CAO' else ('TB' if a.severity == 'TRUNG BÌNH' else 'THAP') }}">{{ {'CAO': 'Cao', 'TRUNG BÌNH': 'Trung bình', 'THẤP': 'Thấp'}.get(a.severity, a.severity) }}</span></td>
+<td style="text-align:left">{{ a.message|vn }}</td></tr>{% endfor %}</table>{% else %}Không có cảnh báo nào trong phiên.{% endif %}</div>
 {% endif %}
 
 <footer>
-<b>Phương pháp.</b> Điểm nhịp = 50 + 50·Σwᵢcᵢ trên 5 thành phần (độ rộng, động lượng chỉ số, sổ lệnh, khối ngoại, thanh khoản).
-OBI₃ = (ΣKL mua − ΣKL bán)/(tổng) trên 3 mức giá. Cảnh báo dùng z-score bền vững (median/MAD), ngưỡng 3,5.
+<b>Phương pháp.</b> Điểm nhịp = 50 + 50·Σwᵢcᵢ trên 5 thành phần (độ rộng thị trường, động lượng chỉ số, mất cân bằng sổ lệnh, khối ngoại, thanh khoản).
+Mất cân bằng sổ lệnh OBI₃ = (ΣKL mua − ΣKL bán)/(ΣKL mua + ΣKL bán) trên 3 mức giá tốt nhất. Cảnh báo dùng điểm z bền vững (trung vị/MAD), ngưỡng 3,5.
 Chi tiết: docs/methodology.md.<br>
-<b>Giới hạn.</b> Chỉ thấy 3 mức giá tốt nhất; cổ phiếu không có dấu thời gian sự kiện nên dùng thời điểm nhận; điểm nhịp mô tả hiện trạng,
-không dự báo. <b>Đây là công cụ phân tích học thuật, không phải khuyến nghị đầu tư.</b>
+<b>Giới hạn.</b> Chỉ quan sát được 3 mức giá tốt nhất; dữ liệu cổ phiếu không có dấu thời gian sự kiện nên dùng thời điểm nhận; điểm nhịp mô tả hiện trạng,
+không dự báo. <b>Công cụ phân tích học thuật. Không phải lời khuyên đầu tư.</b>
 </footer>
 </main></body></html>

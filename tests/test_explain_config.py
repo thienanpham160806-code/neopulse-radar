@@ -107,7 +107,7 @@ def test_telegram_is_optional_and_never_raises(settings):
         raise httpx.ConnectError("down")
     assert send_telegram(s, "hi", transport=httpx.MockTransport(boom)) is False
     msg = format_alert({"ts": "2026-11-13T10:00:00+07:00", "severity": "CAO", "symbol": "VPB", "message": "m"}, simulated=True)
-    assert msg.startswith("[MÔ PHỎNG]") and "không phải khuyến nghị" in msg
+    assert msg.startswith("[MÔ PHỎNG]") and "Không phải lời khuyên đầu tư" in msg
 
 
 def test_vn_digits_converts_numbers_only():

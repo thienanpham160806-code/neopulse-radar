@@ -58,8 +58,8 @@ def basis_state(b: pd.DataFrame) -> dict:
     med = hist.median() if len(hist) >= 30 else np.nan
     mad = (hist - med).abs().median() if len(hist) >= 30 else np.nan
     z = 0.6745 * (last["basis_pct"] - med) / mad if mad and mad > 0 else np.nan
-    label = ("Contango (HĐTL cao hơn cơ sở)" if last["basis"] > 0 else
-             "Backwardation (HĐTL thấp hơn cơ sở)" if last["basis"] < 0 else "Hội tụ")
+    label = ("Hợp đồng tương lai cao hơn chỉ số cơ sở (contango)" if last["basis"] > 0 else
+             "Hợp đồng tương lai thấp hơn chỉ số cơ sở (backwardation)" if last["basis"] < 0 else "Hội tụ")
     return {"basis": float(last["basis"]), "basis_pct": float(last["basis_pct"]), "z": float(z) if pd.notna(z) else np.nan,
             "label": label, "dtm": float(last["dtm"]) if pd.notna(last["dtm"]) else np.nan,
             "carry_ann": float(last["carry_ann"]) if pd.notna(last["carry_ann"]) else np.nan,

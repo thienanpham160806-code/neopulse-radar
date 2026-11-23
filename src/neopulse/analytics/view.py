@@ -95,7 +95,7 @@ def build_view(storage, source: str, trading_date: str | None = None, index_code
     dates = storage.trading_dates(source)
     if not dates:
         return SessionView(source, trading_date, index_code,
-                           status_message=f"Chưa có dữ liệu cho nguồn '{source}'. Hãy chạy bộ ghi hoặc tạo dữ liệu mô phỏng.")
+                           status_message=f"Chưa có dữ liệu cho nguồn '{source}'. Chạy bộ ghi dữ liệu hoặc tạo dữ liệu mô phỏng.")
     day = trading_date if trading_date in dates else dates[-1]
     v = SessionView(source, day, index_code)
     quotes = storage.quotes(day, symbols, "stock", source)
@@ -120,12 +120,12 @@ def build_view(storage, source: str, trading_date: str | None = None, index_code
     v.age_seconds = (now_vn() - v.last_update.to_pydatetime()).total_seconds()
     is_today = day == now_vn().date().isoformat()
     if source == "sim":
-        v.status, v.status_message = "ok", "Dữ liệu MÔ PHỎNG - không phải dữ liệu thị trường."
+        v.status, v.status_message = "ok", "Dữ liệu MÔ PHỎNG, không phải dữ liệu thị trường."
     elif is_today and v.age_seconds <= stale_after_s:
         v.status, v.status_message = "ok", "Đang nhận dữ liệu."
     elif is_today:
         v.status = "stale"
-        v.status_message = (f"Dữ liệu đã cũ {v.age_seconds / 60:.0f} phút - bộ ghi có thể đã dừng, mất kết nối "
+        v.status_message = (f"Dữ liệu chưa cập nhật trong {v.age_seconds / 60:.0f} phút. Bộ ghi có thể đã dừng hoặc mất kết nối, "
                             "hoặc thị trường đang nghỉ.")
     else:
         v.status, v.status_message = "ok", f"Dữ liệu lịch sử của phiên {day} (đã đóng)."
@@ -189,10 +189,10 @@ def fmt_money(x: float | None) -> str:
         return "—"
     a = abs(x)
     if a >= 1e9:
-        return f"{x / 1e9:,.1f} tỷ"
+        return f"{x / 1e9:,.1f} tỷ đồng"
     if a >= 1e6:
-        return f"{x / 1e6:,.1f} triệu"
-    return f"{x:,.0f}"
+        return f"{x / 1e6:,.1f} triệu đồng"
+    return f"{x:,.0f} đồng"
 
 
 _RVOL_CACHE: dict[tuple, tuple] = {}

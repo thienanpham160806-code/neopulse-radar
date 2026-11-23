@@ -28,7 +28,7 @@ from .microstructure import add_book_metrics
 WEIGHTS = {"breadth": 0.30, "momentum": 0.25, "book": 0.20, "foreign": 0.15, "liquidity": 0.10}
 LABELS = [(65, "Tích cực lan tỏa"), (55, "Nghiêng tích cực"), (45, "Trung tính - giằng co"),
           (35, "Nghiêng tiêu cực"), (-1, "Tiêu cực lan tỏa")]
-COMPONENT_NAMES = {"breadth": "Độ rộng", "momentum": "Động lượng chỉ số", "book": "Sổ lệnh",
+COMPONENT_NAMES = {"breadth": "Độ rộng thị trường", "momentum": "Động lượng chỉ số", "book": "Mất cân bằng sổ lệnh",
                    "foreign": "Khối ngoại", "liquidity": "Thanh khoản"}
 
 

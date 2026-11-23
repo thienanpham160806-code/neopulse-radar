@@ -10,6 +10,7 @@ from jinja2 import Environment, PackageLoader, select_autoescape
 from ..finance.pulse import COMPONENT_NAMES, WEIGHTS
 from ..timeutil import now_vn
 from .explain import template_summary
+from .formatting import vn_digits
 from .view import SessionView, fmt_money
 
 
@@ -36,9 +37,12 @@ def sparkline(values: list[float], width: int = 560, height: int = 110, color: s
 def render_briefing(v: SessionView, out_path: str | Path | None = None) -> str:
     env = Environment(loader=PackageLoader("neopulse.analytics", "templates"),
                       autoescape=select_autoescape(["html", "j2"]))
-    env.filters["money"] = fmt_money
-    env.filters["num"] = lambda x, nd=2: "—" if x is None or pd.isna(x) else f"{x:,.{nd}f}"
-    env.filters["signed"] = lambda x, nd=2: "—" if x is None or pd.isna(x) else f"{x:+,.{nd}f}"
+    # Định dạng số kiểu Việt Nam (1.234,56) cho mọi con số hiển thị trong bản tin.
+    env.filters["money"] = lambda x: vn_digits(fmt_money(x))
+    env.filters["num"] = lambda x, nd=2: "—" if x is None or pd.isna(x) else vn_digits(f"{x:,.{nd}f}")
+    env.filters["signed"] = lambda x, nd=2: "—" if x is None or pd.isna(x) else vn_digits(f"{x:+,.{nd}f}")
+    env.filters["vn"] = vn_digits
+    env.filters["dmy"] = lambda d: "/".join(reversed(str(d)[:10].split("-")))
     comps = []
     if v.pulse:
         for k, w in WEIGHTS.items():
@@ -46,7 +50,7 @@ def render_briefing(v: SessionView, out_path: str | Path | None = None) -> str:
             comps.append({"name": COMPONENT_NAMES[k], "weight": w, "value": val,
                           "pct": 50 if val is None else 50 + 50 * max(-1, min(1, val))})
     html = env.get_template("briefing.html.j2").render(
-        v=v, generated=now_vn().strftime("%d/%m/%Y %H:%M"), summary=template_summary(v), comps=comps,
+        v=v, generated=now_vn().strftime("%H:%M, %d/%m/%Y"), summary=template_summary(v), comps=comps,
         index_svg=sparkline(v.index["value"].tolist() if len(v.index) else [],
                             baseline=(v.index_row["value"] - v.index_row["change"]) if v.index_row and v.index_row.get("change") is not None else None),
         pulse_svg=sparkline(v.pulse_series["score"].tolist() if len(v.pulse_series) else [], color="#7c3aed", baseline=50),

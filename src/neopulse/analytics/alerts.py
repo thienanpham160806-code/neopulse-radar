@@ -25,9 +25,9 @@ OBI_EXTREME = 0.6
 OBI_PERSIST = 3
 NEAR_LIMIT = 0.9
 FOREIGN_MIN_SHARE = 0.30
-RULE_NAMES = {"volume_spike": "Bùng nổ khối lượng", "spread_blowout": "Giãn chênh lệch mua-bán",
-              "price_jump": "Giá biến động đột ngột", "foreign_flow": "Dòng tiền NN bất thường",
-              "book_pressure": "Sổ lệnh lệch kéo dài", "near_limit": "Sát trần/sàn"}
+RULE_NAMES = {"volume_spike": "Khối lượng tăng bất thường", "spread_blowout": "Độ chênh giá mua-bán giãn rộng",
+              "price_jump": "Giá biến động đột ngột", "foreign_flow": "Khối ngoại giao dịch bất thường",
+              "book_pressure": "Mất cân bằng sổ lệnh kéo dài", "near_limit": "Sát trần/sàn"}
 
 
 @dataclass(frozen=True)
@@ -110,17 +110,17 @@ def _volume_rule(b: pd.DataFrame, cfg: AlertConfig):
 def _message(r) -> str:
     name = RULE_NAMES[r.rule]
     if r.rule == "volume_spike" and r.threshold == RVOL_SPIKE:
-        return f"{name}: RVOL = {r.value:.1f} lần mức thường thấy cùng giờ (ngưỡng {RVOL_SPIKE:g})"
+        return f"Khối lượng cao gấp {r.value:.1f} lần mức thường thấy cùng khung giờ (ngưỡng {RVOL_SPIKE:.1f})"
     if r.rule == "book_pressure":
-        side = "bên MUA dày hơn" if r.value > 0 else "bên BÁN dày hơn"
-        return f"{name}: OBI₃ = {r.value:+.2f} ({side}) trong {OBI_PERSIST} thanh liên tiếp"
+        side = "bên mua dày hơn" if r.value > 0 else "bên bán dày hơn"
+        return f"Mất cân bằng sổ lệnh (OBI₃) ở mức {r.value:+.2f}, {side}, trong {OBI_PERSIST} thanh 1 phút liên tiếp"
     if r.rule == "near_limit":
-        return f"{name}: giá ở {abs(r.value) * 100:.0f}% biên độ {'trần' if r.value > 0 else 'sàn'}"
+        return f"Giá đã đi {abs(r.value) * 100:.0f}% khoảng cách từ giá tham chiếu đến giá {'trần' if r.value > 0 else 'sàn'}"
     if r.rule == "foreign_flow":
         z = f"|z| ≥ {Z_CAP:.0f}" if abs(r.value) >= Z_CAP else f"z = {r.value:+.1f}"
-        return f"{name}: NN {'mua' if r.value > 0 else 'bán'} ròng đột biến ({z})"
+        return f"Khối ngoại {'mua' if r.value > 0 else 'bán'} ròng cao bất thường (điểm z bền vững: {z})"
     z = f"|z| ≥ {Z_CAP:.0f}" if abs(r.value) >= Z_CAP else f"z = {r.value:+.1f}"
-    return f"{name}: {z} (ngưỡng {r.threshold})"
+    return f"{name}: điểm z bền vững {z} (ngưỡng {r.threshold:g})"
 
 
 def to_rows(alerts: pd.DataFrame) -> list[dict]:

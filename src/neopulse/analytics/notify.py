@@ -7,15 +7,17 @@ import httpx
 import pandas as pd
 
 from ..config import Settings
+from .formatting import vn_digits
 
 log = logging.getLogger(__name__)
-DISCLAIMER = "Công cụ phân tích học thuật - không phải khuyến nghị đầu tư."
+DISCLAIMER = "Công cụ phân tích học thuật. Không phải lời khuyên đầu tư."
 
 
 def format_alert(row: dict | pd.Series, simulated: bool = False) -> str:
     ts = pd.Timestamp(row["ts"]).strftime("%H:%M %d/%m")
     tag = "[MÔ PHỎNG] " if simulated else ""
-    return f"{tag}[{row['severity']}] {row['symbol']} · {ts}\n{row['message']}\n{DISCLAIMER}"
+    level = {"CAO": "Mức cao", "TRUNG BÌNH": "Mức trung bình", "THẤP": "Mức thấp"}.get(row["severity"], row["severity"])
+    return f"{tag}[{level}] {row['symbol']} · {ts}\n{vn_digits(row['message'])}\n{DISCLAIMER}"
 
 
 def send_telegram(settings: Settings, text: str, *, transport: httpx.BaseTransport | None = None) -> bool:

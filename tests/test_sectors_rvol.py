@@ -122,7 +122,7 @@ def test_volume_alert_uses_rvol_when_available():
     a = al.detect(b)
     vs = a[a.rule == "volume_spike"]
     assert len(vs) == 1 and vs.iloc[0]["value"] == pytest.approx(4.0) and vs.iloc[0]["threshold"] == rvol.RVOL_SPIKE
-    assert "RVOL = 4.0" in vs.iloc[0]["message"]
+    assert "cao gấp 4.0 lần" in vs.iloc[0]["message"]
     assert al.detect(b.drop(columns=["rvol_bar"])).query("rule == 'volume_spike'").empty   # z thô: chưa đủ cửa sổ
 
 
