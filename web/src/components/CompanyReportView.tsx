@@ -36,7 +36,7 @@ export function CompanyReportView({ p }: { p: CompanyReport }) {
     <header className="rounded-3xl bg-surface p-6 shadow-sm sm:p-8">
       <p className="text-xs font-semibold uppercase tracking-widest text-muted">NeoPulse · Hồ sơ phân tích doanh nghiệp</p>
       <div className="mt-4 flex flex-wrap items-baseline justify-between gap-4"><div><p className="text-sm text-muted">{p.profile.exchange ?? "—"} · {p.profile.industry ?? "Chưa có phân ngành"}</p><h1 className="mt-1 text-4xl font-bold sm:text-6xl">{p.symbol}</h1><p className="mt-2 text-xl">{p.profile.name ?? p.symbol}</p></div>
-        <div className="text-right"><p className="tnum text-3xl font-semibold">{num(p.price.last, 0)} <span className="text-sm font-normal text-muted">đồng/CP</span></p><p className="mt-1 text-xs text-muted">Giá ngày {dmy(p.price.date)} · không phải giá trực tiếp</p></div></div>
+        <div className="text-left sm:text-right"><p className="tnum text-3xl font-semibold">{num(p.price.last, 0)} <span className="text-sm font-normal text-muted">đồng/CP</span></p><p className="mt-1 text-xs text-muted">Giá ngày {dmy(p.price.date)} · không phải giá trực tiếp</p></div></div>
       <p className="mt-5 text-xs text-muted">Nguồn: {p.source ?? "Chưa rõ"} · Lấy dữ liệu: {dmyTime(p.fetched_at)} · BCTC năm {p.years.join("–") || "chưa có"}. Giá và báo cáo tài chính có thể thuộc các kỳ khác nhau.</p>
     </header>
     <div className="mt-6 grid items-start gap-8 lg:grid-cols-[200px_minmax(0,1fr)]">
