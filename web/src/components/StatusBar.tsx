@@ -26,7 +26,7 @@ export function StatusBar({ meta, nowMs, notice, pollError, live = null, liveNot
   meta: Meta; nowMs: number; notice: string | null; pollError: string | null; live?: LiveInfo | null; liveNote?: string | null;
 }) {
   const f = live
-    ? { level: "green" as Level, label: "TRỰC TIẾP", detail: "", ageSeconds: null }
+    ? { level: "green" as Level, label: "Trực tiếp", detail: "", ageSeconds: null }
     : freshness(meta, nowMs);
   const excluded = meta.n_symbols_excluded;
   return (
@@ -62,7 +62,7 @@ export function StatusBar({ meta, nowMs, notice, pollError, live = null, liveNot
         ) : meta.snapshot_at ? (
           <>
             <span className="tnum">
-              <span className="text-muted">Snapshot lúc: </span>
+              <span className="text-muted">Bản dữ liệu lúc: </span>
               {clock(meta.snapshot_at)} · {dmy(meta.snapshot_at.slice(0, 10))} <span className="text-muted">(giờ VN)</span>
             </span>
             <span className="tnum">
@@ -90,7 +90,7 @@ export function StatusBar({ meta, nowMs, notice, pollError, live = null, liveNot
           </>
         )}
         <span className="tnum">
-          <span className="text-muted">Mã tính / loại: </span>
+          <span className="text-muted">Số mã đã tính / bị loại: </span>
           {meta.n_symbols_computed} / {excluded}
         </span>
         <span className="tnum hidden sm:inline">
