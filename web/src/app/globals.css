@@ -32,14 +32,14 @@
     --hero-bg: #1b4435;
     --hero-fg: #fff4dc;
     --hero-muted: #c0d0b8;
-    --highlight: #ffb273;
+    --highlight: #ff9f43;
     --bg: #0c241e;
     --surface: #14372c;
     --surface-2: #1c4437;
     --line: #315245;
     --fg: #f5efd9;
     --muted: #b6c8b9;
-    --accent: #ffb273;
+    --accent: #ff9f43;
     --on-accent: #0c241e;
     --up: #4ade80;
     --down: #f87171;
@@ -54,7 +54,7 @@
   --hero-bg: #1b4435;
   --hero-fg: #fff4dc;
   --hero-muted: #c0d0b8;
-  --highlight: #ffb273;
+  --highlight: #ff9f43;
   color-scheme: dark;
   --bg: #0c241e;
   --surface: #14372c;
@@ -62,7 +62,7 @@
   --line: #315245;
   --fg: #f5efd9;
   --muted: #b6c8b9;
-  --accent: #ffb273;
+  --accent: #ff9f43;
   --on-accent: #0c241e;
   --up: #4ade80;
   --down: #f87171;
@@ -169,3 +169,23 @@ html {
 .hero-description { color: var(--hero-muted); }
 .hero-highlight { color: var(--highlight); }
 .hero-button { background: var(--highlight); color: var(--hero-bg); }
+
+/* Native top-layer dialog: right drawer on desktop, full screen on narrow displays. */
+.glossary-dialog {
+  position: fixed;
+  inset: 0 0 0 auto;
+  margin: 0;
+  width: min(100%, 580px);
+  height: 100dvh;
+  max-width: 100%;
+  max-height: 100dvh;
+  padding: 0;
+  border: 0;
+  background: var(--surface);
+  color: var(--fg);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  box-shadow: -12px 0 48px rgb(0 0 0 / 25%);
+}
+.glossary-dialog::backdrop { background: rgb(0 0 0 / 50%); }
+@media (max-width: 639px) { .glossary-dialog { width: 100%; } }

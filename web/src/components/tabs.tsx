@@ -10,6 +10,8 @@ import { dash, hm, money, num, pct, ratioPct, signed } from "@/lib/format";
 import { dmyTime } from "@/lib/fmt";
 import type { AlertItem, BookRow, Payload, Severity } from "@/lib/types";
 import { Card, Empty, Note, SevTag, SignedMoney, Stat, Td, Th, TOOLTIP_STYLE, signTone } from "./ui";
+import { Term } from "./Glossary";
+import { AlertDetail } from "./AlertDetail";
 
 export interface Filters {
   sym: string;
@@ -26,7 +28,7 @@ function AlertRow({ a }: { a: AlertItem }) {
       <SevTag sev={a.severity} />
       <div className="min-w-0 flex-1">
         <div className="text-sm"><CompanyLink symbol={a.symbol} /> <span className="text-muted">· {a.rule_name}</span></div>
-        <div className="text-xs text-muted">{a.message}</div>
+        <details className="mt-1"><summary className="min-h-9 cursor-pointer text-sm text-accent">Vì sao có cảnh báo này?</summary><AlertDetail a={a} /></details>
       </div>
       <time className="tnum text-xs text-muted">{hm(a.t)}</time>
     </li>
@@ -68,15 +70,17 @@ export function Book({ p, f }: { p: Payload; f: Filters }) {
   const cur = rows.find((r) => r.symbol === pick) ?? rows[0];
   const ser = cur ? p.book.series[cur.symbol] : undefined;
   const tree = rows.filter((r) => (r.total_value ?? 0) > 0).slice(0, 60).map((r) => ({ name: r.symbol, size: r.total_value as number, obi: r.obi3 }));
+  const terms: Partial<Record<BookKey, string>> = { last: "price", pct_change: "price", obi3: "book", spread_bps: "spread", depth_value: "depth", total_value: "turnover", slippage_bps: "slippage", fill_ratio: "fill", liq_score: "liq_score" };
   const head = (label: string, key: BookKey) => (
     <th scope="col" className="text-right">
-      <button className="w-full whitespace-nowrap px-2 py-1.5 text-right text-xs font-medium text-muted hover:text-fg" onClick={() => (key === sortKey ? setAsc(!asc) : (setSortKey(key), setAsc(false)))}>
+      <span className="inline-flex items-center"><button className="min-h-10 whitespace-nowrap px-2 py-1.5 text-right text-xs font-medium text-muted hover:text-fg" onClick={() => (key === sortKey ? setAsc(!asc) : (setSortKey(key), setAsc(false)))}>
         {label}{sortKey === key ? (asc ? " ▲" : " ▼") : ""}
-      </button>
+      </button>{terms[key] ? <Term k={terms[key]} /> : null}</span>
     </th>
   );
   return (
     <div className="grid grid-cols-1 gap-3">
+      <p className="text-sm leading-relaxed text-muted">Mua bán ngay có tốn chi phí không, và lệnh chờ đang lệch về phía nào? Các bảng dưới đây chỉ xét {p.meta.n_symbols_computed} mã đã ghi, tại mốc dữ liệu đầy đủ gần nhất. Lệnh chờ có thể bị hủy trước khi khớp.</p>
       <Card title="Bản đồ áp lực sổ lệnh">
         {tree.length ? (
           <div className="h-72 w-full" role="img" aria-label="Bản đồ nhiệt áp lực sổ lệnh theo mã">
@@ -128,10 +132,10 @@ export function Book({ p, f }: { p: Payload; f: Filters }) {
           }
         >
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            <Stat label="OBI₃" value={signed(cur.obi3)} tone={signTone(cur.obi3)} sub={cur.micro_dev_bps !== null ? `microprice lệch ${signed(cur.micro_dev_bps, 1)} bps` : undefined} />
-            <Stat label="Spread" value={`${num(cur.spread_bps, 1)} bps`} sub={`Bán/Mua = ${num(cur.pressure)}`} />
-            <Stat label="Trượt giá (mua)" value={`${num(cur.slippage_bps, 1)} bps`} sub={`khớp ${ratioPct(cur.fill_ratio)}`} />
-            <Stat label="Điểm thanh khoản" value={num(cur.liq_score, 0)} sub={`Amihud ${num(cur.amihud)} bps/tỷ`} />
+            <Stat label={<Term k="book">OBI₃</Term>} value={signed(cur.obi3)} tone={signTone(cur.obi3)} sub={<Term k="microprice">Microprice lệch {signed(cur.micro_dev_bps, 1)} bps</Term>} />
+            <Stat label={<Term k="spread">Spread</Term>} value={`${num(cur.spread_bps, 1)} bps`} sub={<Term k="pressure">Bán/Mua = {num(cur.pressure)}</Term>} />
+            <Stat label={<Term k="slippage">Trượt giá (mua)</Term>} value={`${num(cur.slippage_bps, 1)} bps`} sub={<Term k="fill">Khớp {ratioPct(cur.fill_ratio)}</Term>} />
+            <Stat label={<Term k="liq_score">Điểm thanh khoản</Term>} value={num(cur.liq_score, 0)} sub={<Term k="amihud">Amihud {num(cur.amihud)} bps/tỷ</Term>} />
           </div>
           {cur.auction ? <Note>Đang trong phiên định kỳ (ATO/ATC): giá mức 1 không phải giá giới hạn nên chỉ báo sổ lệnh có thể trống.</Note> : null}
           {ser && ser.t.length > 1 ? (
@@ -198,13 +202,13 @@ export function Foreign({ p, f }: { p: Payload; f: Filters }) {
               </ScatterChart>
             </ResponsiveContainer>
           </div>
-          <Note>Góc trên-phải: NN mua một chiều VÀ chiếm tỷ trọng lớn — tín hiệu có trọng lượng. Gần trục dọc: NN gần như không tham gia.</Note>
+        <Note><Term k="foreign">Tỷ trọng và ròng/tổng</Term>: góc trên-phải là mua ròng với mức tham gia lớn hơn. Gần trục dọc là tỷ trọng nhỏ; chưa đủ để suy ra tác động giá.</Note>
         </Card>
       </div>
       <Card title="Bảng khối ngoại">
         <div className="scroll-x max-h-96 overflow-y-auto">
           <table className="w-full min-w-[640px] border-collapse">
-            <thead className="sticky top-0 bg-surface"><tr><Th right={false}>Mã</Th><Th>NN mua</Th><Th>NN bán</Th><Th>Ròng</Th><Th>Ròng/tổng</Th><Th>Tỷ trọng NN</Th><Th>Room đã dùng</Th></tr></thead>
+            <thead className="sticky top-0 bg-surface"><tr><Th right={false}>Mã</Th><Th><Term k="foreign">NN mua</Term></Th><Th><Term k="foreign">NN bán</Term></Th><Th><Term k="foreign">Ròng</Term></Th><Th><Term k="foreign">Ròng/tổng</Term></Th><Th><Term k="foreign">Tỷ trọng NN</Term></Th><Th><Term k="room">Room đã dùng</Term></Th></tr></thead>
             <tbody>
               {rows.map((r) => (
                 <tr key={r.symbol} className="border-t border-line">
@@ -231,9 +235,9 @@ export function Futures({ p }: { p: Payload }) {
     <div className="grid grid-cols-1 gap-3">
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat label={s.symbol ?? "HĐTL"} value={num(fu.future ?? null, 1)} sub={`cơ sở ${num(fu.spot ?? null, 2)}`} />
-        <Stat label="Basis" value={`${signed(s.basis)} điểm`} sub={pct(s.basis_pct)} tone={signTone(s.basis)} />
-        <Stat label="Ngày tới đáo hạn" value={num(s.dtm, 0)} sub={s.label ?? undefined} />
-        <Stat label="Lệch so với giá trị hợp lý" value={`${signed(s.mispricing)} điểm`} sub={s.z !== null ? `z nội phiên = ${signed(s.z, 1)}` : "chưa đủ dữ liệu cho z"} />
+        <Stat label={<Term k="basis">Basis</Term>} value={`${signed(s.basis)} điểm`} sub={pct(s.basis_pct)} tone={signTone(s.basis)} />
+        <Stat label={<Term k="maturity">Ngày tới đáo hạn</Term>} value={num(s.dtm, 0)} sub={s.label ?? undefined} />
+        <Stat label={<Term k="maturity">Lệch so với giá trị hợp lý</Term>} value={`${signed(s.mispricing)} điểm`} sub={s.z !== null ? <Term k="basis_z">z basis = {signed(s.z, 1)}</Term> : "chưa đủ dữ liệu cho z"} />
       </div>
       <Card title="Basis (F − S) theo phút">
         <div className="h-64 w-full" role="img" aria-label="Đồ thị basis hợp đồng tương lai theo phút">
@@ -248,7 +252,7 @@ export function Futures({ p }: { p: Payload }) {
             </AreaChart>
           </ResponsiveContainer>
         </div>
-        <Note>Basis phải hội tụ về 0 khi đáo hạn. Giá trị hợp lý dùng mô hình chi phí lưu giữ với lãi suất giả định 4,5%/năm, không cổ tức. Basis âm không tự động là cơ hội arbitrage vì bán khống cơ sở bị hạn chế.</Note>
+        <Note>Basis thường tiến về mức thanh toán khi gần đáo hạn; các ảnh chụp nội phiên không bảo đảm chênh lệch bằng 0. Giá trị hợp lý dùng lãi suất giả định 4,5%/năm và cổ tức bằng 0. Dấu basis còn phản ánh chi phí vốn và cổ tức; không tự cho biết hướng giá tiếp theo.</Note>
       </Card>
     </div>
   );
@@ -276,7 +280,7 @@ export function Alerts({ p, f }: { p: Payload; f: Filters }) {
       >
         {items.length ? <ul>{items.map((a, i) => <AlertRow key={`${a.t}-${a.symbol}-${a.rule}-${i}`} a={a} />)}</ul> : <Empty>Không có cảnh báo khớp bộ lọc.</Empty>}
         {al.items.length < al.total ? <Note>Chỉ hiển thị {al.items.length} cảnh báo ưu tiên cao nhất trong số {al.total}.</Note> : null}
-        <Note>Cảnh báo là tín hiệu <i>đáng xem</i>, không phải khuyến nghị mua/bán. Ngưỡng z ≥ 3,5 trên median/MAD của 60 thanh trước đó.</Note>
+        <Note>Đây là số lượt cảnh báo, không phải số mã. Mỗi quy tắc có điều kiện riêng: <Term k="rvol">khối lượng tương đối</Term>, <Term k="anomaly">z nội phiên</Term>, <Term k="book">lệch sổ lệnh</Term> hoặc <Term k="band">sát trần/sàn</Term>. Cảnh báo không xác nhận nguyên nhân và không phải khuyến nghị.</Note>
       </Card>
     </div>
   );
@@ -294,12 +298,12 @@ export function Ranking({ p, f }: { p: Payload; f: Filters }) {
   if (!all.length) return <Empty>Chưa có dữ liệu để xếp hạng.</Empty>;
   const zs: [string, string][] = [["momentum", "Động lượng"], ["flow", "Sổ lệnh"], ["foreign", "Khối ngoại"], ["liquidity", "Thanh khoản"], ["cost", "Chi phí"]];
   return (
-    <Card title="Xếp hạng đa yếu tố trong rổ">
+    <Card title={<Term k="ranking">Xếp hạng đa yếu tố trong rổ</Term>}>
       <Note>Điểm = tổng có trọng số của z-score mặt cắt ngang (động lượng 30%, sổ lệnh 25%, khối ngoại 20%, thanh khoản 15%, chi phí 10%). Chỉ có nghĩa tương đối trong rổ, tại thời điểm tính.</Note>
       <div className="scroll-x mt-2 max-h-[34rem] overflow-y-auto">
         <table className="w-full min-w-[820px] border-collapse">
           <thead className="sticky top-0 bg-surface">
-            <tr><Th>Hạng</Th><Th right={false}>Mã</Th><Th>Điểm</Th><Th>Giá</Th><Th>% đổi</Th><Th>OBI₃</Th><Th>NN ròng/tổng</Th><Th>Spread</Th>{zs.map(([, n]) => <Th key={n}>z {n}</Th>)}</tr>
+            <tr><Th>Hạng</Th><Th right={false}>Mã</Th><Th><Term k="ranking">Điểm</Term></Th><Th><Term k="price">Giá</Term></Th><Th>% đổi</Th><Th><Term k="book">OBI₃</Term></Th><Th><Term k="foreign">NN ròng/tổng</Term></Th><Th><Term k="spread">Spread</Term></Th>{zs.map(([, n]) => <Th key={n}><Term k="ranking">z {n}</Term></Th>)}</tr>
           </thead>
           <tbody>
             {rows.map((r) => (
@@ -317,6 +321,12 @@ export function Ranking({ p, f }: { p: Payload; f: Filters }) {
 }
 
 /* ------------------------------------------------------------------ Kiểm chứng */
+const VALIDATION_COLS: Record<string, [string, string]> = {
+  "tín hiệu": ["Tín hiệu", "book"], "tầm nhìn (thanh)": ["Sau bao nhiêu thanh", "sample"], "mẫu": ["Nhóm phiên", "sample"],
+  n_bars: ["Số thanh", "sample"], n_obs: ["Cặp quan sát", "sample"], ic_mean: ["IC trung bình", "ic"],
+  ic_tstat: ["t-stat của IC", "tstat"], hit_rate: ["Tỷ lệ cùng chiều (0–1)", "hit_rate"], spread_bps: ["Q5−Q1 (bps)", "hit_rate"],
+};
+const SIGNAL_TERMS: Record<string, string> = { obi3: "book", obi1: "obi1", obi_w: "obi_w", micro_dev_bps: "microprice" };
 export function Validation({ p }: { p: Payload }) {
   const v = p.validation;
   if (!v) return <Empty>Chưa nhận được kết quả kiểm chứng từ bộ xử lý dữ liệu. Khi có kết quả, trang sẽ tự cập nhật. Mục này kiểm tra chất lượng dữ liệu và mối liên hệ giữa tín hiệu với biến động giá; không phải xác nhận tín hiệu chắc chắn dự báo đúng.</Empty>;
@@ -335,15 +345,15 @@ export function Validation({ p }: { p: Payload }) {
         </div>
       ) : null}
       <Card title="Tín hiệu sổ lệnh có đi trước biến động giá?">
-        <Note>Trong mẫu: {v.ic.train.join(", ") || dash} · Ngoài mẫu: {v.ic.test.join(", ") || dash}</Note>
+        <Note><Term k="sample">Trong mẫu: {v.ic.train.join(", ") || dash} · Ngoài mẫu: {v.ic.test.join(", ") || dash}</Term></Note>
         {v.ic.note ? <p className="mt-2 rounded-md bg-surface2 p-2 text-sm">{v.ic.note}</p> : null}
         {cols.length ? (
           <div className="scroll-x mt-2">
             <table className="w-full min-w-[560px] border-collapse">
-              <thead><tr>{cols.map((c) => <Th key={c} right={false}>{c}</Th>)}</tr></thead>
+              <thead><tr>{cols.map((c) => <Th key={c} right={false}>{VALIDATION_COLS[c] ? <Term k={VALIDATION_COLS[c][1]}>{VALIDATION_COLS[c][0]}</Term> : c}</Th>)}</tr></thead>
               <tbody>
                 {v.ic.table.map((r, i) => (
-                  <tr key={i} className="border-t border-line">{cols.map((c) => <Td key={c} right={false}>{typeof r[c] === "number" ? num(r[c] as number, Number.isInteger(r[c]) ? 0 : 4) : String(r[c] ?? dash)}</Td>)}</tr>
+                  <tr key={i} className="border-t border-line">{cols.map((c) => <Td key={c} right={false}>{c === "tín hiệu" && SIGNAL_TERMS[String(r[c])] ? <Term k={SIGNAL_TERMS[String(r[c])]}>{String(r[c])}</Term> : typeof r[c] === "number" ? num(r[c] as number, Number.isInteger(r[c]) ? 0 : 4) : String(r[c] ?? dash)}</Td>)}</tr>
                 ))}
               </tbody>
             </table>
@@ -373,7 +383,7 @@ export function Validation({ p }: { p: Payload }) {
       <Card title="Chất lượng dữ liệu">
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <Stat label="Ảnh chụp đã lưu" value={num(dq.n_quotes, 0)} />
-          <Stat label="Số phiên" value={dq.n_sessions} sub={dq.n_sessions >= 5 ? "≥ 5 theo đề" : "chưa đủ 5 phiên"} />
+          <Stat label={<Term k="sample">Số phiên</Term>} value={dq.n_sessions} sub={dq.n_sessions >= 5 ? "đạt mốc tối thiểu; cần thêm mẫu" : "chưa đủ 5 phiên"} />
           <Stat label="Số mã" value={dq.n_symbols} />
           <Stat label="Khoảng trống bất thường" value={dq.n_gaps} />
         </div>
@@ -431,6 +441,7 @@ export function Method() {
           <li>Sản phẩm <b>không đặt lệnh</b>; endpoint giao dịch/tài khoản bị chặn trong mã nguồn.</li>
         </ul>
         <p className="mt-3 rounded-md bg-surface2 p-2 text-sm font-medium">Đây là công cụ phân tích học thuật, không phải lời khuyên đầu tư.</p>
+        <p className="mt-3 text-sm"><a href="https://github.com/thienanpham160806-code/neopulse-radar/blob/main/docs/market-design-references.md" target="_blank" rel="noreferrer" className="text-accent underline underline-offset-4">Nguồn tham khảo thiết kế và cách áp dụng trong dự án ↗</a></p>
       </Card>
     </div>
   );

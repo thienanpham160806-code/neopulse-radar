@@ -20,3 +20,14 @@ it("explains limited session history separately from the computed validation res
   expect(html).toContain("khoảng 10 phút một lần");
   expect(html).toContain("Chất lượng dữ liệu");
 });
+
+it("translates validation columns and distinguishes Q5−Q1 from the order-book spread", () => {
+  const payload: Payload = JSON.parse(readFileSync(path.join(__dirname, "../public/sample/latest.json"), "utf8"));
+  payload.validation!.ic.table = [{ "tín hiệu": "obi_w", "tầm nhìn (thanh)": 5, "mẫu": "ngoài mẫu", n_bars: 100, n_obs: 800, ic_mean: -0.02, ic_tstat: -1.1, hit_rate: 0.48, spread_bps: -2 }];
+  const html = renderToStaticMarkup(createElement(Validation, { p: payload }));
+  expect(html).toContain("IC trung bình");
+  expect(html).toContain("Q5−Q1 (bps)");
+  expect(html).toContain('data-term="hit_rate"');
+  expect(html).toContain('data-term="obi_w"');
+  expect(html).not.toContain(">ic_mean<");
+});

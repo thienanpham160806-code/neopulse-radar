@@ -1,0 +1,65 @@
+import { dmyTime, isNum, priceTone, TONE_CLASS, TONE_MARK } from "@/lib/fmt";
+import { num, signed } from "@/lib/format";
+import { componentMeaning } from "@/lib/plain";
+import { GLOSSARY } from "@/lib/glossary";
+import type { Payload, PulseComponent } from "@/lib/types";
+import { Term } from "./Glossary";
+
+const QUESTIONS: Record<string, string> = {
+  breadth: "Đa số cổ phiếu đang tăng hay giảm?",
+  momentum: "Chỉ số đang chuyển động mạnh đến đâu?",
+  book: "Lệnh chờ đang nghiêng về phía nào?",
+  foreign: "Khối ngoại đang mua hay bán ròng?",
+  liquidity: "Giao dịch sôi động hơn thường lệ không?",
+};
+
+export function MarketEvidence({ comps, onNavigate }: { comps: PulseComponent[]; onNavigate: (tab: string) => void }) {
+  return <section aria-labelledby="evidence-title" className="mt-7">
+    <p className="text-xs font-semibold uppercase tracking-widest text-accent">Từ nhận định đến bằng chứng</p>
+    <h2 id="evidence-title" className="mt-1 text-xl font-bold">Năm góc nhìn, mỗi góc trả lời một câu hỏi</h2>
+    <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted">Các số dưới đây là thành phần đã chuẩn hóa từ −1 đến +1 để ghép vào điểm nhịp, không phải % tăng giá. Trọng số gốc là lựa chọn thiết kế; phần thiếu được bỏ qua và phần còn lại được chuẩn hóa lại.</p>
+    <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      {comps.map((c) => {
+        const tone = priceTone(c.value);
+        return <article key={c.key} className="flex min-w-0 flex-col rounded-2xl bg-surface p-4">
+          <h3 className="text-sm font-semibold"><Term k={c.key}>{c.name}</Term></h3>
+          <p className="mt-2 text-sm leading-relaxed">{QUESTIONS[c.key]}</p>
+          <p className={`tnum mt-4 text-2xl font-bold ${isNum(c.value) ? TONE_CLASS[tone] : "text-muted"}`}><span aria-hidden>{isNum(c.value) ? `${TONE_MARK[tone]} ` : ""}</span>{signed(c.value)}</p>
+          <p className="mt-1 text-xs text-muted">Thành phần −1…+1 · trọng số gốc {num(c.weight * 100, 0)}%</p>
+          <p className="mb-4 mt-3 text-sm leading-relaxed">{componentMeaning(c.key, c.value)}</p>
+          <button type="button" onClick={() => onNavigate(GLOSSARY[c.key]?.tab ?? "tong-quan")}
+            className="mt-auto min-h-11 rounded-lg bg-surface2 px-3 text-left text-sm font-semibold text-accent">
+            {c.key === "breadth" || c.key === "momentum" || c.key === "liquidity" ? "Xem diễn biến bên dưới ↓" : "Mở bảng bằng chứng →"}
+          </button>
+        </article>;
+      })}
+    </div>
+  </section>;
+}
+
+export function ValidationSummary({ p, onNavigate }: { p: Payload; onNavigate: (tab: string) => void }) {
+  const v = p.validation;
+  return <section aria-labelledby="validation-summary" className="mt-8 rounded-2xl bg-surface p-5 sm:p-6">
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <div><p className="text-xs font-semibold uppercase tracking-widest text-accent">Mức độ bằng chứng</p>
+        <h2 id="validation-summary" className="mt-1 text-xl font-bold">Đã kiểm tra gì, còn thiếu gì?</h2></div>
+      <button type="button" onClick={() => onNavigate("kiem-chung")} className="min-h-11 rounded-xl bg-surface2 px-4 text-sm font-semibold text-accent">Xem kiểm chứng & dữ liệu →</button>
+    </div>
+    {v ? <>
+      <dl className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div><dt className="text-sm text-muted">Phiên đã ghi</dt><dd className="tnum mt-1 text-2xl font-bold">{num(v.data_quality.n_sessions, 0)}</dd></div>
+        <div><dt className="text-sm text-muted">Mã đã có dữ liệu</dt><dd className="tnum mt-1 text-2xl font-bold">{num(v.data_quality.n_symbols, 0)}</dd></div>
+        <div><dt className="text-sm text-muted">Ảnh chụp sổ lệnh</dt><dd className="tnum mt-1 text-2xl font-bold">{num(v.data_quality.n_quotes, 0)}</dd></div>
+        <div><dt className="text-sm text-muted">Khoảng trống bất thường</dt><dd className="tnum mt-1 text-2xl font-bold">{num(v.data_quality.n_gaps, 0)}</dd></div>
+      </dl>
+      <p className="mt-4 text-sm leading-relaxed">Kiểm chứng đặt câu hỏi: <Term k="ic">tín hiệu sổ lệnh có liên hệ với thay đổi giá sau đó không?</Term> So sánh theo thứ tự phiên, tách <Term k="sample">trong mẫu và ngoài mẫu</Term>.</p>
+      <p className="mt-2 text-sm text-muted">{v.data_quality.n_sessions < 5 ? "Chưa đủ 5 phiên tối thiểu của đồ án; kết quả mới có tính minh họa. " : "Đã đạt mốc 5 phiên tối thiểu của đồ án; vẫn cần nhiều phiên hơn để đánh giá tính ổn định. "}IC hoặc tỷ lệ cùng chiều chưa chứng minh lợi nhuận sau phí.</p>
+      {v.generated_at ? <p className="mt-3 text-xs text-muted">Kiểm chứng tính lúc {dmyTime(v.generated_at)}{v.data_until ? ` · Dữ liệu đến ${dmyTime(v.data_until)}` : ""}. Thống kê trên tập phiên đã dùng để kiểm chứng, không chỉ riêng bộ lọc đang xem.</p> : null}
+    </> : <p className="mt-3 text-sm leading-relaxed text-muted">Bản dữ liệu này chưa có kết quả kiểm chứng. Số liệu quan sát và điểm tổng hợp hiện có chưa đủ để kết luận tín hiệu dự báo tốt. Mở mục kiểm chứng để xem kết quả khi bộ xử lý công bố.</p>}
+    {p.meta.is_simulated || v?.simulated_signals_are_planted ? <p className="mt-3 rounded-lg bg-surface2 p-3 text-sm font-semibold">Dữ liệu mô phỏng: tín hiệu được cài sẵn, chỉ kiểm tra được đường tính toán; không phải bằng chứng về thị trường thật.</p> : null}
+  </section>;
+}
+
+export function ComponentCoverage({ comps }: { comps: PulseComponent[] }) {
+  return <p className="mt-3 text-center text-xs leading-relaxed text-muted">Đang dùng {comps.filter((c) => isNum(c.value)).length}/{comps.length} nhóm tín hiệu có số liệu. Số nhóm có dữ liệu không phải độ chính xác dự báo.</p>;
+}

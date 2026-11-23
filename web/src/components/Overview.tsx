@@ -1,16 +1,12 @@
 "use client";
 
-/**
- * Tổng quan theo hướng B "Bản tin", ghép mobile kiểu C. Mở đầu bằng đồng hồ điểm nhịp + luận giải bằng lời thường
- * ("Hôm nay nghĩa là gì?"), sau đó mới tới biểu đồ, ngành và chi tiết. Mọi số do Python tính; web chỉ chọn câu
- * diễn giải theo dấu/độ lớn và hiển thị.
- */
+/** Observations → evidence → anomalies → chart → validation. Financial metrics come from Python. */
 
 import { useMemo } from "react";
-import { isNum, priceTone, TONE_CLASS, TONE_MARK } from "@/lib/fmt";
-import { num, ratioPct, signed } from "@/lib/format";
+import { dmyTime, isNum, priceTone, TONE_CLASS } from "@/lib/fmt";
+import { num, ratioPct } from "@/lib/format";
 import { mergeSeries, type LiveState } from "@/lib/live";
-import { alertDigest, componentMeaning, GLOSSARY, marketSummary, missingComponents, RULE_PLAIN, scoreMeaning } from "@/lib/plain";
+import { alertDigest, componentMeaning, marketSummary, missingComponents, RULE_PLAIN, scoreMeaning } from "@/lib/plain";
 import type { AlertItem, Num, Payload, Severity } from "@/lib/types";
 import { Gauge, Guide, Term } from "./Explain";
 import { SectorCard } from "./SectorCard";
@@ -18,6 +14,8 @@ import { CompanyLink } from "./CompanyLink";
 import { TechnicalChart } from "./TechnicalChart";
 import { type Filters } from "./tabs";
 import { Change, Note, SevTag, SignedMoney } from "./ui";
+import { AlertDetail } from "./AlertDetail";
+import { ComponentCoverage, MarketEvidence, ValidationSummary } from "./MarketEvidence";
 
 const SEV_ORDER: Severity[] = ["CAO", "TRUNG BÌNH", "THẤP"];
 const ORDER = ["VNINDEX", "VN30", "HNXINDEX", "UPCOMINDEX"];
@@ -61,7 +59,7 @@ function AlertList({ items, limit }: { items: AlertItem[]; limit: number }) {
                 <span className="ml-1 text-xs text-accent group-open:hidden">· chi tiết</span></span>
               <SevTag sev={a.severity} />
             </summary>
-            <p className="mt-1 pl-[3.25rem] text-xs text-muted">{a.message}. Cảnh báo là tín hiệu đáng xem, không phải khuyến nghị mua bán.</p>
+            <div className="pl-[3.25rem]"><AlertDetail a={a} /></div>
             <p className="mt-2 pl-[3.25rem] text-sm"><CompanyLink symbol={a.symbol}>Tìm hiểu doanh nghiệp {a.symbol} →</CompanyLink></p>
           </details>
         </li>
@@ -70,11 +68,11 @@ function AlertList({ items, limit }: { items: AlertItem[]; limit: number }) {
   );
 }
 
-export function Overview({ p, f, live, onAlerts }: { p: Payload; f: Filters; live?: LiveState | null; onAlerts?: () => void }) {
+export function Overview({ p, f, live, onNavigate }: { p: Payload; f: Filters; live?: LiveState | null; onNavigate: (tab: string) => void }) {
+  const onAlerts = () => onNavigate("canh-bao");
   const code = p.index?.code ?? p.meta.index_code;
   const lp = live?.pulse && live.pulse.index_code === code ? live.pulse : null;
   const score = lp ? lp.score : p.pulse?.score ?? null;
-  const label = lp ? lp.label : p.pulse?.label ?? "Không đủ dữ liệu";
   const comps = lp ? lp.comps.map((c) => ({ key: c.k, name: c.n, weight: c.w, value: c.v })) : p.pulse?.components ?? [];
   const row = p.index?.row;
   const ixs: Ix[] = live?.tick
@@ -102,13 +100,17 @@ export function Overview({ p, f, live, onAlerts }: { p: Payload; f: Filters; liv
     <div>
       <Guide />
 
+      <p className="mb-4 text-sm leading-relaxed text-muted"><b className="text-fg">Phạm vi đang đọc:</b> chỉ số và số mã tăng/giảm của {code}; sổ lệnh, khối ngoại trên {p.meta.n_symbols_computed} mã được ghi. {live ? "Giá và điểm nhịp đang nhận cập nhật nhanh; bảng chi tiết theo bản dữ liệu đầy đủ gần nhất. " : "Nhận định theo mốc dữ liệu đã nhận, không suy ra diễn biến sau mốc này. "}
+        Bản đầy đủ đến {p.meta.last_update ? dmyTime(p.meta.last_update) : "chưa xác định"} (giờ Việt Nam).</p>
+
       {/* Phần đầu: đồng hồ (điểm nhấn) + luận giải bằng lời thường */}
       <section aria-labelledby="hero-title" className="grid grid-cols-1 items-center gap-6 rounded-2xl border border-line bg-surface p-4 sm:p-6 md:grid-cols-[1fr_240px]">
         <div className="order-2 border-t border-line pt-4 md:border-l md:border-t-0 md:pl-6 md:pt-0">
           <div className="mb-1 flex justify-center text-sm text-muted"><Term k="pulse">Điểm nhịp thị trường</Term></div>
-          <Gauge score={score} label={label} />
+          <Gauge score={score} label={scoreMeaning(score).replace(/\.$/, "")} />
+          <ComponentCoverage comps={comps} />
           {!lp && p.pulse?.sensitivity && isNum(p.pulse.sensitivity.p05) ? (
-            <p className="mt-1 text-center text-xs text-muted">Đổi trọng số ±50%: điểm trong khoảng {num(p.pulse.sensitivity.p05, 1)}–{num(p.pulse.sensitivity.p95, 1)}, nhãn giữ nguyên {ratioPct(p.pulse.sensitivity.label_stability)} số lần.</p>
+            <details className="mt-3 text-xs leading-relaxed text-muted"><summary className="cursor-pointer py-2 text-center">Điểm phụ thuộc trọng số ra sao?</summary><Term k="sensitivity">Độ nhạy trọng số</Term>: đổi ±50%, khoảng điểm 5–95% là {num(p.pulse.sensitivity.p05, 1)}–{num(p.pulse.sensitivity.p95, 1)}; nhãn giữ nguyên {ratioPct(p.pulse.sensitivity.label_stability)} số lần thử. Đây không phải tỷ lệ dự báo đúng.</details>
           ) : null}
         </div>
         <div className="order-1 min-w-0">
@@ -120,7 +122,7 @@ export function Overview({ p, f, live, onAlerts }: { p: Payload; f: Filters; liv
             <p className="mt-1 text-base text-muted">{ix0.code} <b className={`tnum ${TONE_CLASS[priceTone(ix0.ch)]}`}>{num(ix0.v)}</b> <Change value={ix0.pct} />
               {isNum(ix0.adv) ? ` · ${num(ix0.adv, 0)} mã tăng, ${num(ix0.dec, 0)} mã giảm` : ""}</p>
           ) : null}
-          <h3 className="mt-4 text-sm font-bold uppercase tracking-wide">Đọc nhanh thị trường lúc này</h3>
+          <h3 className="mt-4 text-sm font-bold uppercase tracking-wide">Đọc nhanh tại mốc cập nhật</h3>
           <ul className="mt-2 space-y-2 text-base leading-relaxed">
             <li><b>Đang diễn ra.</b> {marketSummary(code, ix0?.pct, ix0?.adv, ix0?.dec)}</li>
             {drivers.length ? <li><b>Điều gì đang tác động?</b> {drivers.map((c) => componentMeaning(c.key, c.value)).join(" ")}</li> : null}
@@ -137,19 +139,24 @@ export function Overview({ p, f, live, onAlerts }: { p: Payload; f: Filters; liv
         </div>
       </section>
 
+      <MarketEvidence comps={comps} onNavigate={(slug) => {
+        if (slug === "tong-quan") document.getElementById("market-chart")?.focus();
+        else onNavigate(slug);
+      }} />
+
+      <section aria-labelledby="unusual-title" className="mt-7 rounded-2xl bg-surface p-4 sm:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-xs font-semibold uppercase tracking-widest text-accent">Những điểm cần xem lại</p><h2 id="unusual-title" className="mt-1 text-xl font-bold">Biến động đáng chú ý trong rổ</h2></div>
+          <button onClick={onAlerts} className="min-h-11 rounded-xl bg-surface2 px-4 text-sm font-semibold text-accent">Mở toàn bộ cảnh báo →</button></div>
+        <p className="my-3 text-sm leading-relaxed text-muted">{alerts.length} lượt khớp bộ lọc trong danh sách đã tải; dưới đây là tối đa 5 lượt gần nhất. Bấm từng dòng để xem lý do và ngưỡng đo. Một mã có thể xuất hiện nhiều lần.</p>
+        <AlertList items={alerts} limit={5} />
+      </section>
+
       <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="min-w-0">
-          {/* điện thoại: chỉ số + cảnh báo trước phần chi tiết */}
-          <div className="mb-8 space-y-4 lg:hidden">
-            {ixs.length ? <section aria-label="Chỉ số"><IndexList rows={ixs} compact /></section> : null}
-            <section aria-labelledby="m-alerts">
-              <div className="flex items-baseline justify-between"><h2 id="m-alerts" className="text-base font-bold">Điều gì bất thường</h2>
-                <button onClick={onAlerts} className="min-h-10 text-sm text-accent underline underline-offset-4">Xem tất cả</button></div>
-              <AlertList items={alerts} limit={3} />
-            </section>
-          </div>
+          {ixs.length ? <section aria-label="Chỉ số" className="mb-6 lg:hidden"><IndexList rows={ixs} compact /></section> : null}
 
-          <h3 className="text-xl font-bold">Chỉ số đi thế nào trong phiên</h3>
+          <h3 id="market-chart" tabIndex={-1} className="scroll-mt-6 text-xl font-bold">Đặt tín hiệu vào diễn biến giá</h3>
+          <p className="mt-2 text-sm leading-relaxed text-muted">Đối chiếu các tín hiệu bên trên với đường giá. <Term k="ma">MA và EMA</Term> giúp nhìn xu hướng, không tham gia điểm nhịp. Khung Phiên là dữ liệu đã ghi; khung ngày cung cấp bối cảnh dài hơn.</p>
           <figure className="mt-2">
             {series.length > 1 ? <TechnicalChart key={code} symbol={code} intraday={series} intradayChart={p.chart} reference={row?.ref} /> : <p className="text-sm text-muted">Chưa đủ điểm dữ liệu để vẽ.</p>}
             <figcaption className="mt-1 border-t border-line pt-1 text-sm text-muted">
@@ -162,26 +169,6 @@ export function Overview({ p, f, live, onAlerts }: { p: Payload; f: Filters; liv
           <p className="mt-1 text-sm text-muted">Chạm vào một ngành để xem các mã trong ngành.</p>
           <div className="mt-2"><SectorCard sectors={p.sectors} live={lp?.sec ?? null} indexCode={code} /></div>
 
-          <h3 className="mt-10 text-xl font-bold">Năm thành phần của điểm nhịp</h3>
-          <p className="mt-1 text-sm text-muted">Mỗi thành phần từ −1 (rất tiêu cực) đến +1 (rất tích cực). Chạm để xem nó đo gì.</p>
-          <ul className="mt-2 divide-y divide-line rounded-xl border border-line bg-surface">
-            {comps.map((c) => {
-              const tone = priceTone(c.value);
-              return (
-                <li key={c.key}>
-                  <details className="px-3 py-2.5">
-                    <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
-                      <span className="min-w-0"><b>{c.name}</b> <span className="text-sm text-muted">· trọng số {Math.round(c.weight * 100)}%</span>
-                        <span className="block text-sm text-muted">{componentMeaning(c.key, c.value)}</span></span>
-                      <span className={`tnum shrink-0 text-lg font-semibold ${TONE_CLASS[tone]}`}><span aria-hidden>{TONE_MARK[tone]} </span>{signed(c.value)}</span>
-                    </summary>
-                    <p className="mt-2 text-sm">{GLOSSARY[c.key]?.body}</p>
-                  </details>
-                </li>
-              );
-            })}
-          </ul>
-
           {summary.length ? (
             <details className="mt-8 rounded-xl border border-line bg-surface p-3">
               <summary className="cursor-pointer font-semibold">Bản tóm tắt số liệu đầy đủ{lp ? " (theo ảnh chụp gần nhất)" : ""}</summary>
@@ -193,18 +180,14 @@ export function Overview({ p, f, live, onAlerts }: { p: Payload; f: Filters; liv
 
         <aside className="hidden space-y-8 lg:block lg:border-l lg:border-line lg:pl-6">
           <section aria-labelledby="a-ix"><h2 id="a-ix" className="text-sm font-bold uppercase tracking-wide">Bảng chỉ số</h2><IndexList rows={ixs} /></section>
-          <section aria-labelledby="a-al">
-            <div className="flex items-baseline justify-between"><h2 id="a-al" className="text-sm font-bold uppercase tracking-wide">Điều gì bất thường</h2>
-              <button onClick={onAlerts} className="min-h-10 text-sm text-accent underline underline-offset-4">Xem tất cả</button></div>
-            <AlertList items={alerts} limit={6} />
-          </section>
           <section aria-labelledby="a-fn">
             <h2 id="a-fn" className="text-sm font-bold uppercase tracking-wide"><Term k="foreign">Khối ngoại trong rổ</Term></h2>
             <p className="mt-1 text-2xl font-semibold"><SignedMoney value={fs?.net_val ?? null} /></p>
-            <p className="text-sm text-muted">{(fs?.net_val ?? 0) >= 0 ? "Mua ròng" : "Bán ròng"} · {num(fs?.n_net_buy ?? null, 0)} mã mua ròng, {num(fs?.n_net_sell ?? null, 0)} mã bán ròng</p>
+            <p className="text-sm text-muted">{!isNum(fs?.net_val) ? "Chưa đủ dữ liệu" : fs.net_val > 0 ? "Mua ròng" : fs.net_val < 0 ? "Bán ròng" : "Mua và bán cân bằng"} · {num(fs?.n_net_buy ?? null, 0)} mã mua ròng, {num(fs?.n_net_sell ?? null, 0)} mã bán ròng</p>
           </section>
         </aside>
       </div>
+      <ValidationSummary p={p} onNavigate={onNavigate} />
     </div>
   );
 }

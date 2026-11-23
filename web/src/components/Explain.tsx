@@ -1,10 +1,10 @@
 "use client";
 
 /** Đồng hồ điểm nhịp (điểm nhấn của trang), nút giải thích thuật ngữ ⓘ, thẻ hướng dẫn đọc trang lần đầu. */
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { isNum } from "@/lib/fmt";
 import { num } from "@/lib/format";
-import { GLOSSARY } from "@/lib/plain";
+export { Term } from "./Glossary";
 import type { Num } from "@/lib/types";
 
 /**
@@ -52,40 +52,6 @@ export function Gauge({ score, label }: { score: Num; label: string }) {
   );
 }
 
-/** Nút ⓘ mở lời giải thích thuật ngữ; đóng bằng Esc hoặc bấm ra ngoài. */
-export function Term({ k, children }: { k: keyof typeof GLOSSARY | string; children?: React.ReactNode }) {
-  const g = GLOSSARY[k];
-  const [open, setOpen] = useState(false);
-  const id = useId();
-  const ref = useRef<HTMLSpanElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
-    const onDown = (e: MouseEvent) => ref.current && !ref.current.contains(e.target as Node) && setOpen(false);
-    document.addEventListener("keydown", onKey);
-    document.addEventListener("mousedown", onDown);
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.removeEventListener("mousedown", onDown);
-    };
-  }, [open]);
-  if (!g) return <>{children}</>;
-  return (
-    <span ref={ref} className="relative inline-flex items-center gap-1">
-      {children}
-      <button type="button" aria-expanded={open} aria-controls={id} aria-label={`Giải thích: ${g.title}`} onClick={() => setOpen(!open)}
-        className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-line text-xs font-semibold text-muted hover:text-fg">
-        i
-      </button>
-      {open ? (
-        <span id={id} role="note" className="absolute left-0 top-full z-40 mt-1 block w-72 rounded-lg border border-line bg-surface p-3 text-left text-sm font-normal normal-case tracking-normal text-fg shadow-[0_8px_24px_rgba(15,23,42,0.14)]">
-          <b className="block">{g.title}</b>{g.body}
-        </span>
-      ) : null}
-    </span>
-  );
-}
-
 const GUIDE_KEY = "np-guide-dismissed";
 
 /** Thẻ hướng dẫn đọc trang cho lần đầu; đóng thì nhớ trên máy (localStorage, lỗi thì vẫn chạy). */
@@ -115,9 +81,9 @@ export function Guide() {
         <button onClick={close} className="min-h-10 rounded-md px-2 text-sm text-muted underline underline-offset-4">Đã hiểu, ẩn đi</button>
       </div>
       <ol className="mt-2 grid gap-3 text-sm sm:grid-cols-3">
-        <li><b>1. Thị trường khỏe hay yếu?</b> Nhìn đồng hồ: kim càng sang phải (xanh) càng tích cực, sang trái (đỏ) càng tiêu cực.</li>
-        <li><b>2. Vì sao?</b> Mục &ldquo;Hôm nay nghĩa là gì&rdquo; và 5 thành phần bên dưới; chạm vào từng dòng để xem giải thích.</li>
-        <li><b>3. Có gì bất thường?</b> Cột cảnh báo: mã nào vừa có khối lượng, giá hay dòng tiền khác thường.</li>
+        <li><b>1. Đang xem dữ liệu nào?</b> Kiểm tra nguồn, thời điểm cập nhật và phạm vi rổ. Đọc phần tóm tắt để biết chỉ số và số đông cổ phiếu đang đi cùng chiều hay không.</li>
+        <li><b>2. Vì sao có nhận định đó?</b> Xem năm nhóm bằng chứng, rồi mở bảng chi tiết. Đồng hồ chỉ tổng hợp phần có dữ liệu; điểm cao không đồng nghĩa mọi tín hiệu đều tốt.</li>
+        <li><b>3. Điều gì cần kiểm tra thêm?</b> Mở từng cảnh báo và xem phần kiểm chứng. Bấm ⓘ hoặc “Tra cứu chỉ số” để hiểu số liệu và vai trò của nó trong đồ án.</li>
       </ol>
       <p className="mt-2 text-xs text-muted">Biểu tượng <b>i</b> cạnh một thuật ngữ mở lời giải thích. Đây là công cụ học thuật, không phải lời khuyên đầu tư.</p>
     </details>

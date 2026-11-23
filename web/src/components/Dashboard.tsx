@@ -8,6 +8,7 @@ import { clock, dmy } from "@/lib/format";
 import type { Severity } from "@/lib/types";
 import { liveForSnapshot, liveMode } from "@/lib/live";
 import { StatusBar } from "./StatusBar";
+import { GlossaryButton, GlossaryProvider } from "./Glossary";
 
 import { useLive } from "./useLive";
 import { Overview } from "./Overview";
@@ -114,7 +115,7 @@ export function Dashboard({ initial, requestedDate, requestedIndex, initialTab }
 
   const empty = meta.data_status.state === "error" || !p.pulse;
   return (
-    <>
+    <GlossaryProvider onNavigate={(slug) => setTab(tabFromSlug(slug))}>
       <SiteHeader area="market" crumbs={[{ label: "Nhịp thị trường", ...(tab !== "Tổng quan" ? { href: `/?${new URLSearchParams({ ...(requestedDate ? { date: requestedDate } : {}), ...(requestedIndex ? { index: requestedIndex } : {}), tab: "tong-quan" })}`, onClick: () => setTab("Tổng quan") } : {}) }, ...(tab !== "Tổng quan" ? [{ label: tab }] : [])]} />
       <StatusBar
         meta={meta}
@@ -126,10 +127,13 @@ export function Dashboard({ initial, requestedDate, requestedIndex, initialTab }
         liveNote={live.available && !mode.live && live.state.lastMsgAt !== null ? `${mode.reason} — đang hiển thị snapshot.` : null}
       />
       <header className="mx-auto max-w-6xl px-4 pt-5 sm:px-6">
-        <div className="feature-hero rounded-3xl px-6 py-6 sm:px-8 sm:py-7">
+        <div className="feature-hero flex flex-wrap items-center justify-between gap-5 rounded-3xl px-6 py-5 sm:px-8">
+          <div>
           <p className="hero-kicker">THỊ TRƯỜNG VIỆT NAM / {meta.index_code}</p>
           <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Nhịp thị trường<span className="hero-highlight">.</span></h1>
-          <p className="hero-description mt-3 max-w-xl text-sm leading-relaxed">Theo dõi dòng tiền, đọc độ rộng và nhận diện những chuyển động đáng chú ý trong phiên.</p>
+          <p className="hero-description mt-2 max-w-xl text-sm leading-relaxed">Hiểu thị trường đang chuyển động ra sao, xem bằng chứng và tìm những biến động cần chú ý.</p>
+          </div>
+          <GlossaryButton />
         </div>
       </header>
 
@@ -193,7 +197,7 @@ export function Dashboard({ initial, requestedDate, requestedIndex, initialTab }
       </div>
 
       <main className="mx-auto min-w-0 max-w-6xl px-4 pb-28 pt-6 sm:px-6 md:pb-10">
-        <div id="tabpanel" role="tabpanel" aria-labelledby={`tab-${SLUGS[tab]}`}>
+        <div id="tabpanel" tabIndex={-1} role="tabpanel" aria-labelledby={`tab-${SLUGS[tab]}`}>
         <h2 className="sr-only md:hidden">{tab}</h2>
         {empty && tab !== "Phương pháp & giới hạn" ? (
           <div role="alert" className="mx-auto max-w-xl rounded-xl border border-line bg-surface p-6 text-center">
@@ -205,7 +209,7 @@ export function Dashboard({ initial, requestedDate, requestedIndex, initialTab }
               <button onClick={() => setTab("Phương pháp & giới hạn")} className="min-h-10 rounded-md border border-line px-4">Đọc phương pháp</button>
             </div>
           </div>
-        ) : tab === "Tổng quan" ? <Overview p={p} f={filters} live={liveOn} onAlerts={() => setTab("Cảnh báo")} />
+        ) : tab === "Tổng quan" ? <Overview p={p} f={filters} live={liveOn} onNavigate={(slug) => setTab(tabFromSlug(slug))} />
           : tab === "Sổ lệnh & thanh khoản" ? <Book p={p} f={filters} />
           : tab === "Khối ngoại" ? <Foreign p={p} f={filters} />
           : tab === "Phái sinh" ? <Futures p={p} />
@@ -236,6 +240,6 @@ export function Dashboard({ initial, requestedDate, requestedIndex, initialTab }
         </div>
       </nav>
 
-    </>
+    </GlossaryProvider>
   );
 }

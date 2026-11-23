@@ -6,20 +6,7 @@ import { isNum } from "./fmt";
 import { num } from "./format";
 import type { AlertItem, Num } from "./types";
 
-export const GLOSSARY: Record<string, { title: string; body: string }> = {
-  pulse: {
-    title: "Điểm nhịp thị trường (0–100)",
-    body: "Gộp 5 tín hiệu: độ rộng (bao nhiêu mã tăng so với giảm), động lượng chỉ số, sổ lệnh, khối ngoại và thanh khoản. 50 là cân bằng; trên 55 nghiêng tích cực, dưới 45 nghiêng tiêu cực. Điểm mô tả hiện trạng, không dự báo.",
-  },
-  breadth: { title: "Độ rộng", body: "So số mã tăng với số mã giảm. Chỉ số tăng nhưng phần lớn mã giảm nghĩa là chỉ vài mã lớn kéo." },
-  momentum: { title: "Động lượng chỉ số", body: "Chỉ số đang đi mạnh hay yếu so với mức dao động thường ngày của chính nó." },
-  book: { title: "Sổ lệnh (OBI)", body: "Bên mua hay bên bán đang đặt chờ dày hơn ở 3 mức giá tốt nhất. Dương: người mua chờ nhiều hơn." },
-  foreign: { title: "Khối ngoại", body: "Nhà đầu tư nước ngoài đang mua ròng (dương) hay bán ròng (âm) trong rổ đang theo dõi." },
-  liquidity: { title: "Thanh khoản", body: "So sánh giá trị giao dịch đã thực hiện hôm nay với các phiên trước ở cùng thời điểm. Cần đủ dữ liệu quá khứ để đối chiếu." },
-  basis: { title: "Basis phái sinh", body: "Chênh lệch giữa giá hợp đồng tương lai VN30 và chỉ số VN30. Dương: thị trường phái sinh kỳ vọng cao hơn hiện tại." },
-  rvol: { title: "RVOL", body: "Khối lượng giao dịch so với mức bình thường của chính mã đó ở cùng giờ trong 20 phiên trước. 3 lần trở lên là bất thường." },
-  sector: { title: "Đóng góp theo ngành", body: "Ngành đó kéo chỉ số lên hay đè xuống bao nhiêu điểm, ước lượng theo vốn hóa (chưa điều chỉnh free-float nên chỉ gần đúng)." },
-};
+export { GLOSSARY } from "./glossary";
 
 /** Thành phần đang nói gì: dựa vào dấu và độ lớn của giá trị (−1..1) do Python tính. */
 export function componentMeaning(key: string, v: Num): string {

@@ -28,7 +28,7 @@ export function signTone(x: Num | undefined): string {
   return x > 0 ? "text-up" : "text-down";
 }
 
-export function Stat({ label, value, sub, tone = "text-fg" }: { label: string; value: ReactNode; sub?: ReactNode; tone?: string }) {
+export function Stat({ label, value, sub, tone = "text-fg" }: { label: ReactNode; value: ReactNode; sub?: ReactNode; tone?: string }) {
   return (
     <div className="rounded-xl border border-line bg-surface p-3">
       <div className="text-xs text-muted">{label}</div>
