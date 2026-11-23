@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   async rewrites() {
-    return process.env.NODE_ENV === "development" ? [{ source: "/api/company", destination: "http://127.0.0.1:3201/api/company" }] : [];
+    return process.env.NODE_ENV === "development" ? [{ source: "/api/company", destination: "http://127.0.0.1:3201/api/company" }, { source: "/api/news", destination: "http://127.0.0.1:3201/api/news" }] : [];
   },
   poweredByHeader: false,
   async headers() {
