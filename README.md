@@ -123,6 +123,8 @@ python -m pytest -q                          # 229 kiểm thử offline
 2. Điền `.env`: `NEOPULSE_MODE=live`, `NEOPULSE_SOURCE=ssi`, `SSI_API_KEY`, `SSI_API_SECRET`, và tùy chọn `NEOPULSE_FUTURES=VN30F2612`.
 3. `neopulse check` để kiểm tra kết nối (chỉ in trạng thái đã/chưa điền bí mật).
 4. `neopulse record` trong giờ giao dịch (tự dừng 15:05). Trên Windows có thể giao cho Task Scheduler bằng `scripts/run_record_session.ps1`.
+
+Gói chuẩn bị cho bộ thu chạy độc lập trên cloud: [`deploy/collector/`](deploy/collector/README.md). **Chưa kích hoạt**: cần xác minh gói miễn phí không thẻ có đủ RAM và lưu trữ bền, chuyển dữ liệu/Secret sau xác nhận, rồi thử thu thật. Khi chưa nghiệm thu, laptop vẫn là nơi ghi dữ liệu.
 5. Sau phiên: `neopulse briefing --source ssi`, `neopulse alerts --source ssi`; sau ≥ 5 phiên: `neopulse validate --source ssi`.
 
 **Chạy với NEO API** (khi IP của máy đã được VPBankS đăng ký): điền `NEO_USERNAME`, `NEO_PASSWORD`, đặt `NEOPULSE_SOURCE=neo`, rồi chạy cùng các lệnh trên. Danh sách việc cần xác nhận ở lần chạy đầu: [`docs/live_checklist.md`](docs/live_checklist.md).

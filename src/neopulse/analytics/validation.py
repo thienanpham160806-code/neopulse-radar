@@ -100,7 +100,12 @@ def data_quality_report(storage, source: str | None = None) -> dict:
     runs = storage.table("ingest_runs")
     if source:
         q, runs = q[q["source"] == source], runs[runs["source"] == source]
-    quotes = storage.quotes(instrument=None, source=source)
+    # Quality only needs timestamps and counts; loading the full order book here multiplies peak memory.
+    where, params = (" WHERE source=?", (source,)) if source is not None else ("", ())
+    n_quotes, n_sessions, n_symbols = storage._con.execute(
+        "SELECT COUNT(*), COUNT(DISTINCT trading_date), COUNT(DISTINCT symbol) FROM quotes" + where, params,
+    ).fetchone()
+    quotes = storage._df("SELECT DISTINCT trading_date, ts FROM quotes" + where + " ORDER BY ts", params)
     gaps = pd.DataFrame()
     if not quotes.empty:
         t = quotes[["trading_date", "ts"]].drop_duplicates().sort_values("ts")
@@ -111,6 +116,5 @@ def data_quality_report(storage, source: str | None = None) -> dict:
         lunch = (t["ts"].dt.hour == 13) & (t["ts"].dt.minute < 5)
         gaps = t[(t["gap_s"] > max(5 * typical, 60)) & ~lunch]
     return {"issues": q.groupby("kind").size().sort_values(ascending=False) if len(q) else pd.Series(dtype=int),
-            "runs": runs, "gaps": gaps, "n_quotes": int(len(quotes)),
-            "n_sessions": int(quotes["trading_date"].nunique()) if len(quotes) else 0,
-            "n_symbols": int(quotes["symbol"].nunique()) if len(quotes) else 0}
+            "runs": runs, "gaps": gaps, "n_quotes": int(n_quotes),
+            "n_sessions": int(n_sessions), "n_symbols": int(n_symbols)}

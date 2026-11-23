@@ -1,0 +1,13 @@
+# Allow only source needed by the recorder; never upload credentials, databases, or the Git history as build context.
+**
+!pyproject.toml
+!README.md
+!LICENSE
+!src/
+!src/**
+!deploy/
+!deploy/collector/
+!deploy/collector/Dockerfile
+**/__pycache__/
+**/*.pyc
+**/.env*
