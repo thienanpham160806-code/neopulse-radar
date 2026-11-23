@@ -4,7 +4,7 @@ import { ParseError } from "@/lib/parse";
 
 export const dynamic = "force-dynamic";
 
-type SP = Promise<{ date?: string; index?: string; tab?: string }>;
+type SP = Promise<{ date?: string; index?: string; tab?: string; sym?: string }>;
 
 function Message({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -25,5 +25,14 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
     const msg = e instanceof ParseError ? e.message : "Không tải được dữ liệu thị trường. Nguồn có thể đang cập nhật; vui lòng tải lại trang sau ít phút.";
     return <Message title="Không tải được dữ liệu">{msg}</Message>;
   }
-  return <Dashboard key={`${sp.date ?? ""}|${sp.index ?? ""}`} initial={loaded} requestedDate={sp.date ?? null} requestedIndex={sp.index ?? null} initialTab={sp.tab ?? null} />;
+  return (
+    <Dashboard
+      key={`${sp.date ?? ""}|${sp.index ?? ""}`}
+      initial={loaded}
+      requestedDate={sp.date ?? null}
+      requestedIndex={sp.index ?? null}
+      initialTab={sp.tab ?? null}
+      initialSym={sp.sym ?? null}
+    />
+  );
 }

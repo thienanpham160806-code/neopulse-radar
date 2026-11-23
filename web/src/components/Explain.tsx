@@ -1,7 +1,7 @@
 "use client";
 
-/** Đồng hồ điểm nhịp (điểm nhấn của trang), nút giải thích thuật ngữ ⓘ, thẻ hướng dẫn đọc trang lần đầu. */
-import { useEffect, useState } from "react";
+/** Đồng hồ điểm nhịp (thu gọn hợp cột trái Bento), nút giải thích ⓘ, hướng dẫn đọc trang dạng nút mở (không gây CLS). */
+import { useState } from "react";
 import { isNum } from "@/lib/fmt";
 import { num } from "@/lib/format";
 export { Term } from "./Glossary";
@@ -9,10 +9,10 @@ import type { Num } from "@/lib/types";
 
 /**
  * Đồng hồ nửa vòng 0–100. Năm dải theo đúng ranh giới nhãn của Python (35/45/55/65): đỏ = tiêu cực (giảm),
- * vàng = giằng co (tham chiếu), xanh = tích cực (tăng) - cùng nghĩa với quy ước bảng giá. Kim + số + nhãn chữ.
+ * vàng = giằng co (tham chiếu), xanh = tích cực (tăng) — cùng nghĩa với quy ước bảng giá. Kim + số + nhãn chữ.
  */
-export function Gauge({ score, label }: { score: Num; label: string }) {
-  const cx = 160, cy = 150, r = 120;
+export function Gauge({ score, label, compact = false }: { score: Num; label: string; compact?: boolean }) {
+  const cx = 140, cy = 122, r = 96;
   const pt = (v: number, rad = r) => {
     const a = Math.PI * (1 - v / 100);
     return [cx + rad * Math.cos(a), cy - rad * Math.sin(a)] as const;
@@ -22,70 +22,90 @@ export function Gauge({ score, label }: { score: Num; label: string }) {
     return `M ${x1.toFixed(1)} ${y1.toFixed(1)} A ${r} ${r} 0 0 1 ${x2.toFixed(1)} ${y2.toFixed(1)}`;
   };
   const bands: [number, number, string, number][] = [
-    [0, 35, "var(--down)", 1], [35, 45, "var(--down)", 0.45], [45, 55, "var(--refc)", 0.7], [55, 65, "var(--up)", 0.45], [65, 100, "var(--up)", 1],
+    [0, 35, "var(--down)", 1],
+    [35, 45, "var(--down)", 0.45],
+    [45, 55, "var(--refc)", 0.72],
+    [55, 65, "var(--up)", 0.45],
+    [65, 100, "var(--up)", 1],
   ];
   const s = isNum(score) ? Math.max(0, Math.min(100, score)) : null;
-  const [nx, ny] = s === null ? [cx, cy] : pt(s, r - 30);
+  const [nx, ny] = s === null ? [cx, cy] : pt(s, r - 24);
+
   return (
     <figure className="m-0">
-      <svg viewBox="0 0 320 200" className="mx-auto w-full max-w-[360px]" role="img"
-        aria-label={s === null ? "Điểm nhịp: chưa đủ dữ liệu" : `Điểm nhịp ${num(s, 1)} trên 100, ${label}`}>
+      <svg
+        viewBox="0 0 280 172"
+        className={`mx-auto w-full ${compact ? "max-w-[215px]" : "max-w-[280px]"}`}
+        role="img"
+        aria-label={s === null ? "Điểm nhịp: chưa đủ dữ liệu" : `Điểm nhịp ${num(s, 1)} trên 100, ${label}`}
+      >
         {bands.map(([a, b, c, o], i) => (
-          <path key={i} d={arc(a + 0.6, b - 0.6)} stroke={c} strokeOpacity={o} strokeWidth="22" fill="none" />
+          <path key={i} d={arc(a + 0.7, b - 0.7)} stroke={c} strokeOpacity={o} strokeWidth="18" fill="none" />
         ))}
         {[0, 35, 45, 55, 65, 100].map((t) => {
-          const [x, y] = pt(t, r + 20);
-          return <text key={t} x={x} y={y + 4} textAnchor="middle" style={{ fontSize: 11, fill: "var(--muted)" }}>{t}</text>;
+          const [x, y] = pt(t, r + 16);
+          return (
+            <text key={t} x={x} y={y + 3} textAnchor="middle" style={{ fontSize: 10, fill: "var(--muted)" }}>
+              {t}
+            </text>
+          );
         })}
         {s !== null ? (
           <g style={{ transformOrigin: `${cx}px ${cy}px`, ["--sweep" as string]: `${-(s / 100) * 180}deg` }} className="gauge-needle">
-            <line x1={cx} y1={cy} x2={nx} y2={ny} stroke="var(--fg)" strokeWidth="4" strokeLinecap="round" />
+            <line x1={cx} y1={cy} x2={nx} y2={ny} stroke="var(--fg)" strokeWidth="3.5" strokeLinecap="round" />
           </g>
         ) : null}
-        <circle cx={cx} cy={cy} r="8" fill="var(--fg)" />
-        <text x={cx} y={cy + 42} textAnchor="middle" className="tnum" style={{ fontSize: 40, fontWeight: 700, fill: "var(--fg)" }}>
+        <circle cx={cx} cy={cy} r="6.5" fill="var(--fg)" />
+        <text x={cx} y={cy + 36} textAnchor="middle" className="tnum" style={{ fontSize: 32, fontWeight: 700, fill: "var(--fg)" }}>
           {s === null ? "—" : num(s, 1)}
         </text>
+        <text x={cx + 39} y={cy + 36} textAnchor="start" className="tnum" style={{ fontSize: 11, fill: "var(--muted)" }}>
+          /100
+        </text>
       </svg>
-      <figcaption className="-mt-1 text-center text-base font-semibold">{label}</figcaption>
+      <figcaption className="-mt-1 text-center text-sm font-semibold leading-snug">{label}</figcaption>
     </figure>
   );
 }
 
-const GUIDE_KEY = "np-guide-dismissed";
-
-/** Thẻ hướng dẫn đọc trang cho lần đầu; đóng thì nhớ trên máy (localStorage, lỗi thì vẫn chạy). */
-export function Guide() {
-  const [show, setShow] = useState(false);
-  useEffect(() => {
-    try {
-      setShow(localStorage.getItem(GUIDE_KEY) !== "1");
-    } catch {
-      setShow(true);
-    }
-  }, []);
-  if (!show) return null;
-  const close = () => {
-    setShow(false);
-    try {
-      localStorage.setItem(GUIDE_KEY, "1");
-    } catch {
-      /* bỏ qua */
-    }
-  };
+/** Hướng dẫn đọc trang theo yêu cầu (không tự bung sau hydration → loại bỏ CLS). */
+export function GuideButton() {
+  const [open, setOpen] = useState(false);
   return (
-    <details aria-label="Hướng dẫn đọc trang" className="mb-4 rounded-xl border border-line bg-surface px-4 py-2">
-      <summary className="min-h-10 cursor-pointer py-2 text-sm font-semibold">Mới dùng NeoPulse? Xem cách đọc trang</summary>
-      <div className="flex items-start justify-between gap-3">
-        <h2 className="text-base font-bold">Đọc trang này thế nào?</h2>
-        <button onClick={close} className="min-h-10 rounded-md px-2 text-sm text-muted underline underline-offset-4">Đã hiểu, ẩn đi</button>
-      </div>
-      <ol className="mt-2 grid gap-3 text-sm sm:grid-cols-3">
-        <li><b>1. Đang xem dữ liệu nào?</b> Kiểm tra nguồn, thời điểm cập nhật và phạm vi rổ. Đọc phần tóm tắt để biết chỉ số và số đông cổ phiếu đang đi cùng chiều hay không.</li>
-        <li><b>2. Vì sao có nhận định đó?</b> Xem năm nhóm bằng chứng, rồi mở bảng chi tiết. Đồng hồ chỉ tổng hợp phần có dữ liệu; điểm cao không đồng nghĩa mọi tín hiệu đều tốt.</li>
-        <li><b>3. Điều gì cần kiểm tra thêm?</b> Mở từng cảnh báo và xem phần kiểm chứng. Bấm ⓘ hoặc “Tra cứu chỉ số” để hiểu số liệu và vai trò của nó trong đồ án.</li>
-      </ol>
-      <p className="mt-2 text-xs text-muted">Biểu tượng <b>i</b> cạnh một thuật ngữ mở lời giải thích. Đây là công cụ học thuật, không phải lời khuyên đầu tư.</p>
-    </details>
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-controls="quick-guide-panel"
+        className="ui-transition inline-flex min-h-9 items-center gap-1 rounded-lg border border-line bg-surface px-2.5 text-xs font-medium text-muted hover:bg-surface2 hover:text-fg"
+      >
+        <span aria-hidden>?</span>
+        <span className="sr-only sm:not-sr-only">Cách đọc</span>
+      </button>
+      {open ? (
+        <div
+          id="quick-guide-panel"
+          role="region"
+          aria-label="Hướng dẫn đọc trang"
+          className="panel-enter absolute right-0 top-11 z-40 w-[min(92vw,30rem)] rounded-2xl border border-line bg-surface p-4 shadow-lg"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-sm font-bold">Đọc NeoPulse trong 5 giây</h2>
+            <button type="button" onClick={() => setOpen(false)} className="rounded-md px-2 py-1 text-xs text-muted hover:bg-surface2 hover:text-fg">
+              Đóng ×
+            </button>
+          </div>
+          <ol className="mt-2.5 space-y-2 text-xs leading-relaxed text-muted">
+            <li><b className="text-fg">1. Khỏe hay yếu?</b> Kiểm tra nguồn, giờ cập nhật ở thanh trên; xem chỉ số, độ rộng tăng/giảm và điểm nhịp.</li>
+            <li><b className="text-fg">2. Vì sao?</b> Đọc 5 thành phần chuẩn hóa (−1…+1) rồi mở tab <i>Vì sao?</i> để soi ngành, sổ lệnh, khối ngoại, phái sinh.</li>
+            <li><b className="text-fg">3. Có gì bất thường?</b> Bấm vào cảnh báo hoặc bất kỳ mã nào để mở <i>Chi tiết mã</i> và hồ sơ doanh nghiệp. Bấm <b>ⓘ</b> để tra cứu chỉ số ngay tại chỗ.</li>
+          </ol>
+          <p className="mt-2.5 border-t border-line pt-2 text-[11px] text-muted">
+            Công cụ phân tích học thuật, không phải lời khuyên đầu tư.
+          </p>
+        </div>
+      ) : null}
+    </div>
   );
 }

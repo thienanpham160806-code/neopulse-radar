@@ -1,9 +1,8 @@
 "use client";
 
 /**
- * Nút đổi sáng/tối. Tái sử dụng từ invest-system-phase2/components/ThemeToggle.tsx (cùng tác giả):
- * giữ aria-pressed, nhãn chữ, icon SVG, đồng bộ giữa các tab qua sự kiện storage.
- * Sửa: khóa lưu "np-theme"; trạng thái ban đầu theo prefers-color-scheme khi chưa chọn; không phát sự kiện riêng.
+ * Nút đổi sáng/tối. Sửa nhãn & biểu tượng nhất quán với hành động sắp thực hiện
+ * (khắc phục WCAG 2.5.3 label-content-name-mismatch).
  */
 import { useEffect, useState } from "react";
 
@@ -50,13 +49,15 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
     setTheme(next);
   }
 
+  const nextLabel = theme === "dark" ? "Sáng" : "Tối";
+
   return (
     <button
       type="button"
       onClick={toggle}
       aria-pressed={theme === "dark"}
-      aria-label={`Chuyển sang giao diện ${theme === "dark" ? "sáng" : "tối"}`}
-      className={`inline-flex items-center gap-1.5 rounded-md border border-line bg-surface px-2 py-1 text-sm ${className}`}
+      title={`Chuyển sang giao diện ${nextLabel.toLowerCase()}`}
+      className={`ui-transition inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg border border-line bg-surface px-2.5 text-xs font-medium hover:bg-surface2 sm:text-sm ${className}`}
     >
       {theme === "dark" ? (
         <svg aria-hidden viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -68,7 +69,7 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
           <path d="M20.2 15.1A8.5 8.5 0 0 1 8.9 3.8 8.5 8.5 0 1 0 20.2 15.1Z" />
         </svg>
       )}
-      <span>{theme === "dark" ? "Tối" : "Sáng"}</span>
+      <span>{nextLabel}</span>
     </button>
   );
 }
