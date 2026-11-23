@@ -1,6 +1,6 @@
 # Kế hoạch kiểm thử và kiểm chứng
 
-## 1. Kiểm thử tự động (`pytest`, 94 ca, không cần mạng)
+## 1. Kiểm thử tự động (`pytest`, 243 ca, không cần mạng)
 
 | Tệp | Kiểm tra | Vì sao quan trọng |
 |---|---|---|

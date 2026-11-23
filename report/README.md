@@ -13,7 +13,7 @@ Dàn ý dưới đây chỉ ra **lấy nội dung ở đâu trong repo**. Phần
 | 4 | Dữ liệu NEO API | endpoint, kênh, tần suất, quy trình làm sạch, từ điển dữ liệu; số phiên/số bản ghi thật đã thu | `docs/neo_api_notes.md`, `docs/data_dictionary.md`, `ingest_runs` |
 | 5 | Phương pháp | công thức, giả định, cơ sở ngưỡng, trọng số và độ nhạy | `docs/methodology.md` |
 | 6 | Triển khai | ảnh 8 tab, quy trình sử dụng, trạng thái lỗi/dữ liệu cũ | dashboard + `docs/test_plan.md` §2 |
-| 7 | Kiểm thử và kết quả | 94 ca kiểm thử; đối chiếu bảng giá; IC ngoài mẫu; tần suất cảnh báo; lỗi đã thử | `docs/test_plan.md`, `neopulse validate` |
+| 7 | Kiểm thử và kết quả | 243 ca kiểm thử Python và 91 ca kiểm thử web; đối chiếu bảng giá; IC ngoài mẫu; tần suất cảnh báo; lỗi đã thử | `docs/test_plan.md`, `neopulse validate` |
 | 8 | Hạn chế và sử dụng có trách nhiệm | 3 mức giá, thời điểm nhận, rổ hữu hạn, trọng số thiết kế, không dự báo, bảo mật | README §9–10 |
 | 9 | Hướng phát triển | dữ liệu lịch sử từ SSI cho MA20/độ rộng dài hạn; lịch nghỉ lễ; mô hình hóa tác động giá; triển khai máy chủ | `providers/ssi.py` |
 | 10 | Kết luận | giá trị tạo ra; bài học kỹ thuật/tài chính | — |

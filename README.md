@@ -4,13 +4,13 @@ Radar nội phiên cho thị trường cổ phiếu Việt Nam: đo nhịp thị
 
 Đồ án cá nhân cuối kỳ, học phần *Gói phần mềm ứng dụng cho tài chính 1* (261BFF4011), Khoa Tài chính – Ngân hàng, Trường Đại học Kinh tế - Luật.
 
-> Công cụ phân tích học thuật, không phải khuyến nghị đầu tư. Không đặt lệnh: các endpoint giao dịch và tài khoản bị chặn cứng trong mã nguồn.
+> Công cụ phân tích học thuật. Không phải lời khuyên đầu tư. Hệ thống không đặt lệnh: các API giao dịch và tài khoản bị chặn trong mã nguồn.
 
 [![CI](https://img.shields.io/github/actions/workflow/status/thienanpham160806-code/neopulse-radar/ci.yml?branch=main&style=flat&logo=github&label=CI)](https://github.com/thienanpham160806-code/neopulse-radar/actions/workflows/ci.yml)
 [![python](https://img.shields.io/badge/python-3.10%2B-3776AB?style=flat&logo=python&logoColor=white)](https://www.python.org/)
 [![web](https://img.shields.io/badge/web-Next.js%2015-000000?style=flat&logo=nextdotjs&logoColor=white)](web/README.md)
 [![data](https://img.shields.io/badge/data-SSI%20FastConnect%20%C2%B7%20NEO%20API-1F6FEB?style=flat)](#dữ-liệu)
-[![tests](https://img.shields.io/badge/tests-229-2EA44F?style=flat&logo=pytest&logoColor=white)](tests/)
+[![tests](https://img.shields.io/badge/tests-243-2EA44F?style=flat&logo=pytest&logoColor=white)](tests/)
 [![license](https://img.shields.io/badge/license-MIT-lightgrey?style=flat)](LICENSE)
 
 **[Bản web](https://neopulse-radar.vercel.app)** · **[Phương pháp](docs/methodology.md)** · **[Kiến trúc](docs/architecture.md)** · **[Dàn ý báo cáo](report/README.md)**
@@ -20,10 +20,10 @@ Radar nội phiên cho thị trường cổ phiếu Việt Nam: đo nhịp thị
 
 ## Kết quả chính
 
-- **Dữ liệu thật đã thu.** Bộ ghi SSI FastConnect đã chạy 2 phiên (19/11 và 20/11/2026), ghi 236.622 bản ghi giá và sổ lệnh của 31 mã (rổ VN30 và chỉ số) vào SQLite. Mục tiêu tối thiểu là 5 phiên trước khi kiểm chứng ngoài mẫu.
+- **Dữ liệu thật đã thu.** Bộ ghi SSI FastConnect đã ghi 3 phiên (19/11, 20/11 và 23/11/2026), tổng cộng 587.084 bản ghi giá và sổ lệnh của 31 mã (rổ VN30 và chỉ số) vào SQLite. Phiên 19/11 bắt đầu muộn; phiên 23/11 thiếu đoạn 09:00–10:16 do tác vụ ghi không tự khởi động. Mục tiêu tối thiểu là 5 phiên trước khi kiểm chứng ngoài mẫu.
 - **Đã thử kết nối NEO API thật.** Đăng nhập `/auth/token` thành công, nhưng mọi API dữ liệu trả `NEOINP000401` vì NEO bắt buộc đăng ký IP (IP whitelist). Mạng ký túc xá dùng IP động nên không đăng ký được. Endpoint và header của mã nguồn khớp tài liệu v1.0.0; chi tiết lần thử ở [`docs/neo_api_notes.md`](docs/neo_api_notes.md).
 - **Một sản phẩm, hai nguồn.** Khung tin SSI được `ssi/adapter.py` đổi về cùng lược đồ thô với NEO, nên chuẩn hóa, lưu trữ, logic tài chính và giao diện dùng chung. Đổi nguồn bằng một biến `NEOPULSE_SOURCE`.
-- **Kiểm thử.** 229 ca kiểm thử offline: công thức so với giá trị tính tay, không nhìn trước tương lai, dữ liệu bẩn, đăng nhập lại khi 401, WebSocket rớt hoặc treo, chặn endpoint giao dịch, che bí mật trong log.
+- **Kiểm thử.** 243 ca kiểm thử offline: công thức so với giá trị tính tay, không nhìn trước tương lai, dữ liệu bẩn, đăng nhập lại khi 401, WebSocket rớt hoặc treo, chặn endpoint giao dịch, che bí mật trong log.
 - **Web công khai không lộ dữ liệu thô.** Bản web trên Vercel chỉ nhận JSON chỉ báo tổng hợp; khóa SSI/NEO và bảng giá từng tick ở lại máy ghi.
 
 ## Đáp ứng yêu cầu đề bài
@@ -114,7 +114,7 @@ neopulse simulate --sessions 6 --reset       # sinh 6 phiên MÔ PHỎNG
 streamlit run src/neopulse/app/dashboard.py  # dashboard 8 tab
 neopulse briefing                            # bản tin HTML vào out/
 neopulse validate                            # báo cáo kiểm chứng
-python -m pytest -q                          # 229 kiểm thử offline
+python -m pytest -q                          # 243 kiểm thử offline
 ```
 
 **Chạy với dữ liệu thật (SSI FastConnect)**
@@ -135,7 +135,7 @@ neopulse publish-static --source ssi            # ghi JSON tổng hợp vào web
 neopulse publish-static --source ssi --deploy   # ghi rồi triển khai lên Vercel
 ```
 
-Web là snapshot tĩnh, có thể nhận cập nhật trực tiếp qua Ably khi bật `neopulse live-relay`. Chi tiết: [`docs/web_architecture.md`](docs/web_architecture.md).
+Web hiển thị bản dữ liệu tĩnh (snapshot) và nhận cập nhật trực tiếp qua Ably khi bật `neopulse live-relay`. Chi tiết: [`docs/web_architecture.md`](docs/web_architecture.md).
 
 <details>
 <summary>Biến môi trường</summary>
@@ -188,7 +188,7 @@ report/                 dàn ý báo cáo theo khung của đề
 
 ## Hạn chế
 
-- Mới thu 2 phiên dữ liệu thật; kiểm chứng ngoài mẫu cần ít nhất 5 phiên. Các hình và số minh họa có hậu tố `_sim` là mô phỏng.
+- Mới thu 3 phiên dữ liệu thật, hai phiên không trọn vẹn; kiểm chứng ngoài mẫu cần ít nhất 5 phiên. Các hình và số minh họa có hậu tố `_sim` là mô phỏng.
 - Chưa lấy được dữ liệu NEO API thật vì yêu cầu IP whitelist; dữ liệu thật hiện đến từ SSI FastConnect.
 - SSI: giao thức streaming lấy từ mã nguồn SDK chính thức vì tài liệu web không mô tả; các điểm chưa kiểm chứng ở [`docs/ssi_notes.md`](docs/ssi_notes.md).
 - Tin giá không có dấu thời gian sự kiện nên dùng thời điểm nhận (giờ Việt Nam); độ trễ mạng lẫn vào chuỗi.

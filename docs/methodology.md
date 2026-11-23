@@ -84,11 +84,11 @@ z_t = 0,6745 × (x_t − median)/MAD, median và MAD lấy trên 60 thanh **trư
 
 | Quy tắc | Điều kiện | Cơ sở |
 |---|---|---|
-| Bùng nổ khối lượng | z_vol ≥ 3,5 | thống kê |
-| Giãn spread | z_spread ≥ 3,5 **và** spread ≥ 2 × spread nhỏ nhất đã thấy trong phiên | thống kê + loại nhiễu một bước giá |
+| Khối lượng tăng bất thường | z_vol ≥ 3,5 | thống kê |
+| Độ chênh giá mua-bán giãn rộng | z_spread ≥ 3,5 **và** spread ≥ 2 × spread nhỏ nhất đã thấy trong phiên | thống kê + loại nhiễu một bước giá |
 | Giá biến động đột ngột | \|z_ret\| ≥ 3,5 | thống kê |
-| Dòng tiền NN | \|z_fnet\| ≥ 3,5 **và** NN ≥ 30% giá trị thanh | thống kê + điều kiện trọng yếu |
-| Sổ lệnh lệch kéo dài | \|OBI₃\| ≥ 0,6 cùng dấu 3 thanh liên tiếp | 0,6 ⇔ một bên dày gấp 4 lần bên kia; 3 thanh để loại nhiễu đặt-hủy |
+| Khối ngoại giao dịch bất thường | \|z_fnet\| ≥ 3,5 **và** khối ngoại ≥ 30% giá trị thanh | thống kê + điều kiện trọng yếu |
+| Mất cân bằng sổ lệnh kéo dài | \|OBI₃\| ≥ 0,6 cùng dấu 3 thanh liên tiếp | 0,6 ⇔ một bên dày gấp 4 lần bên kia; 3 thanh để loại nhiễu đặt-hủy |
 | Sát trần/sàn | \|vị trí biên độ\| ≥ 0,9 | quy tắc biên độ của sàn |
 
 Mức ưu tiên: **CAO** khi ≥ 2 quy tắc cùng nổ trên một mã trong một thanh hoặc |z| ≥ 6; hai quy tắc cuối là **THẤP** khi đứng một mình; còn lại **TRUNG BÌNH**. Thời gian nguội 10 thanh cho mỗi cặp (mã, quy tắc). Khóa chống lặp khi lưu/gửi.
@@ -141,4 +141,4 @@ Lịch sử dùng cho profile và KL ngày dự phòng được lọc theo từn
 
 RVOL thanh = KL khớp trong thanh / (KL TB 20 phiên × (f(m₁) − f(m₀))), với f(m) là tỷ lệ khối lượng cả ngày thường đã khớp tới phút giao dịch thứ m. Nhờ vậy so với **cùng thời điểm** của các phiên trước, không so với cả ngày. KL TB 20 phiên lấy từ REST ngày của SSI (`neopulse refdata --refresh`, dự phòng Vietcap qua vnstock). f(m) dùng đường thực nghiệm khi đã có ít nhất 3 phiên ghi trọn, nếu không thì **giả định phân bổ đều theo phút** (bỏ qua hình chữ U và khối lượng ATC: biết là thô).
 
-Cảnh báo "Bùng nổ khối lượng" dùng RVOL thanh ≥ 3 (CAO khi ≥ 6) khi có KL TB 20 phiên; nếu không có thì quay về z bền vững của log khối lượng trong phiên. Lý do: z trong phiên cần ít nhất 20 thanh lịch sử và không biết mức "bình thường" của chính mã đó. Trên dữ liệu thật 19/11/2026 (10:59–11:29, 929 thanh, 30 mã), quy tắc z cũ cho 0 cảnh báo khối lượng, quy tắc RVOL cho 12 (1,29% số thanh, 2 mức CAO). **IC chưa kiểm định lại được** vì mới có một phiên (cần ít nhất 2 phiên để tách trong/ngoài mẫu); cần chạy lại sau khi đủ phiên.
+Cảnh báo "Khối lượng tăng bất thường" dùng RVOL thanh ≥ 3 (CAO khi ≥ 6) khi có KL TB 20 phiên; nếu không có thì quay về z bền vững của log khối lượng trong phiên. Lý do: z trong phiên cần ít nhất 20 thanh lịch sử và không biết mức "bình thường" của chính mã đó. Trên dữ liệu thật 19/11/2026 (10:59–11:29, 929 thanh, 30 mã), quy tắc z cũ cho 0 cảnh báo khối lượng, quy tắc RVOL cho 12 (1,29% số thanh, 2 mức CAO). **IC chưa kiểm định lại được** vì mới có một phiên (cần ít nhất 2 phiên để tách trong/ngoài mẫu); cần chạy lại sau khi đủ phiên.
