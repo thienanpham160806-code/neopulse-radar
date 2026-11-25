@@ -188,3 +188,11 @@ Bộ mô phỏng · Dữ liệu MÔ PHỎNG · Không phải lời khuyên đầ
    Không đổi khóa Redis hay mã hóa, nên bản ghi cũ đọc được như cũ.
 4. **`notify.py`** (kênh một chat cũ qua dòng lệnh): đề xuất chỉ đổi định dạng cho khớp mẫu mới, không bỏ.
 5. **Tên lệnh** tiếng Việt không dấu như đề xuất (`/thitruong`, `/canhbao`, `/ma`, `/theodoi`, `/caidat`, `/trangthai`, `/huongdan`, `/dung`).
+
+## 6. Quyết định đã duyệt (25/11/2026)
+
+1. Đồng ý: gom cảnh báo theo đợt; thêm tóm tắt đầu phiên và tổng kết cuối phiên.
+2. Đồng ý: nút bấm có `callback_query`.
+3. Không thêm chọn mức cảnh báo: tin tự động giữ chỉ mức cao. Thêm `digest_open`, `digest_close` (mặc định tắt); bản ghi cũ đọc được như cũ.
+4. Đồng ý: `notify.py` chỉ đổi định dạng.
+5. Đồng ý tên lệnh tiếng Việt không dấu.

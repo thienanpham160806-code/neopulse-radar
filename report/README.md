@@ -62,3 +62,22 @@ Có tái sử dụng có chọn lọc từ dự án cá nhân trước của tá
 4. Dừng bộ ghi → trạng thái dữ liệu cũ (30 giây).
 5. Tab Kiểm chứng: đọc bảng IC ngoài mẫu và nói rõ giới hạn (1 phút).
 6. `pytest` chạy xanh; `.env.example` và việc chặn endpoint giao dịch (30 giây).
+
+## Kênh thông báo: bot Telegram (25/11/2026)
+
+Bot `@neopulse_warningbot` là kênh đọc nhanh, website vẫn là nơi phân tích chi tiết. Bot chia lệnh thành ba nhóm, mỗi lệnh một việc:
+- **Xem ngay:** nhịp thị trường, cảnh báo trong phiên, thẻ một mã.
+- **Cá nhân:** mã theo dõi, bật/tắt từng loại tin.
+- **Khác:** trạng thái dữ liệu, hướng dẫn, hủy đăng ký.
+
+Số liệu đọc từ cùng payload với website (`/api/data`), nên bot và web luôn khớp. Bot không tính lại chỉ báo.
+
+Mỗi tin theo một khuôn: tiêu đề có icon và giờ VN → dòng chính → căn cứ (ngưỡng, điểm z diễn giải bằng lời) → bối cảnh → nút mở đúng trang web → nguồn, trạng thái dữ liệu và câu "Không phải lời khuyên đầu tư". Dữ liệu mô phỏng gắn nhãn [MÔ PHỎNG].
+
+Về vận hành:
+- Tin tự động gửi theo đợt: khoảng mỗi phút trong phiên (bộ phát trực tiếp kích hoạt), mỗi 5 phút ngoài giờ (cron ngoài).
+- Nhiều cảnh báo trong một đợt được gom thành một tin; không gửi trùng (khóa Redis, ghi nhận đã gửi).
+- Đăng ký là tự nguyện, mã hóa Fernet, không lưu chat ID dạng rõ.
+- Lệnh cũ vẫn chạy để không làm gián đoạn người đang dùng.
+
+Nguồn: README mục "Bot Telegram", `docs/bot_style.md`, `docs/bot_samples.md`, `docs/bot_audit.md`. Cách tổ chức mã (tách menu, nút, định dạng tin) tham khảo cấu trúc bot của đồ án nhóm Kumo_VN_bot, không dùng mã của đồ án đó.

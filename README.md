@@ -186,6 +186,44 @@ report/                 dàn ý báo cáo theo khung của đề
 - Báo cáo kiểm chứng: IC trong và ngoài mẫu, IC từng phiên, chất lượng dữ liệu, độ thu hồi cảnh báo.
 - Ảnh chụp giao diện: [`docs/img/`](docs/img/). Các ảnh có hậu tố `_sim` dùng dữ liệu mô phỏng.
 
+## Bot Telegram
+
+Bot `@neopulse_warningbot` đọc nhanh kết quả NeoPulse và gửi tin theo lựa chọn của người dùng. Số liệu lấy từ cùng nguồn với website (`/api/data`, catalog doanh nghiệp), nên con số trên bot khớp con số trên web. Bot không tính lại chỉ báo và không khuyến nghị mua/bán.
+
+```mermaid
+flowchart LR
+  A[Xem ngay] --> A1["📊 /thitruong"] & A2["🚨 /canhbao"] & A3["🏢 /ma MÃ"]
+  B[Cá nhân] --> B1["⭐ /theodoi"] & B2["⚙️ /caidat"]
+  C[Khác] --> C1["ℹ️ /trangthai"] & C2["❓ /huongdan"] & C3["⏹ /dung"]
+```
+
+| Lệnh | Việc | Cần đăng ký |
+|---|---|---|
+| `/thitruong` | Nhịp thị trường VN30: điểm nhịp, chỉ số, căn cứ, bối cảnh | Không |
+| `/canhbao` | Cảnh báo trong phiên, lọc mức bằng nút | Không |
+| `/ma HPG` (hoặc gõ mã) | Thẻ một mã: giá, cảnh báo, khối ngoại, nút mở hồ sơ | Không |
+| `/theodoi` | Xem, thêm, bớt mã theo dõi | Có |
+| `/caidat` | Bật/tắt cảnh báo mức cao, tin doanh nghiệp, tin chính sách, tóm tắt đầu và cuối phiên | Có |
+| `/trangthai`, `/huongdan` | Trạng thái dữ liệu, hướng dẫn | Không |
+| `/start`, `/dung` | Đăng ký (mặc định chỉ cảnh báo mức cao), hủy đăng ký | — |
+
+Lệnh cũ (`/market`, `/alerts`, `/company`, `/watch`, `/all`, `/status`, `/help`, `/stop`) vẫn dùng được và có kèm tên lệnh mới. Quy ước icon và cấu trúc tin: [`docs/bot_style.md`](docs/bot_style.md); mẫu tin: [`docs/bot_samples.md`](docs/bot_samples.md); rà soát và lý do thiết kế: [`docs/bot_audit.md`](docs/bot_audit.md).
+
+Ví dụ một cảnh báo tự động (dữ liệu mô phỏng):
+
+```text
+🚨 [MÔ PHỎNG] Độ chênh giá mua-bán giãn rộng · VIB · 14:28
+VIB: độ chênh giá mua-bán giãn rộng bất thường; giá 41.600 🔴 ▼ −0,95%.
+Căn cứ: điểm z bền vững vượt 50 (ngưỡng 3,5): lệch rất xa so với mức thường thấy trong phiên.
+Bối cảnh: VN30 1.967,70 🟢 ▲ +0,45% · 20 mã tăng / 9 mã giảm / 1 đứng giá.
+[🏢 Thẻ VIB] [🔗 Xem VIB trên NeoPulse]
+Bộ mô phỏng · Dữ liệu MÔ PHỎNG · Không phải lời khuyên đầu tư
+```
+
+**Vận hành.** Webhook `web/api/telegram.py` trả lời lệnh và nút bấm ngay. Tin tự động gửi theo đợt qua `web/api/telegram_tick.py`: bộ phát trực tiếp gọi khoảng mỗi phút trong giờ giao dịch, cron ngoài gọi mỗi 5 phút, GitHub Actions là dự phòng. Khóa Redis chặn hai lượt chạy song song. Đăng ký lưu trong Redis, mã hóa Fernet, ghi có điều kiện (CAS), không xử lý lại update cũ.
+
+**Cấu hình** (biến môi trường trên Vercel, không đưa vào Git): `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `TELEGRAM_STATE_KEY`, `TELEGRAM_TICK_SECRET`, `KV_REST_API_URL`, `KV_REST_API_TOKEN`. Sau khi đổi lệnh, chạy `python tools/configure_telegram_profile.py` (mô tả bot và menu lệnh) và gọi `/api/telegram_tick?setup=webhook` có header `Authorization: Bearer <TELEGRAM_TICK_SECRET>` để webhook nhận cả nút bấm.
+
 ## Hạn chế
 
 - Mới thu 3 phiên dữ liệu thật, hai phiên không trọn vẹn; kiểm chứng ngoài mẫu cần ít nhất 5 phiên. Các hình và số minh họa có hậu tố `_sim` là mô phỏng.
