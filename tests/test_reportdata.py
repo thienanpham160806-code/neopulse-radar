@@ -4,10 +4,9 @@ import pandas as pd
 
 from neopulse.analytics import reportdata
 from neopulse.data.storage import Storage
-from tests.conftest import quote_row
 
 
-def _db(tmp_path):
+def _db(tmp_path, make_quote):
     path = tmp_path / "r.sqlite"
     db = Storage(path)
     rows = []
@@ -16,7 +15,7 @@ def _db(tmp_path):
             minutes = pd.date_range(f"{day} {start}", f"{day} 11:29", freq="1min", tz="Asia/Ho_Chi_Minh").append(
                 pd.date_range(f"{day} 13:00", f"{day} 14:59", freq="1min", tz="Asia/Ho_Chi_Minh"))
             for i, ts in enumerate(minutes):
-                rows.append(quote_row(sym, ts=ts, trading_date=day, source="ssi", total_volume=100.0 * (i + 1),
+                rows.append(make_quote(sym, ts=ts, trading_date=day, source="ssi", total_volume=100.0 * (i + 1),
                                       last=10000.0 + i % 3 * 10))
     db.insert_quotes([{**r, "ts": r["ts"].isoformat(timespec="milliseconds")} for r in rows])
     db.insert_index([{"ts": f"2026-11-20T09:0{i}:00+07:00", "trading_date": "2026-11-20", "index_code": "VN30",
@@ -29,8 +28,8 @@ def _db(tmp_path):
     return path
 
 
-def test_report_data_reads_only_and_writes_summary(tmp_path):
-    path = _db(tmp_path)
+def test_report_data_reads_only_and_writes_summary(tmp_path, make_quote):
+    path = _db(tmp_path, make_quote)
     before = hashlib.sha256(path.read_bytes()).hexdigest()
     summary = reportdata.build(path, "ssi", tmp_path / "out", tests={"pytest": 7, "vitest": None})
     assert hashlib.sha256(path.read_bytes()).hexdigest() == before  # chỉ đọc
