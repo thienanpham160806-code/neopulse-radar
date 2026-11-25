@@ -580,7 +580,10 @@ export function Alerts({
               }`}
             >
               <div className="text-xs font-medium text-muted">{label}</div>
-              <div className="tnum mt-1 text-2xl font-bold leading-tight text-fg">{al.by_severity[s] ?? 0}</div>
+              {/* bộ lọc là "từ mức này trở lên" nên số trên thẻ cộng dồn, khớp số dòng danh sách bên dưới */}
+              <div className="tnum mt-1 text-2xl font-bold leading-tight text-fg">
+                {SEV_ORDER.slice(0, SEV_ORDER.indexOf(s) + 1).reduce((n, x) => n + (al.by_severity[x] ?? 0), 0)}
+              </div>
             </button>
           );
         })}
