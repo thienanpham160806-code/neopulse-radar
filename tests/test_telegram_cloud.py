@@ -67,7 +67,8 @@ def test_encrypted_state_and_wrong_key_fail_closed(tmp_path):
 def test_rss_cites_source_does_not_invent_effective_date():
     xml = b'<rss><channel><item><title>MWG earnings</title><link>https://cafef.vn/a.chn</link><pubDate>Thu, 19 Nov 2026 10:00:00 +0700</pubDate></item></channel></rss>'
     events = rss_items(xml, "news", "cafef.vn", {"MWG"})
-    assert events[0]["symbols"] == ["MWG"] and "https://cafef.vn/a.chn" in events[0]["text"]
+    assert events[0]["symbols"] == ["MWG"] and events[0]["markup"]["inline_keyboard"][0][0]["url"] == "https://cafef.vn/a.chn"
+    assert "Nguồn: cafef.vn" in events[0]["text"] and "10:00, 19/11/2026" in events[0]["text"]
     assert events[0]["at"] == datetime(2026, 11, 19, 3, tzinfo=timezone.utc).timestamp()
     assert not rss_items(xml, "news", "baochinhphu.vn", {"MWG"})
     with pytest.raises(ValueError):

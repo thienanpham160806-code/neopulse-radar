@@ -14,10 +14,13 @@ DISCLAIMER = "Công cụ phân tích học thuật. Không phải lời khuyên 
 
 
 def format_alert(row: dict | pd.Series, simulated: bool = False) -> str:
-    ts = pd.Timestamp(row["ts"]).strftime("%H:%M %d/%m")
+    """Văn bản thuần theo mẫu tin của bot (docs/bot_style.md): icon mức · tiêu đề · mã · giờ, câu mô tả, miễn trừ."""
+    from .telegram_ui import RULE_TITLE, SEV_ICON
+    ts = pd.Timestamp(row["ts"]).strftime("%H:%M, %d/%m")
     tag = "[MÔ PHỎNG] " if simulated else ""
-    level = {"CAO": "Mức cao", "TRUNG BÌNH": "Mức trung bình", "THẤP": "Mức thấp"}.get(row["severity"], row["severity"])
-    return f"{tag}[{level}] {row['symbol']} · {ts}\n{vn_digits(row['message'])}\n{DISCLAIMER}"
+    title = RULE_TITLE.get(row.get("rule"), "Cảnh báo")
+    icon = SEV_ICON.get(row["severity"], SEV_ICON["THẤP"])
+    return f"{icon} {tag}{title} · {row['symbol']} · {ts}\n{row['symbol']}: {vn_digits(row['message'])}\n{DISCLAIMER}"
 
 
 def send_telegram(settings: Settings, text: str, *, transport: httpx.BaseTransport | None = None) -> bool:

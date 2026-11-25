@@ -97,3 +97,29 @@ def handle_update(store, update: dict, valid: set[str], now: float):
 
     store.update(cid, mutate)
     return reply[0] if reply else None
+
+
+def handle_callback(store, update: dict, valid: set[str], now: float) -> dict | None:
+    """Nút bấm đổi đăng ký; cùng cơ chế CAS và chống xử lý lại update cũ như tin nhắn.
+
+    Chỉ nhận nút trong chat riêng của chính người bấm. -> {"toast", "edit"} hoặc None (update cũ/không hợp lệ).
+    """
+    from .telegram_cloud import callback
+    query = update.get("callback_query") or {}
+    chat = (query.get("message") or {}).get("chat") or {}
+    sender = (query.get("from") or {}).get("id")
+    if (chat.get("type") != "private" or not isinstance(chat.get("id"), int) or chat.get("id") != sender
+            or not isinstance(update.get("update_id"), int) or not isinstance(query.get("data"), str)):
+        return None
+    cid, result = str(chat["id"]), []
+
+    def mutate(record):
+        result.clear()
+        if update["update_id"] <= record["version"]:
+            return None
+        state = {"users": {cid: record["user"]} if record.get("user") else {}}
+        result.append(callback(state, cid, query["data"], valid, now))
+        return {"version": update["update_id"], "user": state["users"].get(cid)}
+
+    store.update(cid, mutate)
+    return result[0] if result else None
