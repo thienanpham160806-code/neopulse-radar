@@ -203,7 +203,7 @@ flowchart LR
 | `/canhbao` | Cảnh báo trong phiên, lọc mức bằng nút | Không |
 | `/ma HPG` (hoặc gõ mã) | Thẻ một mã: giá, cảnh báo, khối ngoại, nút mở hồ sơ | Không |
 | `/theodoi` | Xem, thêm, bớt mã theo dõi | Có |
-| `/caidat` | Bật/tắt cảnh báo mức cao, tin doanh nghiệp, tin chính sách, tóm tắt đầu và cuối phiên | Có |
+| `/caidat` | Bật/tắt cảnh báo mức cao, bản tin tin tức (doanh nghiệp, quốc tế, chính sách; gộp lúc 08:30 và 15:00), tóm tắt đầu và cuối phiên | Có |
 | `/trangthai`, `/huongdan` | Trạng thái dữ liệu, hướng dẫn | Không |
 | `/start`, `/dung` | Đăng ký (mặc định chỉ cảnh báo mức cao), hủy đăng ký | — |
 

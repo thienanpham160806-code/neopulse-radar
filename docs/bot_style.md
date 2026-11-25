@@ -11,9 +11,10 @@
 | 🟡 | Tham chiếu / đứng giá | 🏦 | Khối ngoại |
 | 🟣 | Trần | 📈 | Phái sinh |
 | 🔵 | Sàn | 🏢 | Doanh nghiệp |
-| 🚨 | Cảnh báo mức cao | 📰 | Tin doanh nghiệp |
+| 🚨 | Cảnh báo mức cao | 📰 | Bản tin tin tức |
 | ⚠️ | Cảnh báo trung bình | ⚖️ | Tin chính sách |
 | ℹ️ | Cảnh báo thấp; trạng thái dữ liệu | 🔗 | Liên kết mở website |
+|  |  | 🌏 | Tin quốc tế |
 
 Icon cho menu: ⭐ theo dõi · ⚙️ cài đặt · ❓ hướng dẫn · ⏹ hủy đăng ký. Trong màn cài đặt, ✅/▫️ là trạng thái bật/tắt.
 
@@ -54,5 +55,6 @@ Bot không dùng chữ "thời gian thực" hay "realtime".
 
 - Gửi bằng `parse_mode=HTML`; mọi chữ lấy từ nguồn ngoài (tên doanh nghiệp, tiêu đề RSS, nhãn) đều được escape.
 - Mỗi tin tối đa 4.096 ký tự. Danh sách dài hiện tối đa 15 dòng (10 dòng với cảnh báo gom theo đợt), phần còn lại ghi "… và N mục khác".
+- Tin tức không gửi lẻ: gộp thành bản tin đầu phiên (từ 08:30, tin từ 15:00 ngày làm việc trước) và cuối phiên (từ 15:00, tin 08:30–15:00), chia mục 🏢 Doanh nghiệp, 🌏 Quốc tế, ⚖️ Chính sách, pháp luật; tiêu đề bấm được mở bài gốc.
 - Nhiều cảnh báo trong cùng một đợt gửi được gom thành một tin. Mỗi cảnh báo, tin và bản tóm tắt chỉ gửi một lần cho mỗi người (ghi nhận theo mã định danh).
 - Văn phong mô tả, không khuyến nghị; không có tín hiệu mua/bán, giá mục tiêu hay xếp hạng.
