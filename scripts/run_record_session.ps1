@@ -61,5 +61,8 @@ if ($Relay -and -not $Relay.HasExited) {
     # live-relay tự dừng lúc 15:05; chờ tối đa 2 phút để nó gửi tin "end" rồi mới buộc dừng
     if (-not $Relay.WaitForExit(120000)) { taskkill /PID $Relay.Id /T /F | Out-Null; Write-Log "Đã buộc dừng live-relay (cả tiến trình con)" }
 }
+# Cập nhật số liệu báo cáo (chỉ đọc SQLite) để report/data/SUMMARY.md luôn có phiên mới nhất; commit vẫn làm tay.
+cmd.exe /c "`"$Py`" -m neopulse.cli report-data --source ssi --out report/data >> `"$Log`" 2>&1"
+Write-Log "Đã cập nhật report/data (mã thoát $LASTEXITCODE)"
 Write-Log "Kết thúc phiên"
 [NP.Power]::SetThreadExecutionState([uint32]"0x80000000") | Out-Null
