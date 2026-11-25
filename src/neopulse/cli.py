@@ -7,6 +7,7 @@
   alerts     chạy bộ cảnh báo trên dữ liệu đã lưu, lưu vào CSDL, tùy chọn gửi Telegram
   briefing   xuất bản tin HTML của một phiên
   validate   báo cáo kiểm chứng tín hiệu + chất lượng dữ liệu
+  report-data số liệu tổng hợp cho báo cáo đồ án (CSV + SUMMARY.md, chỉ đọc SQLite)
   export     xuất dữ liệu một phiên ra CSV/Parquet
   export-web xuất JSON chỉ báo tổng hợp cho giao diện web (chỉ đọc SQLite)
   refdata    phân ngành + KL trung bình 20 phiên (REST SSI, dự phòng Vietcap) cho RVOL và ngành trong phiên
@@ -209,6 +210,15 @@ def cmd_validate(args, s: Settings) -> int:
     if args.out:
         res["table"].to_csv(args.out, index=False)
         print(f"Đã lưu bảng IC: {args.out}")
+    return 0
+
+
+def cmd_report_data(args, s: Settings) -> int:
+    from pathlib import Path
+
+    from .analytics.reportdata import build
+    out = build(s.db_path, args.source, args.out, root=Path.cwd(), index_code=args.index)
+    print(f"Đã ghi {out} và CSV cùng thư mục.")
     return 0
 
 
@@ -432,6 +442,11 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--freq", default="1min")
     sp.add_argument("--out")
     sp.set_defaults(fn=cmd_validate)
+    sp = sub.add_parser("report-data", help="số liệu tổng hợp cho báo cáo (CSV + SUMMARY.md, chỉ đọc SQLite)")
+    sp.add_argument("--source", choices=["neo", "ssi", "sim"], default="ssi")
+    sp.add_argument("--index", default="VN30")
+    sp.add_argument("--out", default="report/data")
+    sp.set_defaults(fn=cmd_report_data)
     sp = sub.add_parser("export")
     common(sp)
     sp.add_argument("--format", choices=["csv", "parquet"], default="csv")
