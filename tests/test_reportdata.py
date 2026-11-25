@@ -20,7 +20,8 @@ def _db(tmp_path):
                                       last=10000.0 + i % 3 * 10))
     db.insert_quotes([{**r, "ts": r["ts"].isoformat(timespec="milliseconds")} for r in rows])
     db.insert_index([{"ts": f"2026-11-20T09:0{i}:00+07:00", "trading_date": "2026-11-20", "index_code": "VN30",
-                      "source": "ssi", "value": 1900.0, "pct_change": 0.1} for i in range(3)])
+                      "source": "ssi", "value": 1900.0, "pct_change": 0.1, "advances": 10, "declines": 15, "no_change": 5,
+                      "n_ceiling": 0, "n_floor": 0} for i in range(3)])
     run = db.start_run("2026-11-20T08:58:00+07:00", "ssi")
     db.finish_run(run, "2026-11-20T15:05:00+07:00", n_quotes=10, n_reconnects=2, n_duplicates=5, n_rejected=1)
     db.log_quality([{"ts": "2026-11-19T10:00:00+07:00", "source": "ssi", "kind": "unknown_message", "subject": "", "detail": "x"}])

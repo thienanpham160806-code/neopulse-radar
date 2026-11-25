@@ -2,7 +2,7 @@
   "name": "neopulse-web",
   "version": "0.1.0",
   "private": true,
-  "description": "Giao diện web NeoPulse Radar (đọc JSON do `neopulse publish` đẩy lên Vercel Blob)",
+  "description": "Giao diện web NeoPulse Radar (hiển thị JSON tổng hợp do Python xuất: snapshot tĩnh, Redis và Ably)",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

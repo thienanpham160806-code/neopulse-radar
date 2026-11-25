@@ -7,7 +7,7 @@ MÁY CỦA TÁC GIẢ (giữ khóa SSI/NEO)                                   VE
 ┌───────────────────────────────────────────────┐              ┌──────────────────────────────────┐
 │ neopulse record ──► SQLite (WAL)              │              │  web/ Next.js (App Router)        │
 │                        │ đọc, mode=ro         │   vercel     │   public/data/*.json  (tĩnh)      │
-│ neopulse publish-static ◄┘                    ├──  --prod ──►│   web công khai · 8 tab          │
+│ neopulse publish-static ◄┘                    ├──  --prod ──►│   web công khai · 5 tab          │
 │   build_view → webexport → web/public/data/   │  (chủ động)  └───────────────┬──────────────────┘
 └───────────────────────────────────────────────┘                              ▼ trình duyệt / điện thoại
 ```

@@ -116,15 +116,16 @@ Mặc định dùng mẫu câu xác định dựng từ số liệu. Nếu bật
 
 ## Tài liệu tham khảo
 
-*Kiểm tra lại chi tiết thư mục (số tập, trang) trước khi đưa vào báo cáo.*
+*Đã đối chiếu tác giả, năm, tập, số và trang với IDEAS/RePEc, arXiv và danh mục ASQ ngày 25/11/2026.*
 
 - Amihud, Y. (2002). Illiquidity and stock returns: cross-section and time-series effects. *Journal of Financial Markets*, 5(1), 31–56.
-- Chordia, T., Roll, R., & Subrahmanyam, A. (2002). Order imbalance, liquidity, and market returns. *Journal of Financial Economics*, 65(1), 111–130.
-- Cont, R., Kukanov, A., & Stoikov, S. (2014). The price impact of order book events. *Journal of Financial Econometrics*, 12(1), 47–88.
-- Fama, E. F., & MacBeth, J. D. (1973). Risk, return, and equilibrium: Empirical tests. *Journal of Political Economy*, 81(3), 607–636.
-- Iglewicz, B., & Hoaglin, D. C. (1993). *How to Detect and Handle Outliers*. ASQC Quality Press.
+- Chordia, T., Roll, R., & Subrahmanyam, A. (2002). Order imbalance, liquidity, and market returns. *Journal of Financial Economics*, 65(1), 111–130. https://doi.org/10.1016/S0304-405X(02)00136-8
+- Cont, R., Kukanov, A., & Stoikov, S. (2014). The price impact of order book events. *Journal of Financial Econometrics*, 12(1), 47–88. https://doi.org/10.1093/jjfinec/nbt003
+- Fama, E. F., & MacBeth, J. D. (1973). Risk, return, and equilibrium: Empirical tests. *Journal of Political Economy*, 81(3), 607–636. https://doi.org/10.1086/260061
+- Iglewicz, B., & Hoaglin, D. C. (1993). *How to Detect and Handle Outliers* (ASQC Basic References in Quality Control: Statistical Techniques, Vol. 16). Milwaukee: ASQC Quality Press.
 - Stoikov, S. (2018). The micro-price: a high-frequency estimator of future prices. *Quantitative Finance*, 18(12), 1959–1966.
-- VPBankS. *NeoAPI Docs* v1.0.0. https://neoinvest.vpbanks.com.vn/neo-openapi/docs/overview (truy cập 14/11/2026).
+- VPBankS. *NeoAPI Docs* v1.0.0. https://neoinvest.vpbanks.com.vn/neo-openapi/docs/overview (truy cập 14/11/2026). **[Tác giả kiểm tra lại: trang cần đăng nhập, chưa xác minh tự động được.]**
+- SSI. *FastConnect Data API v3*. https://developers.ssi.com.vn (nguồn dữ liệu đang dùng). **[Tác giả bổ sung ngày truy cập.]**
 
 ## 11. Ngành trong phiên — `finance/sectors.py`
 
@@ -141,4 +142,6 @@ Lịch sử dùng cho profile và KL ngày dự phòng được lọc theo từn
 
 RVOL thanh = KL khớp trong thanh / (KL TB 20 phiên × (f(m₁) − f(m₀))), với f(m) là tỷ lệ khối lượng cả ngày thường đã khớp tới phút giao dịch thứ m. Nhờ vậy so với **cùng thời điểm** của các phiên trước, không so với cả ngày. KL TB 20 phiên lấy từ REST ngày của SSI (`neopulse refdata --refresh`, dự phòng Vietcap qua vnstock). f(m) dùng đường thực nghiệm khi đã có ít nhất 3 phiên ghi trọn, nếu không thì **giả định phân bổ đều theo phút** (bỏ qua hình chữ U và khối lượng ATC: biết là thô).
 
-Cảnh báo "Khối lượng tăng bất thường" dùng RVOL thanh ≥ 3 (CAO khi ≥ 6) khi có KL TB 20 phiên; nếu không có thì quay về z bền vững của log khối lượng trong phiên. Lý do: z trong phiên cần ít nhất 20 thanh lịch sử và không biết mức "bình thường" của chính mã đó. Trên dữ liệu thật 19/11/2026 (10:59–11:29, 929 thanh, 30 mã), quy tắc z cũ cho 0 cảnh báo khối lượng, quy tắc RVOL cho 12 (1,29% số thanh, 2 mức CAO). **IC chưa kiểm định lại được** vì mới có một phiên (cần ít nhất 2 phiên để tách trong/ngoài mẫu); cần chạy lại sau khi đủ phiên.
+Cảnh báo "Khối lượng tăng bất thường" dùng RVOL thanh ≥ 3 (CAO khi ≥ 6) khi có KL TB 20 phiên; nếu không có thì quay về z bền vững của log khối lượng trong phiên. Lý do: z trong phiên cần ít nhất 20 thanh lịch sử và không biết mức "bình thường" của chính mã đó. Trên dữ liệu thật 19/11/2026 (10:59–11:29, 929 thanh, 30 mã), quy tắc z cũ cho 0 cảnh báo khối lượng, quy tắc RVOL cho 12 (1,29% số thanh, 2 mức CAO). IC và tần suất cảnh báo trên các phiên thật: xem [`report/data/SUMMARY.md`](../report/data/SUMMARY.md) (sinh bằng `neopulse report-data`).
+
+**Ghi nhận khi đối chiếu dữ liệu thật (25/11/2026):** dữ liệu SSI chỉ có khối lượng khớp từ 09:15 (hết ATO) và sổ lệnh gần như đứng yên sau 14:45 (hết ATC), nên tiêu chí "5 phút đầu, tới 14:59" ở trên không phiên thật nào đạt; RVOL vì thế luôn dùng đường phân bổ đều. Đề xuất đổi mốc thành 09:15–14:45; **chưa sửa** để giữ nguyên công thức đã mô tả.

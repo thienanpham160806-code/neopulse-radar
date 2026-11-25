@@ -1,6 +1,8 @@
 # Kế hoạch kiểm thử và kiểm chứng
 
-## 1. Kiểm thử tự động (`pytest`, 243 ca, không cần mạng)
+## 1. Kiểm thử tự động (`pytest`, không cần mạng)
+
+Số ca không ghi cứng ở đây. Đếm bằng `python -m pytest --co -q` (Python) và `cd web && npx vitest list` (web); `neopulse report-data` chạy hai lệnh này và ghi kết quả vào [`report/data/SUMMARY.md`](../report/data/SUMMARY.md#kiểm-thử).
 
 | Tệp | Kiểm tra | Vì sao quan trọng |
 |---|---|---|
@@ -13,6 +15,11 @@
 | `test_ingest_storage.py` | Múi giờ VN giữ nguyên qua lưu/đọc; khử lặp; loại tin đến muộn; cho phép đặt lại lũy kế sang phiên mới; ghi log thông điệp lạ; tự ghi theo lô; ràng buộc duy nhất; xóa theo nguồn | Lặp, muộn, thời gian |
 | `test_validation_ranking.py` | Tách theo thời gian; lợi suất tương lai dừng ở cuối phiên; IC bắt được tín hiệu cài và ≈ 0 với nhiễu; IC khớp `scipy.stats.spearmanr`; mẫu nhỏ → trống kèm ghi chú | Kiểm chứng không tự lừa mình |
 | `test_explain_config.py` | Số bịa bị loại; ngôn ngữ khuyến nghị bị loại; lỗi gọi mô hình → mẫu câu; cấu hình che bí mật; log che JWT/mật khẩu; Telegram tùy chọn, không ném lỗi | Mục 13 của đề và bảo mật |
+| `test_ssi.py` | Khung tin SSI đổi về lược đồ chung; mã HĐTL KRX `41I1GC000` và mã cũ `VN30FYYMM` suy đúng ngày đáo hạn; chặn endpoint giao dịch | Nguồn chính đang dùng |
+| `test_telegram_ui.py`, `test_telegram_cloud.py`, `test_telegram_store.py` | Định dạng tin HTML có escape; giới hạn 4.096 ký tự; lệnh mới và lệnh cũ; nút bấm; bấm mã mở thẻ mã không tạo đăng ký; gom cảnh báo; bản tin tin tức chỉ gửi 08:30 và 15:00, không gửi lẻ; chống phát lại update cũ; lỗi không lộ token/chat ID | Bot không gửi sai, không gửi trùng, không khuyến nghị |
+| `test_health.py` | Đến 09:05 chưa có dữ liệu hôm nay thì báo; im lặng quá 5 phút giao dịch thì báo, nghỉ trưa không tính; thứ Bảy/Chủ nhật không báo; mỗi sự cố báo một lần; thiếu `TELEGRAM_OWNER_CHAT_ID` thì không gửi | Phát hiện bộ ghi chết khi máy ghi tắt |
+| `test_reportdata.py` | `report-data` mở CSDL chỉ đọc (băm tệp trước/sau bằng nhau); khoảng trống tính từ 09:00; đếm nối lại/lặp/loại/lạ; phiên đủ/thiếu; CSV không có giá hay sổ lệnh từng tick | Số liệu báo cáo sinh từ dữ liệu thật, không bịa |
+| `test_liverelay.py`, `test_marketstore.py` | Bộ phát trực tiếp chỉ đọc SQLite; tin Ably đúng lược đồ; hạn mức tự giãn nhịp; payload Redis mới nhất và theo phiên; kích hoạt worker bot | Web thời gian thực |
 | `test_end_to_end.py` | Sinh → lưu → chỉ báo → cảnh báo → bản tin → CLI; mô phỏng tuân thủ bước giá/biên độ; `as_of` không dùng dữ liệu sau đó và **cảnh báo quá khứ không đổi khi có thêm dữ liệu**; trạng thái rỗng; polling sống sót khi API lỗi; đối chiếu WS–REST bắt lệch | Toàn chuỗi |
 
 ## 2. Tình huống lỗi trên giao diện
@@ -35,31 +42,33 @@
 | NaN/inf -> null, kiểu numpy -> Python | pytest + `allow_nan=False` | JSON hợp lệ nghiêm ngặt |
 | Nhãn MÔ PHỎNG và trạng thái | pytest, vitest | `is_simulated`, `source_label`="MÔ PHỎNG", web luôn hiện nhãn |
 | Không bí mật, không sổ lệnh thô trong JSON | pytest, vitest (quét chuỗi) | không có password/secret/token/bid1/ask1... |
-| Trạng thái fresh/stale/error/closed; ngoài giờ không phải lỗi | pytest + vitest (40 ca) | ngưỡng xanh <60 s, cam <5 phút, đỏ; "phiên đã kết thúc" |
+| Trạng thái fresh/stale/error/closed; ngoài giờ không phải lỗi | pytest + vitest (`status.test.ts`) | ngưỡng xanh <60 s, cam <5 phút, đỏ; "phiên đã kết thúc" |
 | SQLite mở chỉ đọc | pytest | thử `DELETE` báo `OperationalError`; thiếu CSDL ném `FileNotFoundError` |
 | `publish-static` sinh đúng tệp (latest, sessions, index) với `snapshot_at/kind/label`, `snapshot_realtime=false` | `tests/test_webstatic.py` | cuối phiên khi phiên đã đóng, giữa phiên khi đang mở |
 | JSON snapshot không bí mật, không sổ lệnh thô, không NaN; không sửa CSDL nguồn | pytest | quét chuỗi, `parse_constant`, so mtime/size |
 | `--deploy` chạy `vercel --prod --yes` trong `web/`, in URL alias; lỗi báo rõ | pytest (runner giả) | thiếu vercel / thư mục sai / mã thoát khác 0 |
 | Dữ liệu thật không vào git | pytest (`git check-ignore`, `git ls-files`) | `web/public/data/**` bị ignore; `web/public/sample/**` được theo dõi và đều `is_simulated` |
-| Trạng thái snapshot: cuối phiên không bao giờ đỏ, giữa phiên cam, MÔ PHỎNG/lỗi giữ nguyên | vitest (`snapshot.test.ts`) | 11 ca |
+| Trạng thái snapshot: cuối phiên không bao giờ đỏ, giữa phiên cam, MÔ PHỎNG/lỗi giữ nguyên | vitest (`snapshot.test.ts`) | đạt |
+| Cập nhật trực tiếp: nhận tin Ably, gộp vào snapshot, mất tin quá 60 giây thì quay về snapshot | vitest (`live.test.ts`, `cloud-data.test.ts`) | đạt |
+| Đường dẫn: `/` là trang chủ, `/thi-truong?tab=…` đúng tab, link cũ `/?tab=…` chuyển hướng | vitest (`routes.test.ts`) + HTTP production | 200 và chuyển hướng 307 |
 | Web/API/snapshot công khai, không cần cookie | vitest + HTTP production | 200 |
 | `publish --dry-run` (Blob, tùy chọn) không gọi mạng | pytest (chặn `httpx.Client.put`) | ghi `latest.json`, `index.json` cục bộ |
 | Blob: ghi đè cùng đường dẫn, header đúng giao thức | pytest (MockTransport) | `x-allow-overwrite=1`, `x-add-random-suffix=0` |
 | Mạng rớt: thử lại lùi dần, không crash, log không lộ token | pytest | chờ 1 s, 2 s...; `failures>0` nhưng vòng lặp vẫn chạy đủ chu kỳ |
 | CSDL thiếu: đẩy trạng thái `error` để web hiện rõ | pytest | `latest.json` có `data_status.state="error"` |
 | Token Ably công khai vẫn chỉ subscribe, TTL ngắn và không lộ khóa | vitest + HTTP production | 200, capability chỉ subscribe; thiếu key:503 |
-| Bố cục di động 390 px, không tràn ngang, 8 tab, sáng/tối | puppeteer chụp từng tab | `scrollWidth` = 390; ảnh trong `docs/img/web_*_sim.png` |
+| Bố cục di động 390 px, không tràn ngang, 5 tab, sáng/tối | trình duyệt chụp từng tab | `scrollWidth` = 390; ảnh `docs/img/*_live*.png` (thật) và `web_*_sim.png` (mô phỏng) |
 
 ## 3. Kiểm chứng với dữ liệu thật — **việc còn phải làm**
 
 | Việc | Bằng chứng đưa vào báo cáo |
 |---|---|
-| Đối chiếu 3–5 mã với bảng giá NEO Invest cùng thời điểm | ảnh chụp hai bên |
+| Đối chiếu 3–5 mã với bảng giá công khai cùng thời điểm | ảnh chụp hai bên |
 | Đối chiếu WebSocket với REST | số dòng `reconcile` và `ws_rest_mismatch` trong `quality_log` |
-| Độ ổn định kết nối một phiên | `ingest_runs`: số tin, số lần nối lại, số bị loại/lặp |
+| Độ ổn định kết nối một phiên | `report/data/SUMMARY.md` bảng "Từng phiên" (từ `ingest_runs`, `quality_log`) |
 | Khoảng trống dữ liệu | `neopulse validate` mục [1] |
-| IC ngoài mẫu sau ≥ 5 phiên | bảng `neopulse validate --source neo` — báo cả khi yếu |
-| Tần suất cảnh báo mỗi phiên theo quy tắc | mục [4]; nếu quá dày, điều chỉnh ngưỡng và ghi lại lý do |
+| IC ngoài mẫu sau ≥ 5 phiên | `neopulse report-data --source ssi` (bảng IC mọi phiên và chỉ phiên đủ) — báo cả khi yếu |
+| Tần suất cảnh báo mỗi phiên theo mức và quy tắc | `report/data/SUMMARY.md` mục "Cảnh báo"; nếu lệch, đề xuất ngưỡng và ghi lý do |
 | Thử lỗi có chủ đích (rút mạng, sai mật khẩu) | ảnh log + ảnh dashboard |
 
 ## 4. Kết quả trên dữ liệu mô phỏng (chỉ xác nhận mã chạy đúng)
@@ -70,7 +79,7 @@ Chạy `neopulse simulate --sessions 6 --reset && neopulse validate`. Với seed
 
 | Ca | Kiểm bằng | Kết quả |
 |---|---|---|
-| 8 tab, desktop 1440 và điện thoại 390, sáng/tối: không tràn ngang | puppeteer chụp từng tab | scrollWidth = viewport ở mọi tổ hợp |
+| 8 tab (bản giao diện lúc đó), desktop 1440 và điện thoại 390, sáng/tối: không tràn ngang | puppeteer chụp từng tab | scrollWidth = viewport ở mọi tổ hợp |
 | Màu bảng giá: trần/sàn ưu tiên hơn tăng/giảm; mọi số có dấu có ▲▼■ | vitest `fmt.test.ts` + rà ảnh | đạt |
 | Số kiểu Việt trong câu do Python sinh | pytest `test_vn_digits_converts_numbers_only` | đạt |
 | Trợ năng | Lighthouse mobile | Accessibility 100 |

@@ -10,20 +10,20 @@ Radar nội phiên cho thị trường cổ phiếu Việt Nam: đo nhịp thị
 [![python](https://img.shields.io/badge/python-3.10%2B-3776AB?style=flat&logo=python&logoColor=white)](https://www.python.org/)
 [![web](https://img.shields.io/badge/web-Next.js%2015-000000?style=flat&logo=nextdotjs&logoColor=white)](web/README.md)
 [![data](https://img.shields.io/badge/data-SSI%20FastConnect%20%C2%B7%20NEO%20API-1F6FEB?style=flat)](#dữ-liệu)
-[![tests](https://img.shields.io/badge/tests-243-2EA44F?style=flat&logo=pytest&logoColor=white)](tests/)
+[![tests](https://img.shields.io/badge/tests-pytest%20%C2%B7%20vitest-2EA44F?style=flat&logo=pytest&logoColor=white)](report/data/SUMMARY.md#kiểm-thử)
 [![license](https://img.shields.io/badge/license-MIT-lightgrey?style=flat)](LICENSE)
 
-**[Bản web](https://neopulse-radar.vercel.app)** · **[Phương pháp](docs/methodology.md)** · **[Kiến trúc](docs/architecture.md)** · **[Dàn ý báo cáo](report/README.md)**
+**[Bản web](https://neopulse-radar.vercel.app)** · **[Phương pháp](docs/methodology.md)** · **[Kiến trúc](docs/architecture.md)** · **[Số liệu báo cáo](report/data/SUMMARY.md)** · **[Dàn ý báo cáo](report/README.md)**
 
 ![Bản web, tab Tổng quan với dữ liệu SSI thật phiên 20/11/2026](docs/img/web_overview_live.png)
 *Bản web với dữ liệu SSI FastConnect thật, lần cập nhật 11:30 ngày 20/11/2026.*
 
 ## Kết quả chính
 
-- **Dữ liệu thật đã thu.** Bộ ghi SSI FastConnect đã ghi 3 phiên (19/11, 20/11 và 23/11/2026), tổng cộng 587.084 bản ghi giá và sổ lệnh của 31 mã (rổ VN30 và chỉ số) vào SQLite. Phiên 19/11 bắt đầu muộn; phiên 23/11 thiếu đoạn 09:00–10:16 do tác vụ ghi không tự khởi động. Mục tiêu tối thiểu là 5 phiên trước khi kiểm chứng ngoài mẫu.
-- **Đã thử kết nối NEO API thật.** Đăng nhập `/auth/token` thành công, nhưng mọi API dữ liệu trả `NEOINP000401` vì NEO bắt buộc đăng ký IP (IP whitelist). Mạng ký túc xá dùng IP động nên không đăng ký được. Endpoint và header của mã nguồn khớp tài liệu v1.0.0; chi tiết lần thử ở [`docs/neo_api_notes.md`](docs/neo_api_notes.md).
+- **Dữ liệu thật đã thu.** Bộ ghi SSI FastConnect ghi sổ lệnh 3 mức, khối ngoại và chỉ số của rổ VN30 vào SQLite từ 19/11/2026. Số phiên, số bản ghi, độ phủ và khoảng trống từng phiên **sinh tự động** bằng `neopulse report-data` vào [`report/data/SUMMARY.md`](report/data/SUMMARY.md); không ghi cứng ở đây để khỏi lệch khi có phiên mới.
+- **SSI thay NEO API, có chấp thuận của giảng viên.** Đăng nhập NEO `/auth/token` thành công, nhưng mọi API dữ liệu trả `NEOINP000401` vì NEO bắt buộc đăng ký IP cố định (IP whitelist); mạng ký túc xá dùng IP động. Giảng viên đã chấp thuận dùng SSI FastConnect thay NEO API ([ngày, hình thức chấp thuận]). Lớp NEO vẫn giữ làm nguồn dự phòng; chi tiết lần thử ở [`docs/neo_api_notes.md`](docs/neo_api_notes.md).
 - **Một sản phẩm, hai nguồn.** Khung tin SSI được `ssi/adapter.py` đổi về cùng lược đồ thô với NEO, nên chuẩn hóa, lưu trữ, logic tài chính và giao diện dùng chung. Đổi nguồn bằng một biến `NEOPULSE_SOURCE`.
-- **Kiểm thử.** 243 ca kiểm thử offline: công thức so với giá trị tính tay, không nhìn trước tương lai, dữ liệu bẩn, đăng nhập lại khi 401, WebSocket rớt hoặc treo, chặn endpoint giao dịch, che bí mật trong log.
+- **Kiểm thử.** Kiểm thử offline bằng pytest (công thức so với giá trị tính tay, không nhìn trước tương lai, dữ liệu bẩn, đăng nhập lại khi 401, WebSocket rớt hoặc treo, chặn endpoint giao dịch, che bí mật trong log, bot Telegram) và vitest cho web. Số ca đếm bằng lệnh thật, xem [`SUMMARY.md`](report/data/SUMMARY.md#kiểm-thử).
 - **Web công khai không lộ dữ liệu thô.** Bản web trên Vercel chỉ nhận JSON chỉ báo tổng hợp; khóa SSI/NEO và bảng giá từng tick ở lại máy ghi.
 
 ## Đáp ứng yêu cầu đề bài
@@ -35,7 +35,7 @@ Radar nội phiên cho thị trường cổ phiếu Việt Nam: đo nhịp thị
 | Làm sạch và lưu trữ | Ép kiểu, kiểm tra miền giá trị, khử lặp, loại tin đến muộn, SQLite chế độ WAL, nhật ký chất lượng — `data/` |
 | Logic tài chính | Spread, OBI, microprice, trượt giá, độ rộng, khối ngoại, basis, điểm nhịp — `finance/` |
 | Phân tích và cảnh báo | z-score bền vững, cảnh báo có mức ưu tiên, xếp hạng, IC trong và ngoài mẫu, bản tin HTML — `analytics/` |
-| Giao diện | Dashboard Streamlit 8 tab (`app/`) và bản web Next.js (`web/`) |
+| Giao diện | Bản web Next.js 5 tab (`web/`, sản phẩm công khai) và dashboard Streamlit 8 tab (`app/`, chạy cục bộ để phân tích sâu) |
 | Gợi ý của đề được kết hợp | 1 (nhịp thị trường), 3 (thanh khoản), 4 (mất cân bằng sổ lệnh), 5 (khối ngoại), 6–7 (bất thường và cảnh báo), 10 (basis), 11 (bộ ghi dữ liệu), 14 (diễn giải có rào chắn) |
 | Sử dụng có trách nhiệm | Không đặt lệnh, không khuyến nghị MUA/BÁN, dữ liệu mô phỏng luôn gắn nhãn, bí mật không rời máy |
 
@@ -43,8 +43,8 @@ Radar nội phiên cho thị trường cổ phiếu Việt Nam: đo nhịp thị
 
 | Nguồn | Nội dung | Trạng thái |
 |---|---|---|
-| [SSI FastConnect Data v3](https://developers.ssi.com.vn) | REST (`securitiesByBoard`, chỉ số, lịch sử ngày) và streaming giá, sổ lệnh 3 mức, khối ngoại, chỉ số | Nguồn dữ liệu thật đang dùng, ghi từ 19/11/2026 |
-| [NEO API v1.0.0 (VPBankS)](https://neoinvest.vpbanks.com.vn/neo-openapi/docs/overview) | `stockDetail*`, `marketIndexDetail`, `marketStatus`; WebSocket `stockInfo`, `marketInfo`, `marketSession` | Lớp kết nối hoàn chỉnh, kiểm thử bằng máy chủ giả; chờ IP được whitelist |
+| [SSI FastConnect Data v3](https://developers.ssi.com.vn) | REST (`securitiesByBoard`, chỉ số, lịch sử ngày) và streaming giá, sổ lệnh 3 mức, khối ngoại, chỉ số | **Nguồn chính**, ghi từ 19/11/2026. Dùng thay NEO API với chấp thuận của giảng viên ([ngày, hình thức chấp thuận]) |
+| [NEO API v1.0.0 (VPBankS)](https://neoinvest.vpbanks.com.vn/neo-openapi/docs/overview) | `stockDetail*`, `marketIndexDetail`, `marketStatus`; WebSocket `stockInfo`, `marketInfo`, `marketSession` | **Dự phòng.** Lớp kết nối hoàn chỉnh, kiểm thử bằng máy chủ giả; chưa lấy được dữ liệu vì cần IP cố định |
 | [vnstock](https://github.com/thinh-vu/vnstock) (Vietcap) | Phân ngành, khối lượng trung bình 20 phiên, báo cáo tài chính năm cho trang doanh nghiệp | Chỉ làm dữ liệu tham chiếu và dự phòng |
 | Bộ mô phỏng (`neo_api/sim.py`) | Phiên giả lập có sự kiện cài sẵn để kiểm thử độ thu hồi cảnh báo | Luôn ghi `source='sim'`, giao diện gắn nhãn MÔ PHỎNG |
 
@@ -61,9 +61,10 @@ flowchart LR
     NORM --> DB[("SQLite WAL")]
     DB --> FIN["Logic tài chính<br/>finance/"]
     FIN --> ANA["Bất thường · cảnh báo · IC<br/>analytics/"]
-    ANA --> APP["Streamlit 8 tab"]
-    ANA --> BRF["Bản tin HTML · Telegram"]
-    ANA --> WEB["JSON tổng hợp<br/>Next.js trên Vercel"]
+    ANA --> APP["Streamlit 8 tab<br/>(cục bộ)"]
+    ANA --> BRF["Bản tin HTML"]
+    ANA --> WEB["JSON tổng hợp · Ably<br/>web Next.js 5 tab trên Vercel"]
+    WEB --> BOT["Bot Telegram"]
 ```
 
 | Chỉ báo | Công thức |
@@ -114,18 +115,30 @@ neopulse simulate --sessions 6 --reset       # sinh 6 phiên MÔ PHỎNG
 streamlit run src/neopulse/app/dashboard.py  # dashboard 8 tab
 neopulse briefing                            # bản tin HTML vào out/
 neopulse validate                            # báo cáo kiểm chứng
-python -m pytest -q                          # 243 kiểm thử offline
+python -m pytest -q                          # kiểm thử offline
 ```
 
 **Chạy với dữ liệu thật (SSI FastConnect)**
 
 1. Đăng nhập [developers.ssi.com.vn](https://developers.ssi.com.vn), vào *Quản lý API Key*, tạo key mới và lưu API Secret ngay (chỉ hiện một lần).
-2. Điền `.env`: `NEOPULSE_MODE=live`, `NEOPULSE_SOURCE=ssi`, `SSI_API_KEY`, `SSI_API_SECRET`, và tùy chọn `NEOPULSE_FUTURES=VN30F2612`.
+2. Điền `.env`: `NEOPULSE_MODE=live`, `NEOPULSE_SOURCE=ssi`, `SSI_API_KEY`, `SSI_API_SECRET`, và tùy chọn `NEOPULSE_FUTURES=41I1GC000` (mã HĐTL theo chuẩn KRX; mã cũ dạng `VN30F2612` vẫn được nhận).
 3. `neopulse check` để kiểm tra kết nối (chỉ in trạng thái đã/chưa điền bí mật).
-4. `neopulse record` trong giờ giao dịch (tự dừng 15:05). Trên Windows có thể giao cho Task Scheduler bằng `scripts/run_record_session.ps1`.
+4. `neopulse record` trong giờ giao dịch (tự dừng 15:05). Trên Windows, giao cho Task Scheduler (xem "Lịch ghi tự động" bên dưới).
+5. Sau phiên: `neopulse briefing --source ssi`, `neopulse alerts --source ssi`, rồi `neopulse report-data --source ssi --out report/data/` để cập nhật số liệu báo cáo; `neopulse validate --source ssi` cho bảng IC chi tiết.
 
 Gói chuẩn bị cho bộ thu chạy độc lập trên cloud: [`deploy/collector/`](deploy/collector/README.md). **Chưa kích hoạt**: cần xác minh gói miễn phí không thẻ có đủ RAM và lưu trữ bền, chuyển dữ liệu/Secret sau xác nhận, rồi thử thu thật. Khi chưa nghiệm thu, laptop vẫn là nơi ghi dữ liệu.
-5. Sau phiên: `neopulse briefing --source ssi`, `neopulse alerts --source ssi`; sau ≥ 5 phiên: `neopulse validate --source ssi`.
+
+**Lịch ghi tự động (Windows)**
+
+`scripts/cai_lich_va_chay.cmd` (chuột phải, *Run as administrator*) cài tác vụ `NeoPulseRecord` từ `scripts/NeoPulseRecord_task.xml`: chạy 8:55 thứ Hai–thứ Sáu, chạy bù khi máy bật muộn và khi đăng nhập. `scripts/run_record_session.ps1` tự thoát ngoài 08:30–14:45, chờ mạng tối đa 5 phút, chạy lại bộ ghi sau 30 giây nếu nó dừng giữa phiên. Máy **tắt hẳn hoặc ngủ đông** thì không tác vụ nào tự chạy được: để máy cắm sạc, chỉ cho ngủ (sleep), và bật hẹn giờ đánh thức khi chạy pin (`powercfg /setdcvalueindex SCHEME_CURRENT SUB_SLEEP RTCWAKE 1`, rồi `powercfg /setactive SCHEME_CURRENT`).
+
+Kiểm tra lịch đang hoạt động (PowerShell):
+```powershell
+Get-ScheduledTask NeoPulseRecord | Select-Object State, @{n='Triggers';e={$_.Triggers.CimClass.CimClassName -join ', '}}
+Get-ScheduledTaskInfo NeoPulseRecord | Select-Object LastRunTime, LastTaskResult, NextRunTime   # LastTaskResult 0 = thành công
+Get-Content "out\record_$(Get-Date -Format yyyyMMdd).log" -Tail 5 -Encoding UTF8                 # dòng "SSI WS authenticated | N tin" tăng dần
+```
+Nếu bật `TELEGRAM_OWNER_CHAT_ID` trên Vercel, worker cloud nhắn riêng cho bạn khi đến 09:05 chưa có dữ liệu hôm nay hoặc dữ liệu im lặng quá 5 phút trong giờ khớp lệnh (xem mục Bot Telegram).
 
 **Chạy với NEO API** (khi IP của máy đã được VPBankS đăng ký): điền `NEO_USERNAME`, `NEO_PASSWORD`, đặt `NEOPULSE_SOURCE=neo`, rồi chạy cùng các lệnh trên. Danh sách việc cần xác nhận ở lần chạy đầu: [`docs/live_checklist.md`](docs/live_checklist.md).
 
@@ -143,7 +156,7 @@ Web hiển thị bản dữ liệu tĩnh (snapshot) và nhận cập nhật tr�
 | Biến | Bắt buộc | Ý nghĩa |
 |---|---|---|
 | `NEOPULSE_MODE` | ✓ | `sim` hoặc `live` |
-| `NEOPULSE_SOURCE` | live | `neo` (mặc định) hoặc `ssi` |
+| `NEOPULSE_SOURCE` | live | `ssi` (nguồn đang dùng) hoặc `neo` (mặc định trong mã, dự phòng) |
 | `SSI_API_KEY`, `SSI_API_SECRET` | ssi | Khóa tạo tại developers.ssi.com.vn (tên cũ `SSI_CONSUMER_*` vẫn được đọc) |
 | `SSI_API_URL`, `SSI_STREAM_URL`, `SSI_MAX_RPS`, `SSI_PRICE_SCALE` | – | Địa chỉ dịch vụ SSI, giới hạn tần suất (mặc định 5), hệ số giá |
 | `NEO_USERNAME`, `NEO_PASSWORD` | neo | Đăng nhập `/auth/token` |
@@ -152,12 +165,12 @@ Web hiển thị bản dữ liệu tĩnh (snapshot) và nhận cập nhật tr�
 | `NEO_DEVICE_ID`, `NEO_DEVICE_TYPE` | – | Header `x-device`, `x-devicetype` |
 | `NEO_MAX_RPS` | – | Giới hạn phía client, tối đa 5 (mặc định 4) |
 | `NEOPULSE_UNIVERSE_INDEX`, `NEOPULSE_EXTRA_SYMBOLS`, `NEOPULSE_INDEXES` | – | Rổ theo dõi |
-| `NEOPULSE_FUTURES` | – | Mã HĐTL, ví dụ `VN30F2612` (ngày đáo hạn tự suy: thứ Năm thứ ba của tháng) |
+| `NEOPULSE_FUTURES` | – | Mã HĐTL theo chuẩn KRX, ví dụ `41I1GC000` (tháng 12/2026); mã cũ `VN30FYYMM` vẫn được nhận. Ngày đáo hạn tự suy: thứ Năm thứ ba của tháng |
 | `NEOPULSE_DB_PATH` | – | Tệp SQLite |
-| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | – | Gửi cảnh báo mức CAO |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | – | `neopulse alerts --notify` gửi cảnh báo mức CAO từ máy ghi |
 | `LLM_API_KEY`, `LLM_MODEL` | – | Diễn giải bằng mô hình ngôn ngữ, có kiểm tra số liệu |
 | `ABLY_API_KEY` | – | Cập nhật trực tiếp cho bản web |
-| `BLOB_READ_WRITE_TOKEN`, `BLOB_PREFIX` | – | Chỉ cho `neopulse publish` (Vercel Blob, tốn hạn mức) |
+| `BLOB_READ_WRITE_TOKEN`, `BLOB_PREFIX` | – | Chỉ cho `neopulse publish` (Vercel Blob): tùy chọn, **chưa kiểm chứng với Blob thật**, tốn hạn mức; cách đang dùng là snapshot tĩnh + Ably |
 
 </details>
 
@@ -175,16 +188,16 @@ scripts/                lịch ghi phiên trên Windows
 tests/                  kiểm thử offline (máy chủ giả, không cần mạng)
 data_sample/            dữ liệu MÔ PHỎNG mẫu
 docs/                   kiến trúc, phương pháp, từ điển dữ liệu, kế hoạch kiểm thử, ghi chú API
-report/                 dàn ý báo cáo theo khung của đề
+report/                 dàn ý báo cáo; report/data/ là số liệu sinh bằng `neopulse report-data`
 ```
 
 ## Đầu ra
 
-- Dashboard Streamlit 8 tab: Tổng quan, Sổ lệnh & thanh khoản, Khối ngoại, Phái sinh, Cảnh báo, Xếp hạng, Kiểm chứng & dữ liệu, Phương pháp & giới hạn.
-- Bản web: [neopulse-radar.vercel.app](https://neopulse-radar.vercel.app).
+- **Bản web** (sản phẩm công khai): [neopulse-radar.vercel.app](https://neopulse-radar.vercel.app). Trang chủ, trang thị trường 5 tab (Tổng quan, Vì sao?, Bất thường, Chi tiết mã, Phương pháp), trang doanh nghiệp và trang nhận tin Telegram. Cập nhật trực tiếp qua Ably khi bộ phát chạy, ngoài giờ dùng snapshot tĩnh.
+- **Dashboard Streamlit** (chạy cục bộ, cho tác giả phân tích sâu trên SQLite): 8 tab Tổng quan, Sổ lệnh & thanh khoản, Khối ngoại, Phái sinh, Cảnh báo, Xếp hạng, Kiểm chứng & dữ liệu, Phương pháp & giới hạn. Không đưa lên mạng.
 - Bản tin cuối phiên dạng HTML ([mẫu mô phỏng](docs/sample_briefing_sim.html)) và cảnh báo mức CAO qua Telegram.
-- Báo cáo kiểm chứng: IC trong và ngoài mẫu, IC từng phiên, chất lượng dữ liệu, độ thu hồi cảnh báo.
-- Ảnh chụp giao diện: [`docs/img/`](docs/img/). Các ảnh có hậu tố `_sim` dùng dữ liệu mô phỏng.
+- Báo cáo kiểm chứng: IC trong và ngoài mẫu, IC từng phiên, chất lượng dữ liệu, độ thu hồi cảnh báo (`neopulse validate`); bảng tổng hợp cho báo cáo ở [`report/data/SUMMARY.md`](report/data/SUMMARY.md).
+- Ảnh chụp giao diện: [`docs/img/`](docs/img/). Hậu tố `_live` là dữ liệu SSI thật, `_sim` là dữ liệu mô phỏng.
 
 ## Bot Telegram
 
@@ -222,19 +235,21 @@ Bộ mô phỏng · Dữ liệu MÔ PHỎNG · Không phải lời khuyên đầ
 
 **Vận hành.** Webhook `web/api/telegram.py` trả lời lệnh và nút bấm ngay. Tin tự động gửi theo đợt qua `web/api/telegram_tick.py`: bộ phát trực tiếp gọi khoảng mỗi phút trong giờ giao dịch, cron ngoài gọi mỗi 5 phút, GitHub Actions là dự phòng. Khóa Redis chặn hai lượt chạy song song. Đăng ký lưu trong Redis, mã hóa Fernet, ghi có điều kiện (CAS), không xử lý lại update cũ.
 
-**Cấu hình** (biến môi trường trên Vercel, không đưa vào Git): `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `TELEGRAM_STATE_KEY`, `TELEGRAM_TICK_SECRET`, `KV_REST_API_URL`, `KV_REST_API_TOKEN`. Sau khi đổi lệnh, chạy `python tools/configure_telegram_profile.py` (mô tả bot và menu lệnh) và gọi `/api/telegram_tick?setup=webhook` có header `Authorization: Bearer <TELEGRAM_TICK_SECRET>` để webhook nhận cả nút bấm.
+**Cấu hình** (biến môi trường trên Vercel, không đưa vào Git): `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `TELEGRAM_STATE_KEY`, `TELEGRAM_TICK_SECRET`, `KV_REST_API_URL`, `KV_REST_API_TOKEN`; tùy chọn `TELEGRAM_OWNER_CHAT_ID` (chat riêng của tác giả) để nhận cảnh báo sức khỏe bộ ghi (`analytics/health.py`). Sau khi đổi lệnh, chạy `python tools/configure_telegram_profile.py` (mô tả bot và menu lệnh) và gọi `/api/telegram_tick?setup=webhook` có header `Authorization: Bearer <TELEGRAM_TICK_SECRET>` để webhook nhận cả nút bấm.
 
 ## Hạn chế
 
-- Mới thu 3 phiên dữ liệu thật, hai phiên không trọn vẹn; kiểm chứng ngoài mẫu cần ít nhất 5 phiên. Các hình và số minh họa có hậu tố `_sim` là mô phỏng.
-- Chưa lấy được dữ liệu NEO API thật vì yêu cầu IP whitelist; dữ liệu thật hiện đến từ SSI FastConnect.
+- Số phiên thật còn ít và có phiên ghi thiếu (độ phủ từng phiên ở [`SUMMARY.md`](report/data/SUMMARY.md)); kiểm chứng ngoài mẫu cần ít nhất 5 phiên, nên IC hiện chỉ mang tính minh họa. Các hình và số có hậu tố `_sim` là mô phỏng.
+- Không lấy được dữ liệu NEO API thật vì yêu cầu IP cố định; dùng SSI FastConnect thay thế với chấp thuận của giảng viên ([ngày, hình thức chấp thuận]).
+- Bộ ghi chạy trên laptop: máy tắt hoặc ngủ đông thì mất dữ liệu (phiên 23/11/2026 thiếu 09:00–10:16 vì máy khởi động lúc 10:09). Đã thêm chạy bù khi đăng nhập và cảnh báo sức khỏe qua Telegram, nhưng không thay được việc giữ máy bật.
+- Tiêu chí "phiên ghi trọn" của RVOL (`finance/rvol.py`) đòi khối lượng từ 09:05 tới 14:59, trong khi khớp lệnh chỉ có khối lượng từ 09:15 (hết ATO) tới 14:45 (hết ATC); vì vậy chưa phiên thật nào đạt và RVOL đang dùng đường phân bổ đều theo phút. Ghi nhận để xem lại, chưa sửa.
 - SSI: giao thức streaming lấy từ mã nguồn SDK chính thức vì tài liệu web không mô tả; các điểm chưa kiểm chứng ở [`docs/ssi_notes.md`](docs/ssi_notes.md).
 - Tin giá không có dấu thời gian sự kiện nên dùng thời điểm nhận (giờ Việt Nam); độ trễ mạng lẫn vào chuỗi.
 - Chỉ có 3 mức giá: OBI và độ sâu là xấp xỉ, trượt giá là cận dưới.
 - Khối ngoại và sổ lệnh tính trên rổ theo dõi, không phải toàn thị trường.
 - Trọng số điểm nhịp là lựa chọn thiết kế; điểm mô tả hiện trạng, không dự báo.
 - IC chưa trừ spread và phí; t-stat chưa hiệu chỉnh tự tương quan.
-- Chưa có lịch nghỉ lễ; SQLite phù hợp một máy, một bộ ghi.
+- Chưa có lịch nghỉ lễ (bot và cảnh báo sức khỏe vẫn chạy vào ngày lễ trong tuần); SQLite phù hợp một máy, một bộ ghi.
 
 ## Bảo mật
 

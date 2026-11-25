@@ -42,7 +42,7 @@ Web đọc theo thứ tự: `BLOB_READ_URL` (tùy chọn) → `web/public/data/`
 ```
 src/app/            page.tsx (đọc dữ liệu phía máy chủ) · api/data (làm mới) · api/ably-token
 src/lib/            types (hợp đồng JSON) · status (tươi/cũ/snapshot) · parse · data (Blob tùy chọn/tĩnh/mẫu) · auth (quyết định truy cập) · format
-src/components/     StatusBar · Dashboard (bộ lọc, 8 tab) · tabs · ui
+src/components/     StatusBar · Dashboard (bộ lọc, 5 tab) · tabs · ui
 tests/              vitest: trạng thái tươi/cũ, phân tích JSON, cổng dữ liệu, xác thực, định dạng
 ```
 
