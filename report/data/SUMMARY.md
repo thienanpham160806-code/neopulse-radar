@@ -1,27 +1,25 @@
 # Số liệu báo cáo NeoPulse Radar
 
-Sinh bằng `neopulse report-data --source ssi` lúc 16:26 25/11/2026 từ CSDL SQLite (chỉ đọc). Không chỉnh tay; chạy lại lệnh sau mỗi phiên mới. CSV chi tiết cùng thư mục.
+Sinh bằng `neopulse report-data --source ssi` lúc 17:40 25/11/2026 từ CSDL SQLite (chỉ đọc). Không chỉnh tay; chạy lại lệnh sau mỗi phiên mới. CSV chi tiết cùng thư mục.
 
 ## Tổng quan
 
 - Nguồn: `ssi` (SSI FastConnect, dữ liệu thật)
-- Số phiên: 4 (0 phiên đủ, 4 phiên thiếu)
+- Số phiên: 4 (1 phiên đủ, 3 phiên thiếu)
 - Khoảng thời gian: 2026-11-19 09:58 đến 2026-11-25 14:56
 - Tổng bản ghi giá: 966.072
 - Tổng tick chỉ số: 22.294
 
 ## Từng phiên
 
-Phiên **đủ** khi ít nhất 90% số mã đạt tiêu chí ghi trọn của `finance/rvol.py` (`complete_history`: có dữ liệu trong 5 phút đầu, tới phút cuối phiên, không mất quá 5 phút giao dịch liên tiếp). Khoảng trống tính theo phút giao dịch (bỏ nghỉ trưa), kể cả từ 09:00 tới tin đầu tiên và từ tin cuối tới 15:00.
+Phiên **đủ** khi ít nhất 90% số mã đạt tiêu chí ghi trọn của `finance/rvol.py` (`complete_history`: có khối lượng khớp trong 5 phút sau 09:15, tới 14:44, không mất quá 5 phút giao dịch liên tiếp trong giờ khớp lệnh). Khoảng trống tính theo phút giao dịch (bỏ nghỉ trưa), kể cả từ 09:00 tới tin đầu tiên và từ tin cuối tới 15:00.
 
-| phiên | bắt đầu | kết thúc | bản ghi giá | tick chỉ số | số mã | mã ghi trọn | khoảng trống lớn nhất (phút) | khoảng trống từ | lượt chạy bộ ghi | lần nối lại | tin lặp | tin bị loại | tin lạ | ghi chú chất lượng | mã ghi trọn 09:15-14:45 | đủ | đủ 09:15-14:45 |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 2026-11-19 | 09:58:38 | 14:50:18 | 57258 | 1869 | 30 | 0 | 91 | 11:30 | 4 | 19 | 29262 | 0 | 0 | 1 | 0 | thiếu | thiếu |
-| 2026-11-20 | 09:31:28 | 14:48:27 | 254064 | 5449 | 30 | 0 | 56 | 13:04 | 2 | 121 | 341255 | 0 | 0 | 0 | 0 | thiếu | thiếu |
-| 2026-11-23 | 10:16:03 | 14:57:12 | 275762 | 6243 | 30 | 0 | 76 | 09:00 | 1 | 24 | 755519 | 0 | 0 | 0 | 0 | thiếu | thiếu |
-| 2026-11-25 | 08:58:16 | 14:56:19 | 378988 | 8733 | 30 | 0 | 4 | 14:46 | 4 | 39 | 820295 | 0 | 0 | 0 | 30 | thiếu | đủ |
-
-Cột "đủ 09:15-14:45" chỉ để đối chiếu: cùng điều kiện nhưng trong khung có khối lượng khớp (09:15 hết ATO, 14:45 hết ATC). Tiêu chí của `rvol.py` đòi khối lượng từ 09:05 và tới 14:59, trong khi dữ liệu SSI thật chỉ có khối lượng khớp từ 09:15 và sổ lệnh gần như đứng yên sau 14:45, nên không phiên thật nào đạt; khi đó RVOL luôn dùng đường phân bổ đều theo phút. Đây là đề xuất xem lại, chưa sửa trong nhánh này.
+| phiên | bắt đầu | kết thúc | bản ghi giá | tick chỉ số | số mã | mã ghi trọn | khoảng trống lớn nhất (phút) | khoảng trống từ | lượt chạy bộ ghi | lần nối lại | tin lặp | tin bị loại | tin lạ | ghi chú chất lượng | đủ |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 2026-11-19 | 09:58:38 | 14:50:18 | 57258 | 1869 | 30 | 0 | 91 | 11:30 | 4 | 19 | 29262 | 0 | 0 | 1 | thiếu |
+| 2026-11-20 | 09:31:28 | 14:48:27 | 254064 | 5449 | 30 | 0 | 56 | 13:04 | 2 | 121 | 341255 | 0 | 0 | 0 | thiếu |
+| 2026-11-23 | 10:16:03 | 14:57:12 | 275762 | 6243 | 30 | 0 | 76 | 09:00 | 1 | 24 | 755519 | 0 | 0 | 0 | thiếu |
+| 2026-11-25 | 08:58:16 | 14:56:19 | 378988 | 8733 | 30 | 30 | 4 | 14:46 | 4 | 39 | 820295 | 0 | 0 | 0 | đủ |
 
 ## Cảnh báo
 
@@ -76,14 +74,6 @@ Trong mẫu: 2 phiên (2026-11-19, 2026-11-20); ngoài mẫu: 2 phiên (2026-11-
 
 ### Chỉ các phiên đủ
 
-Trong mẫu: 0 phiên (chưa có); ngoài mẫu: 0 phiên (chưa có).
-
-chưa có
-
-Độ tin cậy: Không có phiên nào trong phạm vi này. t-stat bị thổi phồng do các thanh liền kề tự tương quan; ít phiên ngoài mẫu nên chưa đủ để kết luận tín hiệu có giá trị dự báo.
-
-### Chỉ các phiên đủ 09:15-14:45 (đối chiếu)
-
 Trong mẫu: 1 phiên (2026-11-25); ngoài mẫu: 0 phiên (chưa có).
 
 | tín hiệu | tầm nhìn (thanh) | mẫu | IC | t | tỷ lệ đúng chiều | Q5-Q1 (bps) | số thanh |
@@ -101,5 +91,5 @@ Trong mẫu: 1 phiên (2026-11-25); ngoài mẫu: 0 phiên (chưa có).
 
 ## Kiểm thử
 
-- Python (`pytest --co -q`): 272 ca
+- Python (`pytest --co -q`): 273 ca
 - Web (`vitest list`): 100 ca
