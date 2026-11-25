@@ -25,12 +25,19 @@ def linear_profile(minutes: np.ndarray | float) -> np.ndarray:
     return np.clip(np.asarray(minutes, dtype=float) / SESSION_MIN, 0.0, 1.0)
 
 
+MATCH_START_MIN = 15.0  # 09:15: hết ATO, khối lượng khớp đầu tiên của phiên
+MATCH_END_MIN = 255.0   # 14:45: hết ATC; sau đó chỉ còn thỏa thuận, sổ lệnh gần như đứng yên
+
+
 def complete_history(history_bars: pd.DataFrame) -> pd.DataFrame:
-    """Giữ từng mã/phiên có đầu, cuối phiên và không mất quá 5 phút giao dịch liên tiếp."""
+    """Giữ từng mã/phiên ghi trọn giờ khớp lệnh: có khối lượng trong 5 phút sau 09:15, tới 14:44, và không mất quá
+    5 phút giao dịch liên tiếp trong khoảng đó. (Mốc cũ 09:05-14:59 không phiên SSI thật nào đạt, xem report/data.)"""
     parts = []
     for _, g in history_bars.dropna(subset=["total_volume"]).groupby(["trading_date", "symbol"]):
         m = np.sort([trading_minutes_elapsed(t.to_pydatetime()) for t in g["bar"]])
-        if m[0] <= 5 and m[-1] >= SESSION_MIN - 1 and np.diff(m).max(initial=0) <= 5 and g["total_volume"].max() > 0:
+        m = m[m <= MATCH_END_MIN]
+        if (len(m) and m[0] <= MATCH_START_MIN + 5 and m[-1] >= MATCH_END_MIN - 1
+                and np.diff(m).max(initial=0) <= 5 and g["total_volume"].max() > 0):
             parts.append(g)
     return pd.concat(parts) if parts else history_bars.iloc[:0].copy()
 

@@ -25,7 +25,6 @@ from ..data.storage import Storage
 from ..finance import rvol as frvol
 from ..timeutil import trading_minutes_elapsed
 
-MATCH_START_MIN, MATCH_END_MIN = 15.0, 255.0  # 09:15 hết ATO (có KL khớp đầu tiên), 14:45 hết ATC
 COMPLETE_SHARE = 0.9  # phiên "đủ" khi >= 90% mã có dữ liệu đạt tiêu chí complete_history của finance/rvol.py
 NA = "chưa có"
 
@@ -72,17 +71,6 @@ def _minute_to_clock(m: float) -> str:
     return f"{int(total // 60):02d}:{int(total % 60):02d}"
 
 
-def _complete_between(bars: pd.DataFrame, start_min: float, end_min: float) -> int:
-    """Số mã đạt cùng điều kiện complete_history nhưng trong khung khớp lệnh [start_min, end_min] (chỉ để đối chiếu)."""
-    n = 0
-    for _, g in bars.dropna(subset=["total_volume"]).groupby("symbol"):
-        m = np.sort([trading_minutes_elapsed(t.to_pydatetime()) for t in g["bar"]])
-        m = m[m <= end_min]
-        if len(m) and m[0] <= start_min + 5 and m[-1] >= end_min - 1 and np.diff(m).max(initial=0) <= 5 and g["total_volume"].max() > 0:
-            n += 1
-    return n
-
-
 def session_table(db: Storage, source: str) -> pd.DataFrame:
     rows = []
     runs = db._df("SELECT * FROM ingest_runs WHERE source=?", (source,))
@@ -100,7 +88,6 @@ def session_table(db: Storage, source: str) -> pd.DataFrame:
         gap, gap_at = _largest_gap(minutes)
         complete = frvol.complete_history(bars) if len(bars) else bars
         n_complete = int(complete[["symbol"]].drop_duplicates().shape[0]) if len(complete) else 0
-        n_complete_1445 = _complete_between(bars, MATCH_START_MIN, MATCH_END_MIN) if len(bars) else 0
         r = runs[runs["day"] == day] if len(runs) else runs
         q = qlog[qlog["day"] == day] if len(qlog) else qlog
         rows.append({
@@ -115,9 +102,7 @@ def session_table(db: Storage, source: str) -> pd.DataFrame:
             "tin bị loại": int(r["n_rejected"].fillna(0).sum()) if len(r) else 0,
             "tin lạ": int((q["kind"] == "unknown_message").sum()) if len(q) else 0,
             "ghi chú chất lượng": int((q["kind"] != "unknown_message").sum()) if len(q) else 0,
-            "mã ghi trọn 09:15-14:45": n_complete_1445,
             "đủ": bool(n_sym and n_complete >= COMPLETE_SHARE * n_sym),
-            "đủ 09:15-14:45": bool(n_sym and n_complete_1445 >= COMPLETE_SHARE * n_sym),
         })
     return pd.DataFrame(rows)
 
@@ -217,8 +202,6 @@ def build(db_path: str | Path, source: str, out_dir: str | Path, root: Path | No
         val_all, meta_all = validation_table(db, source)
         full_days = sessions.loc[sessions["đủ"], "phiên"].tolist()
         val_full, meta_full = validation_table(db, source, full_days)
-        days_1445 = sessions.loc[sessions["đủ 09:15-14:45"], "phiên"].tolist()
-        val_1445, meta_1445 = validation_table(db, source, days_1445)
         span = _one(db, "SELECT MIN(ts), MAX(ts) FROM quotes WHERE source=?", (source,))
     finally:
         db.close()
@@ -227,7 +210,7 @@ def build(db_path: str | Path, source: str, out_dir: str | Path, root: Path | No
     sessions.to_csv(out / "sessions.csv", index=False, encoding="utf-8")
     alerts.to_csv(out / "alerts.csv", index=False, encoding="utf-8")
     vals = [t.assign(**{"phạm vi": scope}) for t, scope in
-            ((val_all, "mọi phiên"), (val_full, "chỉ phiên đủ"), (val_1445, "chỉ phiên đủ 09:15-14:45")) if len(t)]
+            ((val_all, "mọi phiên"), (val_full, "chỉ phiên đủ")) if len(t)]
     (pd.concat(vals, ignore_index=True) if vals else pd.DataFrame()).to_csv(out / "validation.csv", index=False, encoding="utf-8")
 
     n = len(sessions)
@@ -248,15 +231,11 @@ def build(db_path: str | Path, source: str, out_dir: str | Path, root: Path | No
         "## Từng phiên",
         "",
         f"Phiên **đủ** khi ít nhất {COMPLETE_SHARE:.0%} số mã đạt tiêu chí ghi trọn của `finance/rvol.py` "
-        "(`complete_history`: có dữ liệu trong 5 phút đầu, tới phút cuối phiên, không mất quá 5 phút giao dịch liên tiếp). "
+        "(`complete_history`: có khối lượng khớp trong 5 phút sau 09:15, tới 14:44, không mất quá 5 phút giao dịch "
+        "liên tiếp trong giờ khớp lệnh). "
         "Khoảng trống tính theo phút giao dịch (bỏ nghỉ trưa), kể cả từ 09:00 tới tin đầu tiên và từ tin cuối tới 15:00.",
         "",
-        *_md(sessions.assign(**{c: sessions[c].map({True: "đủ", False: "thiếu"}) for c in ("đủ", "đủ 09:15-14:45")})),
-        "",
-        "Cột \"đủ 09:15-14:45\" chỉ để đối chiếu: cùng điều kiện nhưng trong khung có khối lượng khớp "
-        "(09:15 hết ATO, 14:45 hết ATC). Tiêu chí của `rvol.py` đòi khối lượng từ 09:05 và tới 14:59, trong khi dữ liệu "
-        "SSI thật chỉ có khối lượng khớp từ 09:15 và sổ lệnh gần như đứng yên sau 14:45, nên không phiên thật nào đạt; "
-        "khi đó RVOL luôn dùng đường phân bổ đều theo phút. Đây là đề xuất xem lại, chưa sửa trong nhánh này.",
+        *_md(sessions.assign(đủ=sessions["đủ"].map({True: "đủ", False: "thiếu"}))),
         "",
         "## Cảnh báo",
         "",
@@ -271,8 +250,7 @@ def build(db_path: str | Path, source: str, out_dir: str | Path, root: Path | No
     lines += ["Nhận xét tự động (chỉ đề xuất, chưa đổi ngưỡng):", "", *_rule_notes(alerts, n), ""]
 
     lines += ["## Kiểm chứng tín hiệu (`validate`)", ""]
-    for title, table, meta in (("Mọi phiên", val_all, meta_all), ("Chỉ các phiên đủ", val_full, meta_full),
-                               ("Chỉ các phiên đủ 09:15-14:45 (đối chiếu)", val_1445, meta_1445)):
+    for title, table, meta in (("Mọi phiên", val_all, meta_all), ("Chỉ các phiên đủ", val_full, meta_full)):
         lines += [f"### {title}", "",
                   f"Trong mẫu: {len(meta['train'])} phiên ({', '.join(meta['train']) or NA}); "
                   f"ngoài mẫu: {len(meta['test'])} phiên ({', '.join(meta['test']) or NA}).", ""]

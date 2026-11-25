@@ -158,3 +158,19 @@ def test_refdata_roundtrip_and_bundled_fallback(tmp_path):
                          "avg_volume": {"AAA": {"avg": 5.0, "n": 1, "source": "ssi"}}})
     d = rd.load_refdata(db)
     assert d["avg_volume"] == {"AAA": 5.0} and d["reference"]["AAA"]["icb_code"] == "9537" and "VCB" in d["reference"]
+
+
+def test_complete_history_follows_matching_hours_0915_to_1445():
+    def session(start, end, extra=()):
+        rows = []
+        for t in pd.date_range(f"2026-11-25T{start}:00+07:00", f"2026-11-25T{end}:00+07:00", freq="1min"):
+            if t.hour == 12 or (t.hour == 11 and t.minute >= 30):
+                continue
+            rows.append({"trading_date": "2026-11-25", "symbol": "AAA", "bar": t, "total_volume": 100.0 * len(rows) + 1})
+        for t in extra:  # thỏa thuận lác đác sau 14:45 không làm hỏng tiêu chí
+            rows.append({"trading_date": "2026-11-25", "symbol": "AAA", "bar": pd.Timestamp(f"2026-11-25T{t}:00+07:00"),
+                         "total_volume": 1e9})
+        return pd.DataFrame(rows)
+    assert len(rvol.complete_history(session("09:15", "14:45", extra=("14:56",))))  # dữ liệu SSI thật trông như vậy
+    assert rvol.complete_history(session("09:30", "14:45")).empty                   # vào muộn
+    assert rvol.complete_history(session("09:15", "14:30")).empty                   # thiếu ATC

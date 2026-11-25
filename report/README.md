@@ -7,15 +7,15 @@ Dàn ý dưới đây chỉ ra **lấy nội dung ở đâu trong repo**. Phần
 
 | # | Phần | Viết gì | Nguồn trong repo |
 |---|---|---|---|
-| 1 | Tóm tắt điều hành (½ trang) | vấn đề · người dùng · giải pháp · dữ liệu SSI FastConnect (thay NEO API, đã được giảng viên chấp thuận [ngày, hình thức chấp thuận]) · phương pháp · kết quả chính | README mục "Kết quả chính", `report/data/SUMMARY.md` |
+| 1 | Tóm tắt điều hành (½ trang) | vấn đề · người dùng · giải pháp · dữ liệu SSI FastConnect (thay NEO API; giảng viên đã đồng ý, đề bài cho phép dùng nguồn nào cũng được miễn đáp ứng đủ yêu cầu) · phương pháp · kết quả chính | README mục "Kết quả chính", `report/data/SUMMARY.md` |
 | 2 | Vấn đề và nhu cầu người dùng | 3 câu hỏi nội phiên; vì sao bảng giá chưa trả lời được; khác gì công cụ sẵn có | README phần mở đầu, `PRODUCT.md` |
 | 3 | Thiết kế sản phẩm | sơ đồ kiến trúc; nhiệm vụ từng lớp; lý do chọn SQLite, tách bộ ghi, web Next.js + Ably, bot Telegram | `docs/architecture.md`, `docs/web_architecture.md` |
 | 4 | Dữ liệu | SSI FastConnect (nguồn chính): endpoint, kênh, tần suất, làm sạch; vì sao không dùng được NEO (IP cố định) và việc được chấp thuận thay thế; số phiên, bản ghi, độ phủ, khoảng trống | `docs/ssi_notes.md`, `docs/neo_api_notes.md`, `docs/data_dictionary.md`, `report/data/SUMMARY.md` (bảng "Từng phiên") |
 | 5 | Phương pháp | công thức, giả định, cơ sở ngưỡng, trọng số và độ nhạy | `docs/methodology.md` |
 | 6 | Triển khai | bản web 5 tab (ảnh `docs/img/*_live*.png`), bot Telegram, dashboard Streamlit cục bộ; trạng thái lỗi/dữ liệu cũ | web production, `docs/test_plan.md` §2 |
 | 7 | Kiểm thử và kết quả | số ca pytest/vitest (đếm bằng lệnh); đối chiếu bảng giá; IC trong/ngoài mẫu; tần suất cảnh báo theo mức và quy tắc; lỗi đã thử | `report/data/SUMMARY.md`, `docs/test_plan.md` |
-| 8 | Hạn chế và sử dụng có trách nhiệm | ít phiên, phiên ghi thiếu, 3 mức giá, thời điểm nhận, rổ hữu hạn, trọng số thiết kế, tiêu chí RVOL, không dự báo, bảo mật | README mục "Hạn chế" và "Bảo mật" |
-| 9 | Hướng phát triển | lịch nghỉ lễ; bộ ghi chạy trên máy chủ (`deploy/collector/`); sửa mốc ghi trọn của RVOL; mô hình hóa tác động giá; thêm phiên để kiểm chứng | README mục "Hạn chế" |
+| 8 | Hạn chế và sử dụng có trách nhiệm | ít phiên, phiên ghi thiếu, 3 mức giá, thời điểm nhận, rổ hữu hạn, trọng số thiết kế, không dự báo, bảo mật | README mục "Hạn chế" và "Bảo mật" |
+| 9 | Hướng phát triển | lịch nghỉ lễ; bộ ghi chạy trên máy chủ (`deploy/collector/`); mô hình hóa tác động giá; thêm phiên để kiểm chứng | README mục "Hạn chế" |
 | 10 | Kết luận | giá trị tạo ra; bài học kỹ thuật/tài chính | — |
 | PL | Phụ lục | từ điển dữ liệu, công thức chi tiết, kết quả `pytest`, hướng dẫn cài đặt, đường dẫn mã/video | `docs/` |
 
@@ -43,18 +43,16 @@ Nội dung nên viết (lấy từ `docs/web_architecture.md`):
 
 ## Tái sử dụng mã nguồn (ghi trong báo cáo, mục Triển khai hoặc Phụ lục)
 
-Có tái sử dụng có chọn lọc từ dự án cá nhân trước của tác giả (invest-system-phase2): font Be Vietnam Pro (SIL OFL), các hàm định dạng số/tiền/ngày (đã bỏ phần màu khuyến nghị mua/bán), nút sáng/tối, danh sách mã tham chiếu cho phân ngành dự phòng, và cách gọi dự phòng Vietcap qua vnstock. Bảng chi tiết (tệp, nguồn, đã sửa gì) ở README mục "Tái sử dụng từ dự án cũ của tác giả". Không dùng mã của đồ án nhóm Kumo_VN_bot. Tính năng mới dựa trên phần tái sử dụng: **Ngành trong phiên** (độ rộng, % bình quân vốn hóa, đóng góp điểm ước lượng) và **RVOL theo thời điểm** (đầu vào cho cảnh báo khối lượng) - xem docs/methodology.md mục 11-12, kể cả giới hạn (đóng góp lệch do chưa free-float; tiêu chí ghi trọn của RVOL chưa khớp giờ khớp lệnh thật, xem `report/data/SUMMARY.md`).
+Có tái sử dụng có chọn lọc từ dự án cá nhân trước của tác giả (invest-system-phase2): font Be Vietnam Pro (SIL OFL), các hàm định dạng số/tiền/ngày (đã bỏ phần màu khuyến nghị mua/bán), nút sáng/tối, danh sách mã tham chiếu cho phân ngành dự phòng, và cách gọi dự phòng Vietcap qua vnstock. Bảng chi tiết (tệp, nguồn, đã sửa gì) ở README mục "Tái sử dụng từ dự án cũ của tác giả". Không dùng mã của đồ án nhóm Kumo_VN_bot. Tính năng mới dựa trên phần tái sử dụng: **Ngành trong phiên** (độ rộng, % bình quân vốn hóa, đóng góp điểm ước lượng) và **RVOL theo thời điểm** (đầu vào cho cảnh báo khối lượng) - xem docs/methodology.md mục 11-12, kể cả giới hạn (đóng góp lệch do chưa free-float; RVOL cần ít nhất 3 phiên ghi trọn giờ khớp lệnh mới dùng đường phân bổ thực nghiệm).
 
 ## Checklist hoàn thiện trước khi nộp (30/11/2026)
 
 - [ ] Ghi thêm phiên 26/11 và 27/11 (máy cắm sạc, không tắt; kiểm tra lịch theo README mục "Lịch ghi tự động").
-- [ ] Sau mỗi phiên: `neopulse report-data --source ssi --out report/data/` rồi commit `report/data/`.
-- [ ] Điền "[ngày, hình thức chấp thuận]" của giảng viên ở README (mục Kết quả chính, Dữ liệu, Hạn chế) và phần 1, 4 của báo cáo.
-- [ ] Đặt `TELEGRAM_OWNER_CHAT_ID` trên Vercel nếu muốn nhận cảnh báo sức khỏe bộ ghi.
+- [ ] Sau mỗi phiên, `scripts/run_record_session.ps1` tự chạy `neopulse report-data`; kiểm tra `report/data/SUMMARY.md` rồi commit.
+- [ ] Phần 1 và 4 của báo cáo: nêu việc đã xin ý kiến giảng viên dùng SSI thay NEO (README đã ghi).
 - [ ] Ảnh dữ liệu thật `docs/img/*_live*.png` (desktop và điện thoại); ảnh `_sim` chỉ dùng minh họa và ghi rõ "mô phỏng".
 - [ ] Bảng IC và tần suất cảnh báo lấy từ `report/data/SUMMARY.md`; nói rõ số phiên trong/ngoài mẫu và giới hạn.
 - [ ] Ảnh đối chiếu 3–5 mã với bảng giá công khai cùng thời điểm; ảnh thử lỗi (dừng bộ ghi, web báo dữ liệu cũ).
-- [ ] Xử lý các mục tài liệu tham khảo còn đánh dấu trong `docs/methodology.md` (trang NeoAPI cần đăng nhập, ngày truy cập SSI).
 - [ ] Ghi rõ việc dùng công cụ AI hỗ trợ lập trình và biên tập (Mục 13 của đề).
 
 ## Kịch bản video (5–7 phút)

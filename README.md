@@ -21,7 +21,7 @@ Radar nội phiên cho thị trường cổ phiếu Việt Nam: đo nhịp thị
 ## Kết quả chính
 
 - **Dữ liệu thật đã thu.** Bộ ghi SSI FastConnect ghi sổ lệnh 3 mức, khối ngoại và chỉ số của rổ VN30 vào SQLite từ 19/11/2026. Số phiên, số bản ghi, độ phủ và khoảng trống từng phiên **sinh tự động** bằng `neopulse report-data` vào [`report/data/SUMMARY.md`](report/data/SUMMARY.md); không ghi cứng ở đây để khỏi lệch khi có phiên mới.
-- **SSI thay NEO API, có chấp thuận của giảng viên.** Đăng nhập NEO `/auth/token` thành công, nhưng mọi API dữ liệu trả `NEOINP000401` vì NEO bắt buộc đăng ký IP cố định (IP whitelist); mạng ký túc xá dùng IP động. Giảng viên đã chấp thuận dùng SSI FastConnect thay NEO API ([ngày, hình thức chấp thuận]). Lớp NEO vẫn giữ làm nguồn dự phòng; chi tiết lần thử ở [`docs/neo_api_notes.md`](docs/neo_api_notes.md).
+- **SSI thay NEO API, có chấp thuận của giảng viên.** Đăng nhập NEO `/auth/token` thành công, nhưng mọi API dữ liệu trả `NEOINP000401` vì NEO bắt buộc đăng ký IP cố định (IP whitelist); mạng ký túc xá dùng IP động. Tác giả đã xin ý kiến và giảng viên đồng ý dùng SSI FastConnect; đề bài cho phép dùng nguồn nào cũng được, miễn đáp ứng đủ các yêu cầu. Lớp NEO vẫn giữ làm nguồn dự phòng; chi tiết lần thử ở [`docs/neo_api_notes.md`](docs/neo_api_notes.md).
 - **Một sản phẩm, hai nguồn.** Khung tin SSI được `ssi/adapter.py` đổi về cùng lược đồ thô với NEO, nên chuẩn hóa, lưu trữ, logic tài chính và giao diện dùng chung. Đổi nguồn bằng một biến `NEOPULSE_SOURCE`.
 - **Kiểm thử.** Kiểm thử offline bằng pytest (công thức so với giá trị tính tay, không nhìn trước tương lai, dữ liệu bẩn, đăng nhập lại khi 401, WebSocket rớt hoặc treo, chặn endpoint giao dịch, che bí mật trong log, bot Telegram) và vitest cho web. Số ca đếm bằng lệnh thật, xem [`SUMMARY.md`](report/data/SUMMARY.md#kiểm-thử).
 - **Web công khai không lộ dữ liệu thô.** Bản web trên Vercel chỉ nhận JSON chỉ báo tổng hợp; khóa SSI/NEO và bảng giá từng tick ở lại máy ghi.
@@ -43,7 +43,7 @@ Radar nội phiên cho thị trường cổ phiếu Việt Nam: đo nhịp thị
 
 | Nguồn | Nội dung | Trạng thái |
 |---|---|---|
-| [SSI FastConnect Data v3](https://developers.ssi.com.vn) | REST (`securitiesByBoard`, chỉ số, lịch sử ngày) và streaming giá, sổ lệnh 3 mức, khối ngoại, chỉ số | **Nguồn chính**, ghi từ 19/11/2026. Dùng thay NEO API với chấp thuận của giảng viên ([ngày, hình thức chấp thuận]) |
+| [SSI FastConnect Data v3](https://developers.ssi.com.vn) | REST (`securitiesByBoard`, chỉ số, lịch sử ngày) và streaming giá, sổ lệnh 3 mức, khối ngoại, chỉ số | **Nguồn chính**, ghi từ 19/11/2026. Dùng thay NEO API, giảng viên đã đồng ý |
 | [NEO API v1.0.0 (VPBankS)](https://neoinvest.vpbanks.com.vn/neo-openapi/docs/overview) | `stockDetail*`, `marketIndexDetail`, `marketStatus`; WebSocket `stockInfo`, `marketInfo`, `marketSession` | **Dự phòng.** Lớp kết nối hoàn chỉnh, kiểm thử bằng máy chủ giả; chưa lấy được dữ liệu vì cần IP cố định |
 | [vnstock](https://github.com/thinh-vu/vnstock) (Vietcap) | Phân ngành, khối lượng trung bình 20 phiên, báo cáo tài chính năm cho trang doanh nghiệp | Chỉ làm dữ liệu tham chiếu và dự phòng |
 | Bộ mô phỏng (`neo_api/sim.py`) | Phiên giả lập có sự kiện cài sẵn để kiểm thử độ thu hồi cảnh báo | Luôn ghi `source='sim'`, giao diện gắn nhãn MÔ PHỎNG |
@@ -240,9 +240,9 @@ Bộ mô phỏng · Dữ liệu MÔ PHỎNG · Không phải lời khuyên đầ
 ## Hạn chế
 
 - Số phiên thật còn ít và có phiên ghi thiếu (độ phủ từng phiên ở [`SUMMARY.md`](report/data/SUMMARY.md)); kiểm chứng ngoài mẫu cần ít nhất 5 phiên, nên IC hiện chỉ mang tính minh họa. Các hình và số có hậu tố `_sim` là mô phỏng.
-- Không lấy được dữ liệu NEO API thật vì yêu cầu IP cố định; dùng SSI FastConnect thay thế với chấp thuận của giảng viên ([ngày, hình thức chấp thuận]).
+- Không lấy được dữ liệu NEO API thật vì yêu cầu IP cố định; dùng SSI FastConnect thay thế; giảng viên đã đồng ý và đề bài cho phép dùng nguồn nào cũng được, miễn đáp ứng đủ yêu cầu.
 - Bộ ghi chạy trên laptop: máy tắt hoặc ngủ đông thì mất dữ liệu (phiên 23/11/2026 thiếu 09:00–10:16 vì máy khởi động lúc 10:09). Đã thêm chạy bù khi đăng nhập và cảnh báo sức khỏe qua Telegram, nhưng không thay được việc giữ máy bật.
-- Tiêu chí "phiên ghi trọn" của RVOL (`finance/rvol.py`) đòi khối lượng từ 09:05 tới 14:59, trong khi khớp lệnh chỉ có khối lượng từ 09:15 (hết ATO) tới 14:45 (hết ATC); vì vậy chưa phiên thật nào đạt và RVOL đang dùng đường phân bổ đều theo phút. Ghi nhận để xem lại, chưa sửa.
+- RVOL dùng đường phân bổ khối lượng thực nghiệm chỉ khi có ít nhất 3 phiên ghi trọn giờ khớp lệnh (09:15–14:45); trước đó dùng giả định phân bổ đều theo phút, vốn bỏ qua hình chữ U của khối lượng trong ngày.
 - SSI: giao thức streaming lấy từ mã nguồn SDK chính thức vì tài liệu web không mô tả; các điểm chưa kiểm chứng ở [`docs/ssi_notes.md`](docs/ssi_notes.md).
 - Tin giá không có dấu thời gian sự kiện nên dùng thời điểm nhận (giờ Việt Nam); độ trễ mạng lẫn vào chuỗi.
 - Chỉ có 3 mức giá: OBI và độ sâu là xấp xỉ, trượt giá là cận dưới.
