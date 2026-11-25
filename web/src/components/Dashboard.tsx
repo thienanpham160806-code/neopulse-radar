@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Loaded } from "@/lib/data";
 import { clock, dmy } from "@/lib/format";
@@ -144,6 +144,9 @@ export function Dashboard({
   initialSym?: string | null;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const urlTab = searchParams.get("tab");
+  const urlSym = searchParams.get("sym");
   const now = useNow();
   const initRoute = resolveSlug(initialTab);
 
@@ -157,12 +160,21 @@ export function Dashboard({
 
   useEffect(() => setLoaded(initial), [initial]);
 
+  // Same-page links and browser Back/Forward must restore the visible panel too.
+  useEffect(() => {
+    const route = resolveSlug(urlTab);
+    setTabState(route.tab);
+    setWhySub(route.whySub ?? "nganh");
+    setMethodSub(route.methodSub ?? "phuong-phap");
+    setSelectedSymbol(urlSym?.toUpperCase() ?? "");
+  }, [urlTab, urlSym]);
+
   const updateUrl = useCallback((nextSlug: string, sym?: string) => {
     const u = new URL(window.location.href);
     u.searchParams.set("tab", nextSlug);
     if (sym) u.searchParams.set("sym", sym);
     else u.searchParams.delete("sym");
-    window.history.replaceState(null, "", u);
+    window.history.pushState(null, "", u);
   }, []);
 
   const setTab = useCallback(
@@ -249,9 +261,9 @@ export function Dashboard({
     const qs = new URLSearchParams();
     if (date) qs.set("date", date);
     if (code) qs.set("index", code);
-    qs.set("tab", SLUGS[tab]);
+    qs.set("tab", tab === "Vì sao?" ? (whySub === "nganh" ? "vi-sao" : whySub) : tab === "Phương pháp" ? methodSub : SLUGS[tab]);
     if (tab === "Chi tiết mã" && selectedSymbol) qs.set("sym", selectedSymbol);
-    router.push(`/?${qs}`);
+    router.push(`/thi-truong?${qs}`);
   };
 
   const highAlertCount = p.alerts?.by_severity?.CAO ?? 0;
@@ -263,7 +275,7 @@ export function Dashboard({
 
   return (
     <GlossaryProvider onNavigate={navigateSlug}>
-      <SiteHeader area="market" compact />
+      <SiteHeader area="market" crumbs={[{ label: "Nhịp thị trường", href: "/thi-truong" }, { label: tab }]} />
       <StatusBar
         meta={meta}
         nowMs={now}
