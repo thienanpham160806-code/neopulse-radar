@@ -116,6 +116,8 @@ def command(state: dict, update: dict, valid: set[str], now: float) -> tuple[str
     if cmd == "/dung":
         state["users"].pop(cid, None)
         return cid, "⏹ Đã hủy và xóa đăng ký NeoPulse. Bạn sẽ không nhận thêm tin. Gửi /start để đăng ký lại." + note, MAIN_KEYBOARD
+    if cmd == "/start" and value.startswith("ma_"):  # link mã: chỉ xem, không đăng ký (webhook trả thẻ mã trước bước này)
+        return cid, f"Xem thẻ mã: /ma {value[3:].upper()}", None
     if cmd == "/start":
         user = state["users"].setdefault(cid, new_user(requested_at))
         topics = value.split("_")

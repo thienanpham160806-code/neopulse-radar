@@ -145,7 +145,7 @@ def test_close_digest_and_news_message():
     text = ui.format_close_digest(payload())
     assert text.startswith("📊 <b>Tổng kết phiên 23/11/2026 · VN30</b>")
     assert "🟣 0 trần · 🔵 0 sàn" in text and "📈 VN30F2612: chênh lệch cơ sở −1,20 điểm, còn 24 ngày tới đáo hạn" in text
-    assert "mua ròng nhiều nhất HPG, bán ròng nhiều nhất BID" in text
+    assert "mua ròng nhiều nhất " + ui.sym_link("HPG") + ", bán ròng nhiều nhất " + ui.sym_link("BID") in text
     news = ui.format_news("laws", "baochinhphu.vn", "Nghị định <mới> & thuế", "https://baochinhphu.vn/a.htm", 0, [])
     assert news.startswith("⚖️ <b>Tin chính sách</b>") and "Nghị định &lt;mới&gt; &amp; thuế" in news and "dự thảo" in news
 
@@ -260,3 +260,14 @@ def test_webhook_readonly_callback_edits_and_foreign_chat_is_ignored(monkeypatch
     query = {**query, "from": {"id": 8}}
     status, body = call_webhook(mod, {"update_id": 4, "callback_query": query}, monkeypatch, readonly_site)
     assert body == {"method": "answerCallbackQuery", "callback_query_id": "q1"}
+
+
+def test_symbols_in_messages_open_card_without_subscribing():
+    p = payload()
+    line = ui.alert_line(p["alerts"]["items"][0])
+    assert '<a href="https://t.me/neopulse_warningbot?start=ma_HPG">HPG</a>' in line
+    assert ui.sym_link("<x>") == "&lt;x&gt;"
+    text, markup = ui.readonly_answer("/start ma_HPG", CATALOG, payload)
+    assert text.startswith("🏢") and "Lệnh mới" not in text and buttons(markup)[0]["callback_data"] == "c:HPG"
+    s = {"users": {}}
+    assert "/ma HPG" in tc.command(s, msg("/start ma_HPG"), VALID, 100)[1] and s["users"] == {}

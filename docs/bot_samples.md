@@ -20,14 +20,14 @@ VN30 1.967,70 🟢 ▲ +0,45% · 20 mã tăng / 9 mã giảm / 1 đứng giá
 🚨 <b>[MÔ PHỎNG] Cảnh báo trong phiên · VN30</b> · 14:30
 31 lượt: 🚨 7 mức cao · ⚠️ 4 trung bình · ℹ️ 20 thấp.
 Mức cao gần nhất:
-🚨 14:28 <b>VIB</b> · độ chênh giá mua-bán giãn rộng bất thường
-🚨 14:09 <b>TPB</b> · độ chênh giá mua-bán giãn rộng bất thường
-🚨 13:44 <b>CTG</b> · khối ngoại bán ròng cao bất thường
-🚨 11:09 <b>HPG</b> · khối ngoại bán ròng cao bất thường
-🚨 10:54 <b>BID</b> · độ chênh giá mua-bán giãn rộng bất thường
-🚨 10:46 <b>VJC</b> · độ chênh giá mua-bán giãn rộng bất thường
-🚨 10:13 <b>SHB</b> · độ chênh giá mua-bán giãn rộng bất thường
-Cảnh báo là quan sát cần xem lại, chưa cho biết nguyên nhân hay hướng giá.
+🚨 14:28 <b><a href="https://t.me/neopulse_warningbot?start=ma_VIB">VIB</a></b> · độ chênh giá mua-bán giãn rộng bất thường
+🚨 14:09 <b><a href="https://t.me/neopulse_warningbot?start=ma_TPB">TPB</a></b> · độ chênh giá mua-bán giãn rộng bất thường
+🚨 13:44 <b><a href="https://t.me/neopulse_warningbot?start=ma_CTG">CTG</a></b> · khối ngoại bán ròng cao bất thường
+🚨 11:09 <b><a href="https://t.me/neopulse_warningbot?start=ma_HPG">HPG</a></b> · khối ngoại bán ròng cao bất thường
+🚨 10:54 <b><a href="https://t.me/neopulse_warningbot?start=ma_BID">BID</a></b> · độ chênh giá mua-bán giãn rộng bất thường
+🚨 10:46 <b><a href="https://t.me/neopulse_warningbot?start=ma_VJC">VJC</a></b> · độ chênh giá mua-bán giãn rộng bất thường
+🚨 10:13 <b><a href="https://t.me/neopulse_warningbot?start=ma_SHB">SHB</a></b> · độ chênh giá mua-bán giãn rộng bất thường
+Bấm vào mã để xem thẻ mã. Cảnh báo là quan sát cần xem lại, chưa cho biết nguyên nhân hay hướng giá.
 <i>Bộ mô phỏng · Dữ liệu MÔ PHỎNG · Không phải lời khuyên đầu tư</i>
 [✓ 🚨 Chỉ mức cao]  [⚠️ Từ trung bình]  [🔗 Mở trên web]
 ```
@@ -62,9 +62,9 @@ Mất cân bằng sổ lệnh −0,06: bên bán dày hơn trên 3 mức giá t�
 📊 <b>[MÔ PHỎNG] Tổng kết phiên 23/11/2026 · VN30</b> · 14:30, 23/11/2026
 VN30 1.967,70 🟢 ▲ +0,45% · 20 mã tăng / 9 mã giảm / 1 đứng giá · 🟣 0 trần · 🔵 0 sàn
 🧭 Điểm nhịp 58,6/100: Nghiêng tích cực.
-🏦 Khối ngoại bán ròng 99,1 tỷ đồng trong rổ; mua ròng nhiều nhất TCB, bán ròng nhiều nhất BID.
+🏦 Khối ngoại bán ròng 99,1 tỷ đồng trong rổ; mua ròng nhiều nhất <a href="https://t.me/neopulse_warningbot?start=ma_TCB">TCB</a>, bán ròng nhiều nhất <a href="https://t.me/neopulse_warningbot?start=ma_BID">BID</a>.
 📈 VN30F2612: chênh lệch cơ sở −1,20 điểm, còn 24 ngày tới đáo hạn.
-🚨 31 cảnh báo (7 mức cao), nhiều nhất ở VIB, TPB, CTG.
+🚨 31 cảnh báo (7 mức cao), nhiều nhất ở <a href="https://t.me/neopulse_warningbot?start=ma_VIB">VIB</a>, <a href="https://t.me/neopulse_warningbot?start=ma_TPB">TPB</a>, <a href="https://t.me/neopulse_warningbot?start=ma_CTG">CTG</a>.
 <i>Bộ mô phỏng · Dữ liệu MÔ PHỎNG · Không phải lời khuyên đầu tư</i>
 [🔗 Xem bản tin phiên trên web]
 ```

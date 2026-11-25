@@ -13,6 +13,7 @@ import time
 from datetime import datetime, timedelta, timezone
 
 BASE = "https://neopulse-radar.vercel.app"
+BOT = "neopulse_warningbot"  # bấm mã trong tin mở thẻ mã qua link sâu t.me/<bot>?start=ma_<MÃ>
 DISCLAIMER = "Không phải lời khuyên đầu tư"
 VN = timezone(timedelta(hours=7))
 LIMIT = 4000  # Telegram cho tối đa 4096 ký tự; chừa chỗ cho thẻ HTML
@@ -256,8 +257,15 @@ def describe(a: dict) -> str:
     return a.get("message") or a.get("rule_name") or "cảnh báo"
 
 
+def sym_link(symbol: str) -> str:
+    """Mã bấm được: Telegram gửi "/start ma_<MÃ>" và bot trả thẻ mã (không tạo đăng ký)."""
+    if not SYMBOL.fullmatch(symbol or ""):
+        return esc(symbol or "")
+    return f'<a href="https://t.me/{BOT}?start=ma_{symbol}">{symbol}</a>'
+
+
 def alert_line(a: dict) -> str:
-    return f"{SEV_ICON.get(a.get('severity'), ICON['low'])} {hm(a.get('t'))} <b>{esc(a.get('symbol', ''))}</b> · {esc(describe(a))}"
+    return f"{SEV_ICON.get(a.get('severity'), ICON['low'])} {hm(a.get('t'))} <b>{sym_link(a.get('symbol', ''))}</b> · {esc(describe(a))}"
 
 
 def format_alert_list(payload: dict, now: float | None = None, scope: str = "CAO") -> str:
@@ -273,7 +281,7 @@ def format_alert_list(payload: dict, now: float | None = None, scope: str = "CAO
     head.append("Mức cao gần nhất:" if scope == "CAO" else "Từ trung bình trở lên, gần nhất:")
     if not items:
         head.append("Không có cảnh báo ở mức này.")
-    tail = ["Cảnh báo là quan sát cần xem lại, chưa cho biết nguyên nhân hay hướng giá.", footer(meta, now)]
+    tail = ["Bấm vào mã để xem thẻ mã. Cảnh báo là quan sát cần xem lại, chưa cho biết nguyên nhân hay hướng giá.", footer(meta, now)]
     return fit(head, [alert_line(a) for a in items], tail, "cảnh báo")
 
 
@@ -314,7 +322,7 @@ def format_alert_push(alerts: list[dict], payload: dict, now: float | None = Non
     if len(alerts) > 1:
         head = [f"{ICON['high']} <b>{sim_tag(meta)}{len(alerts)} cảnh báo mức cao mới</b> · {hm(alerts[0].get('t'))}"]
         tail = [x for x in [("<b>Bối cảnh:</b> " + _index_line(payload)) if _index_line(payload) else None,
-                            "Bấm mã trên web hoặc gõ /ma MÃ để xem thẻ mã.", footer(meta, now)] if x]
+                            "Bấm vào mã để xem thẻ mã.", footer(meta, now)] if x]
         return fit(head, [alert_line(a) for a in alerts], tail, "cảnh báo", max_items=10)
     a = alerts[0]
     sym = esc(a.get("symbol", ""))
@@ -403,7 +411,7 @@ def _digest(payload: dict, now: float | None, title: str) -> str:
         lines.append(f"{ICON['pulse']} Điểm nhịp {num(pulse['score'], 1)}/100: {esc(pulse.get('label', ''))}.")
     fr = sorted(_rows(payload, "foreign").values(), key=lambda r: r.get("net") or 0)
     if (fl := _foreign_line(payload)):
-        ends = f"; mua ròng nhiều nhất {esc(fr[-1]['symbol'])}, bán ròng nhiều nhất {esc(fr[0]['symbol'])}" if len(fr) >= 2 else ""
+        ends = f"; mua ròng nhiều nhất {sym_link(fr[-1]['symbol'])}, bán ròng nhiều nhất {sym_link(fr[0]['symbol'])}" if len(fr) >= 2 else ""
         lines.append(fl + ends + ".")
     fu = (payload.get("futures") or {})
     st = fu.get("state") or {}
@@ -416,7 +424,7 @@ def _digest(payload: dict, now: float | None, title: str) -> str:
         for a in al.get("items", []):
             if a.get("severity") == "CAO":
                 hot[a["symbol"]] = hot.get(a["symbol"], 0) + 1
-        top = ", ".join(esc(s) for s, _ in sorted(hot.items(), key=lambda kv: -kv[1])[:3])
+        top = ", ".join(sym_link(s) for s, _ in sorted(hot.items(), key=lambda kv: -kv[1])[:3])
         lines.append(f"{ICON['high']} {al['total']} cảnh báo ({(al.get('by_severity') or {}).get('CAO', 0)} mức cao)" + (f", nhiều nhất ở {top}." if top else "."))
     return "\n".join(lines + [footer(meta, now)])
 
@@ -508,6 +516,8 @@ def readonly_answer(text: str, catalog: dict[str, dict], load_payload) -> tuple[
     cmd, arg, old = split_command(text)
     if not cmd:
         return None
+    if cmd == "/start" and arg.startswith("ma_"):  # bấm mã trong tin nhắn
+        cmd, arg, old = "/ma", arg[3:].upper(), None
     note = alias_note(old, cmd)
 
     def payload_or_none():
