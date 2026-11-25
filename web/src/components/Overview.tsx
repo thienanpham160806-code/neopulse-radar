@@ -235,14 +235,12 @@ export function Overview({
   live,
   onNavigate,
   onSelectSymbol,
-  onFilterSev,
 }: {
   p: Payload;
   f: Filters;
   live?: LiveState | null;
   onNavigate: (tab: string) => void;
   onSelectSymbol?: (symbol: string) => void;
-  onFilterSev?: (sev: Severity) => void;
 }) {
   const [showAllMobileComps, setShowAllMobileComps] = useState(false);
 
@@ -270,8 +268,12 @@ export function Overview({
   }));
   const liveKeys = useMemo(() => new Set(liveAlerts.map((a) => `${a.t}|${a.symbol}|${a.rule}`)), [liveAlerts]);
   const { items: allAlerts, nHigh, hot } = alertDigest(liveAlerts, p.alerts?.items ?? [], p.alerts?.by_severity?.CAO, p.meta.last_update);
+  // Nút đếm trong thẻ lọc đúng một mức (khớp con số trên nút); không chọn thì theo ngưỡng chung của bộ lọc.
+  const [onlySev, setOnlySev] = useState<Severity | null>(null);
   const alerts = allAlerts.filter(
-    (a) => SEV_ORDER.indexOf(a.severity) <= SEV_ORDER.indexOf(f.minSev) && (!f.sym || a.symbol.includes(f.sym.toUpperCase()))
+    (a) =>
+      (onlySev ? a.severity === onlySev : SEV_ORDER.indexOf(a.severity) <= SEV_ORDER.indexOf(f.minSev)) &&
+      (!f.sym || a.symbol.includes(f.sym.toUpperCase()))
   );
   const summary = p.pulse?.summary ?? [];
   const baseSeries = p.pulse?.series;
@@ -577,10 +579,11 @@ export function Overview({
                 <button
                   key={sev}
                   type="button"
-                  onClick={() => (onFilterSev ? onFilterSev(sev) : onAlerts())}
-                  aria-pressed={f.minSev === sev}
+                  onClick={() => setOnlySev((cur) => (cur === sev ? null : sev))}
+                  aria-pressed={onlySev === sev}
+                  title={onlySev === sev ? "Bấm lần nữa để bỏ lọc" : `Chỉ hiện cảnh báo mức ${txt.replace(/^\S+ \d+ /, "")}`}
                   className={`ui-transition tnum rounded-lg px-2 py-1 text-xs font-semibold ${
-                    f.minSev === sev
+                    onlySev === sev
                       ? "bg-accent text-on-accent"
                       : "border border-line bg-surface2/70 text-fg hover:bg-surface2"
                   }`}
@@ -596,7 +599,7 @@ export function Overview({
             </div>
 
             <p className="mt-2 text-[11px] leading-relaxed text-muted">
-              {alerts.length} lượt khớp lọc ({f.minSev === "CAO" ? "chỉ mức Cao" : f.minSev === "TRUNG BÌNH" ? "từ Trung bình" : "tất cả"}); hiện tối đa 5 lượt gần nhất. Bấm mã để soi nội phiên.
+              {alerts.length} lượt khớp lọc ({onlySev ? `chỉ mức ${onlySev === "CAO" ? "Cao" : onlySev === "TRUNG BÌNH" ? "Trung bình" : "Thấp"}; bấm lại để bỏ lọc` : f.minSev === "CAO" ? "chỉ mức Cao" : f.minSev === "TRUNG BÌNH" ? "từ Trung bình" : "tất cả"}); hiện tối đa 5 lượt gần nhất. Bấm mã để soi nội phiên.
             </p>
 
             <div className="mt-1.5">

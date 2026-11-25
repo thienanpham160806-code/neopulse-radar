@@ -423,7 +423,6 @@ export function Dashboard({
               live={liveOn}
               onNavigate={navigateSlug}
               onSelectSymbol={openStockDetail}
-              onFilterSev={(sev) => setFilters((prev) => ({ ...prev, minSev: sev }))}
             />
           ) : tab === "Vì sao?" ? (
             <WhyTab
