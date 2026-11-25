@@ -1,6 +1,6 @@
 # Số liệu báo cáo NeoPulse Radar
 
-Sinh bằng `neopulse report-data --source ssi` lúc 17:40 25/11/2026 từ CSDL SQLite (chỉ đọc). Không chỉnh tay; chạy lại lệnh sau mỗi phiên mới. CSV chi tiết cùng thư mục.
+Sinh bằng `neopulse report-data --source ssi` lúc 18:08 25/11/2026 từ CSDL SQLite (chỉ đọc). Không chỉnh tay; chạy lại lệnh sau mỗi phiên mới. CSV chi tiết cùng thư mục.
 
 ## Tổng quan
 
@@ -91,5 +91,5 @@ Trong mẫu: 1 phiên (2026-11-25); ngoài mẫu: 0 phiên (chưa có).
 
 ## Kiểm thử
 
-- Python (`pytest --co -q`): 273 ca
+- Python (`pytest --co -q`): 277 ca
 - Web (`vitest list`): 100 ca
