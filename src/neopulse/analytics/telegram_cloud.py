@@ -338,11 +338,25 @@ def run(path: Path, token: str, key: str, *, client: httpx.Client, now: float | 
             print("Một lượt khác đang chạy; bỏ qua lượt này.")
             return
     try:
+        if store:
+            _health(client, Telegram(token, client), store, time.time() if now is None else now)
         _run(path, token, key, client=client, now=now, store=store,
              deadline=None if budget_s is None else time.monotonic() + budget_s)
     finally:
         if store:
             store.call("DEL", LOCK_KEY)
+
+
+def _health(client: httpx.Client, api: Telegram, store, now: float):
+    """Báo riêng chủ dự án khi bộ ghi chưa chạy hoặc im lặng (analytics/health.py). Lỗi ở đây không chặn gửi tin."""
+    from .health import notify_owner
+    try:
+        r = client.get(BASE + "/api/data")
+        payload = r.json().get("payload") if r.status_code == 200 else None
+        if notify_owner(payload, now, store, api.send):
+            print("Đã gửi cảnh báo sức khỏe bộ ghi cho chủ dự án.")
+    except (httpx.HTTPError, ValueError, RuntimeError):
+        print("Không kiểm tra được sức khỏe bộ ghi ở lượt này.")
 
 
 def _run(path: Path, token: str, key: str, *, client: httpx.Client, now: float | None, store, deadline: float | None):
