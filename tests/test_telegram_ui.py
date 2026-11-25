@@ -146,8 +146,16 @@ def test_close_digest_and_news_message():
     assert text.startswith("📊 <b>Tổng kết phiên 23/11/2026 · VN30</b>")
     assert "🟣 0 trần · 🔵 0 sàn" in text and "📈 VN30F2612: chênh lệch cơ sở −1,20 điểm, còn 24 ngày tới đáo hạn" in text
     assert "mua ròng nhiều nhất " + ui.sym_link("HPG") + ", bán ròng nhiều nhất " + ui.sym_link("BID") in text
-    news = ui.format_news("laws", "baochinhphu.vn", "Nghị định <mới> & thuế", "https://baochinhphu.vn/a.htm", 0, [])
-    assert news.startswith("⚖️ <b>Tin chính sách</b>") and "Nghị định &lt;mới&gt; &amp; thuế" in news and "dự thảo" in news
+    at = datetime(2026, 11, 23, 10, 0, tzinfo=VN).timestamp()
+    items = [{"category": "laws", "at": at, "symbols": [], "title": "Nghị định <mới> & thuế", "link": "https://baochinhphu.vn/a.htm?x=1&y=\"2\"", "host": "baochinhphu.vn"},
+             {"category": "news", "at": at, "symbols": ["FPT"], "title": "FPT ký hợp đồng", "link": "https://cafef.vn/f.chn", "host": "cafef.vn"},
+             {"category": "news", "at": at - 60, "symbols": ["HPG"], "title": "HPG lên kế hoạch", "link": "https://cafef.vn/h.chn", "host": "cafef.vn"}]
+    news = ui.format_bulletin("close", items, at - 3600, at + 3600, ["HPG"], set())
+    assert news.startswith("📰 <b>Bản tin cuối phiên · 23/11/2026</b>")
+    assert "Nghị định &lt;mới&gt; &amp; thuế" in news and 'href="https://baochinhphu.vn/a.htm?x=1&amp;y=&quot;2&quot;"' in news and "dự thảo" in news
+    assert news.index("⭐" + ui.sym_link("HPG")) < news.index(ui.sym_link("FPT"))  # mã đang theo dõi lên trước
+    assert "🌏" not in news and "Không phải lời khuyên đầu tư" in news
+    assert "Không có tin mới đáng chú ý" in ui.format_bulletin("open", [], at - 3600, at, [], set())
 
 
 # ------------------------------------------------------------------------------------------------ đăng ký
@@ -166,7 +174,7 @@ def test_help_and_menu_do_not_subscribe_unknown_text_gets_reply():
 def test_start_settings_watch_and_old_commands():
     s = {"users": {}}
     start = tc.command(s, msg("/start news_laws"), VALID, 100)[1]
-    assert "Đang nhận: tin doanh nghiệp, tin chính sách" in start and not s["users"]["7"]["alerts"]
+    assert "Đang nhận: bản tin doanh nghiệp, quốc tế, bản tin chính sách, pháp luật" in start and not s["users"]["7"]["alerts"]
     text, markup = tc.command(s, msg("/alerts on"), VALID, 101)[1:]
     assert s["users"]["7"]["alerts"] and "Lệnh mới: /caidat" in text and buttons(markup)[0]["callback_data"] == "t:alerts"
     tc.command(s, msg("/theodoi HPG"), VALID, 102)
@@ -200,6 +208,24 @@ def test_outbox_groups_alerts_and_skips_delivered():
     assert len(out) == 2 and out[0]["ids"] == [e["id"] for e in events if e["category"] == "alerts"]
     user["delivered"] = {i: now for i in out[0]["ids"]}
     assert [m["ids"] for m in tc.outbox(user, events, basket, p, now)] == [["n1"]]
+
+
+def test_news_bulletin_twice_a_day_never_single_items():
+    p = payload()
+    user = {"since": 0, "alerts": False, "news": True, "laws": False, "symbols": [], "delivered": {}}
+    day = lambda h, m, d=25: datetime(2026, 11, d, h, m, tzinfo=VN).timestamp()  # noqa: E731
+    news = [{"id": "w", "category": "world", "at": day(16, 0, 24), "symbols": [], "title": "Fed giữ lãi suất", "link": "https://cafef.vn/w.chn", "host": "cafef.vn"},
+            {"id": "n", "category": "news", "at": day(10, 0), "symbols": ["HPG"], "title": "HPG lãi lớn", "link": "https://cafef.vn/n.chn", "host": "cafef.vn"},
+            {"id": "l", "category": "laws", "at": day(9, 0), "symbols": [], "title": "Thông tư mới", "link": "https://baochinhphu.vn/l.htm", "host": "baochinhphu.vn"}]
+    assert tc.outbox(user, [], set(), p, day(12, 0), news) == []  # giữa hai khung: không gửi lẻ
+    morning = tc.outbox(user, [], set(), p, day(8, 40), news)
+    assert [m["ids"] for m in morning] == [["bulletin_open|2026-11-25"]] and "Fed giữ lãi suất" in morning[0]["text"] and "HPG" not in morning[0]["text"]
+    user["delivered"]["bulletin_open|2026-11-25"] = day(8, 40)
+    assert tc.outbox(user, [], set(), p, day(9, 0), news) == []
+    evening = tc.outbox(user, [], set(), p, day(15, 5), news)[0]["text"]
+    assert "HPG lãi lớn" in evening and "Thông tư mới" not in evening and "Fed" not in evening  # chính sách đang tắt
+    assert tc.bulletin_slot(datetime(2026, 11, 23, 9, 0, tzinfo=VN).timestamp())[1] == datetime(2026, 11, 20, 15, 0, tzinfo=VN).timestamp()  # thứ Hai lấy từ thứ Sáu
+    assert tc.bulletin_slot(datetime(2026, 11, 28, 9, 0, tzinfo=VN).timestamp()) is None  # thứ Bảy
 
 
 def test_digest_events_once_per_day_at_right_time():

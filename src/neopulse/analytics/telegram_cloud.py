@@ -7,7 +7,7 @@ import os
 import re
 import time
 import xml.etree.ElementTree as ET
-from datetime import datetime
+from datetime import datetime, timedelta
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 from urllib.parse import urlparse
@@ -20,11 +20,10 @@ from .telegram_ui import (  # noqa: F401 - BASE/HELP giữ cho mã gọi cũ
     HELP,
     alert_push_keyboard,
     format_alert_push,
+    format_bulletin,
     format_close_digest,
-    format_news,
     format_open_digest,
     keyboard,
-    news_keyboard,
     web_link,
 )
 
@@ -215,6 +214,20 @@ def timestamp(value: str) -> float | None:
                 return None
 
 
+FEEDS = [("news", "https://cafef.vn/thi-truong-chung-khoan.rss", "cafef.vn"),
+         ("news", "https://cafef.vn/doanh-nghiep.rss", "cafef.vn"),
+         ("world", "https://cafef.vn/tai-chinh-quoc-te.rss", "cafef.vn"),
+         ("laws", "https://baochinhphu.vn/home.rss", "baochinhphu.vn"),
+         ("laws", "https://baochinhphu.vn/chinh-sach-moi.rss", "baochinhphu.vn")]
+# Lọc "đáng chú ý" bằng từ khóa trên tiêu đề; tin quốc tế phải liên quan thị trường, tin chính sách phải là văn bản/kinh tế.
+WORLD_KEYS = re.compile(r"\bFed\b|lãi suất|lạm phát|tỷ giá|\bUSD\b|đồng đô la|giá dầu|\bOPEC|giá vàng|thuế quan|thuế đối ứng|"
+                        r"Phố Wall|Dow Jones|S&P|Nasdaq|chứng khoán|cổ phiếu|trái phiếu|\bECB\b|\bBoJ\b|ngân hàng trung ương|"
+                        r"\bGDP\b|suy thoái|kinh tế Mỹ|kinh tế Trung Quốc|xuất khẩu|thương mại", re.I)
+LAW_KEYS = re.compile(r"nghị định|thông tư|nghị quyết|\bluật\b|dự thảo|quy định mới|thuế|chứng khoán|trái phiếu|"
+                      r"ngân hàng|tín dụng|lãi suất|tỷ giá|doanh nghiệp", re.I)
+NOT_TICKER = {"CEO", "USD", "GDP", "IPO", "ETF", "FDI", "VAT", "EU", "AI"}  # viết tắt hay gặp trùng mã niêm yết
+
+
 def rss_items(content: bytes, category: str, allowed_host: str, symbols: set[str]) -> list[dict]:
     if len(content) > 2_000_000 or b"<!DOCTYPE" in content.upper() or b"<!ENTITY" in content.upper():
         raise ValueError("RSS không an toàn")
@@ -227,14 +240,32 @@ def rss_items(content: bytes, category: str, allowed_host: str, symbols: set[str
         when = timestamp(item.findtext("pubDate", ""))
         if not title or when is None:
             continue
-        matched = sorted(s for s in symbols if re.search(rf"\b{re.escape(s)}\b", title, re.I))
+        # Mã trong tiêu đề viết hoa; so khớp phân biệt hoa thường để chữ thường không bị nhận nhầm là mã.
+        matched = sorted({w for w in re.findall(r"\b[A-Z][A-Z0-9]{2}\b", title) if w in symbols} - NOT_TICKER)
         if category == "news" and not matched:
             continue
-        if category == "laws" and not re.search(r"nghị định|thông tư|luật|thuế|chứng khoán|trái phiếu|chính sách|dự thảo", title, re.I):
+        if category == "world" and not WORLD_KEYS.search(title):
             continue
-        out.append({"id": hashlib.sha256(link.encode()).hexdigest(), "category": category, "at": when, "symbols": matched,
-                    "text": format_news(category, allowed_host, title, link, when, matched), "markup": news_keyboard(link)})
+        if category == "laws" and not LAW_KEYS.search(title):
+            continue
+        out.append({"id": hashlib.sha256(link.encode()).hexdigest(), "category": category, "at": when,
+                    "symbols": matched, "title": title, "link": link, "host": allowed_host})
     return out
+
+
+def bulletin_slot(now: float) -> tuple[str, float, float] | None:
+    """Khung bản tin tin tức (ngày thứ Hai–thứ Sáu): đầu phiên gửi 08:30–11:30, gom tin từ 15:00 ngày làm việc trước
+    đến 08:30; cuối phiên gửi 15:00–22:00, gom tin 08:30–15:00. Hai khung nối nhau nên mỗi tin vào đúng một bản."""
+    t = datetime.fromtimestamp(now, VN_TZ)
+    if t.weekday() >= 5:
+        return None
+    at = lambda h, m: t.replace(hour=h, minute=m, second=0, microsecond=0)  # noqa: E731
+    if at(8, 30) <= t < at(11, 30):
+        prev = at(15, 0) - timedelta(days=3 if t.weekday() == 0 else 1)
+        return "open", prev.timestamp(), at(8, 30).timestamp()
+    if at(15, 0) <= t < at(22, 0):
+        return "close", at(8, 30).timestamp(), at(15, 0).timestamp()
+    return None
 
 
 def should_send(user: dict, event: dict, now: float) -> bool:
@@ -244,7 +275,7 @@ def should_send(user: dict, event: dict, now: float) -> bool:
             and (event["category"] in MARKET_WIDE or not user["symbols"] or bool(set(user["symbols"]) & set(event["symbols"]))))
 
 
-MARKET_WIDE = {"laws", "digest_open", "digest_close"}
+MARKET_WIDE = {"digest_open", "digest_close"}
 
 
 def digest_events(payload: dict, now: float) -> list[dict]:
@@ -271,8 +302,10 @@ def digest_events(payload: dict, now: float) -> list[dict]:
     return out
 
 
-def outbox(user: dict, events: list[dict], basket: set[str], payload: dict, now: float) -> list[dict]:
-    """Tin cần gửi cho một người: lọc theo cài đặt và mã; các cảnh báo cùng đợt gom thành một tin."""
+def outbox(user: dict, events: list[dict], basket: set[str], payload: dict, now: float,
+           news: list[dict] | None = None) -> list[dict]:
+    """Tin cần gửi cho một người: lọc theo cài đặt và mã; các cảnh báo cùng đợt gom thành một tin;
+    tin tức gom vào bản tin đầu/cuối phiên, mỗi bản một lần mỗi ngày."""
     due = [e for e in sorted(events, key=lambda e: e["at"])
            if (user["symbols"] or e["category"] in MARKET_WIDE or set(e["symbols"]) & basket) and should_send(user, e, now)]
     alerts = [e for e in due if e["category"] == "alerts"]
@@ -282,6 +315,13 @@ def outbox(user: dict, events: list[dict], basket: set[str], payload: dict, now:
         out.append({"ids": [e["id"] for e in alerts], "text": format_alert_push(raw, payload, now),
                     "markup": alert_push_keyboard(raw)})
     out += [{"ids": [e["id"]], "text": e["text"], "markup": e.get("markup")} for e in due if e["category"] != "alerts"]
+    slot = bulletin_slot(now) if news is not None and (user.get("news") or user.get("laws")) else None
+    if slot:
+        kind, start, end = slot
+        bid = f"bulletin_{kind}|{datetime.fromtimestamp(end, VN_TZ).date().isoformat()}"
+        if bid not in user["delivered"]:
+            picked = [n for n in news if start <= n["at"] < end and user.get("laws" if n["category"] == "laws" else "news")]
+            out.append({"ids": [bid], "text": format_bulletin(kind, picked, start, end, user["symbols"], basket), "markup": None})
     return out
 
 
@@ -345,14 +385,19 @@ def _run(path: Path, token: str, key: str, *, client: httpx.Client, now: float |
                 events.append({"id": hashlib.sha256(identity.encode()).hexdigest(), "category": "alerts", "at": at,
                                "symbols": [a["symbol"]], "alert": a})
     events += digest_events(payload, now)
-    for category, url, host in [("news", "https://cafef.vn/thi-truong-chung-khoan.rss", "cafef.vn"),
-                                ("laws", "https://baochinhphu.vn/home.rss", "baochinhphu.vn")]:
-        try:
-            response = client.get(url)
-            response.raise_for_status()
-            events += rss_items(response.content, category, host, valid)
-        except (httpx.HTTPError, ValueError, ET.ParseError):
-            print(f"Nguồn {category} tạm không truy cập được; sẽ thử ở lượt sau.")
+    news = None
+    if bulletin_slot(now) and any(u.get("news") or u.get("laws") for u in state["users"].values()):
+        news, seen = [], set()
+        for category, url, host in FEEDS:
+            try:
+                response = client.get(url)
+                response.raise_for_status()
+                for n in rss_items(response.content, category, host, valid):
+                    if n["id"] not in seen:
+                        seen.add(n["id"])
+                        news.append(n)
+            except (httpx.HTTPError, ValueError, ET.ParseError):
+                print(f"Nguồn {category} tạm không truy cập được; bản tin dùng các nguồn còn lại.")
     sent = 0
     recipients = list(state["users"].items())
     cursor = state.get("cursor", 0) % max(1, len(recipients))
@@ -362,7 +407,7 @@ def _run(path: Path, token: str, key: str, *, client: httpx.Client, now: float |
         user["delivered"] = {k: v for k, v in user["delivered"].items() if v >= now - 7 * 86400}
         if store:
             user = store.read(cid).get("user") or user
-        messages = outbox(user, events, basket, payload, now)
+        messages = outbox(user, events, basket, payload, now, news)
         for message in messages:
             if store:
                 current = store.read(cid).get("user")

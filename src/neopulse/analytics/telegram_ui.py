@@ -22,7 +22,7 @@ LIMIT = 4000  # Telegram cho tối đa 4096 ký tự; chừa chỗ cho thẻ HTM
 ICON = {
     "up": "🟢", "down": "🔴", "flat": "🟡", "ceil": "🟣", "floor": "🔵",
     "high": "🚨", "mid": "⚠️", "low": "ℹ️",
-    "market": "📊", "pulse": "🧭", "foreign": "🏦", "deriv": "📈", "company": "🏢", "news": "📰", "laws": "⚖️",
+    "market": "📊", "pulse": "🧭", "foreign": "🏦", "deriv": "📈", "company": "🏢", "news": "📰", "laws": "⚖️", "world": "🌏",
     "watch": "⭐", "settings": "⚙️", "status": "ℹ️", "help": "❓", "stop": "⏹", "link": "🔗",
 }
 SEV_ICON = {"CAO": ICON["high"], "TRUNG BÌNH": ICON["mid"], "THẤP": ICON["low"]}
@@ -30,7 +30,7 @@ SEV_NAME = {"CAO": "mức cao", "TRUNG BÌNH": "trung bình", "THẤP": "thấp"
 RULE_TITLE = {"volume_spike": "Khối lượng bất thường", "spread_blowout": "Độ chênh giá mua-bán giãn rộng",
               "price_jump": "Giá biến động đột ngột", "foreign_flow": "Khối ngoại giao dịch bất thường",
               "book_pressure": "Mất cân bằng sổ lệnh kéo dài", "near_limit": "Sát trần/sàn"}
-TOPICS = {"alerts": "Cảnh báo mức cao", "news": "Tin doanh nghiệp", "laws": "Tin chính sách",
+TOPICS = {"alerts": "Cảnh báo mức cao", "news": "Bản tin doanh nghiệp, quốc tế", "laws": "Bản tin chính sách, pháp luật",
           "digest_open": "Tóm tắt đầu phiên", "digest_close": "Tổng kết cuối phiên"}
 SYMBOL = re.compile(r"[A-Z][A-Z0-9]{1,9}")
 
@@ -438,24 +438,44 @@ def format_close_digest(payload: dict, now: float | None = None) -> str:
     return _digest(payload, now, "Tổng kết phiên" + (f" {d.strftime('%d/%m/%Y')}" if d else ""))
 
 
-def format_news(category: str, host: str, title: str, link: str, at: float, symbols: list[str]) -> str:
-    icon, name = (ICON["laws"], "Tin chính sách") if category == "laws" else (ICON["news"], "Tin doanh nghiệp")
-    tag = f" · {esc(', '.join(symbols))}" if symbols else ""
-    lines = [f"{icon} <b>{name}{tag}</b> · {datetime.fromtimestamp(at, VN).strftime('%H:%M, %d/%m/%Y')}", esc(title),
-             f"Nguồn: {esc(host)}"]
-    if category == "laws":
-        lines.append("Có thể là dự thảo hoặc đề xuất; xem hiệu lực trong văn bản gốc, không suy ra từ ngày đăng.")
-    return "\n".join(lines + [f"<i>{DISCLAIMER}</i>"])
+BULLETIN_MAX = {"news": 8, "world": 5, "laws": 5}
+BULLETIN_HEAD = {"news": (ICON["company"], "Doanh nghiệp"), "world": (ICON["world"], "Quốc tế"),
+                 "laws": (ICON["laws"], "Chính sách, pháp luật")}
 
 
-def news_keyboard(link: str) -> dict:
-    return keyboard([(f"{ICON['link']} Đọc bài gốc", link)])
+def format_bulletin(kind: str, items: list[dict], start: float, end: float, watched: list[str], basket: set[str]) -> str:
+    """Bản tin gộp đầu/cuối phiên: tin doanh nghiệp (mã đang theo dõi, rồi VN30, lên trước), quốc tế, chính sách."""
+    title = "Bản tin đầu phiên" if kind == "open" else "Bản tin cuối phiên"
+    a, b = datetime.fromtimestamp(start, VN), datetime.fromtimestamp(end, VN)
+    lines = [f"{ICON['news']} <b>{title} · {b.strftime('%d/%m/%Y')}</b>",
+             f"Tin đáng chú ý từ {a.strftime('%H:%M %d/%m')} đến {b.strftime('%H:%M %d/%m')}."]
+    mine = set(watched)
+    for cat, (icon, name) in BULLETIN_HEAD.items():
+        rows = sorted((n for n in items if n["category"] == cat),
+                      key=lambda n: (not set(n["symbols"]) & mine, not set(n["symbols"]) & basket, -n["at"]))
+        if not rows:
+            continue
+        lines += ["", f"{icon} <b>{name}</b>"]
+        for n in rows[:BULLETIN_MAX[cat]]:
+            tags = " ".join(("⭐" if sym in mine else "") + sym_link(sym) for sym in n["symbols"][:3])
+            link = html.escape(n["link"], quote=True)
+            when = datetime.fromtimestamp(n["at"], VN).strftime("%H:%M %d/%m")
+            lines.append(f"• {'<b>' + tags + '</b> · ' if tags else ''}<a href=\"{link}\">{esc(n['title'])}</a> · {esc(n['host'])} {when}")
+        if len(rows) > BULLETIN_MAX[cat]:
+            lines.append(f"… và {len(rows) - BULLETIN_MAX[cat]} tin khác")
+    if len(lines) == 2:
+        lines.append("Không có tin mới đáng chú ý trong khoảng này.")
+    if any(n["category"] == "laws" for n in items):
+        lines += ["", "<i>Tin chính sách có thể là dự thảo hoặc đề xuất; xem hiệu lực trong văn bản gốc.</i>"]
+    text = "\n".join(lines + [f"<i>Nguồn: CafeF, Báo Chính phủ · Bấm tiêu đề để đọc bài gốc · {DISCLAIMER}</i>"])
+    return text if len(text) <= LIMIT else text[:LIMIT].rsplit("\n•", 1)[0] + f"\n<i>{DISCLAIMER}</i>"
 
 
 def settings_text(user: dict) -> str:
     lines = [f"{ICON['settings']} <b>Cài đặt nhận tin</b>", "Bấm để bật/tắt từng loại tin:"]
     lines += [f"{'✅' if user.get(k) else '▫️'} {name}" for k, name in TOPICS.items()]
-    lines.append("Chỉ gửi tin phát sinh sau lúc bạn bật. Đổi mã theo dõi: /theodoi.")
+    lines.append("Tin tức gửi gộp hai lượt mỗi ngày giao dịch: đầu phiên (08:30) và cuối phiên (15:00).")
+    lines.append("Cảnh báo chỉ gửi khi phát sinh sau lúc bạn bật. Đổi mã theo dõi: /theodoi.")
     return "\n".join(lines)
 
 
@@ -498,7 +518,7 @@ HELP = (
     f"{ICON['company']} /ma HPG · thẻ một mã (gõ mã cũng được)\n\n"
     "<b>Cá nhân</b>\n"
     f"{ICON['watch']} /theodoi · xem, thêm, bớt mã theo dõi\n"
-    f"{ICON['settings']} /caidat · bật/tắt cảnh báo, tin doanh nghiệp, tin chính sách, tóm tắt đầu và cuối phiên\n\n"
+    f"{ICON['settings']} /caidat · bật/tắt cảnh báo, bản tin tin tức (08:30 và 15:00), tóm tắt đầu và cuối phiên\n\n"
     "<b>Khác</b>\n"
     f"{ICON['status']} /trangthai · dữ liệu đang trong phiên, đã kết thúc hay MÔ PHỎNG\n"
     f"{ICON['stop']} /dung · hủy và xóa đăng ký\n\n"

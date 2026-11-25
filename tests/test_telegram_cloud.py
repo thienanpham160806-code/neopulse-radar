@@ -64,11 +64,16 @@ def test_encrypted_state_and_wrong_key_fail_closed(tmp_path):
         load_state(p, crypto.Fernet.generate_key().decode())
 
 
+def rss(*titles):
+    items = "".join(f'<item><title>{t}</title><link>https://cafef.vn/{i}.chn</link><pubDate>Thu, 19 Nov 2026 10:00:00 +0700</pubDate></item>'
+                    for i, t in enumerate(titles))
+    return f"<rss><channel>{items}</channel></rss>".encode()
+
+
 def test_rss_cites_source_does_not_invent_effective_date():
-    xml = b'<rss><channel><item><title>MWG earnings</title><link>https://cafef.vn/a.chn</link><pubDate>Thu, 19 Nov 2026 10:00:00 +0700</pubDate></item></channel></rss>'
+    xml = rss("MWG earnings")
     events = rss_items(xml, "news", "cafef.vn", {"MWG"})
-    assert events[0]["symbols"] == ["MWG"] and events[0]["markup"]["inline_keyboard"][0][0]["url"] == "https://cafef.vn/a.chn"
-    assert "Nguồn: cafef.vn" in events[0]["text"] and "10:00, 19/11/2026" in events[0]["text"]
+    assert events[0]["symbols"] == ["MWG"] and events[0]["link"] == "https://cafef.vn/0.chn" and events[0]["host"] == "cafef.vn"
     assert events[0]["at"] == datetime(2026, 11, 19, 3, tzinfo=timezone.utc).timestamp()
     assert not rss_items(xml, "news", "baochinhphu.vn", {"MWG"})
     with pytest.raises(ValueError):
@@ -122,3 +127,13 @@ def test_redis_lock_skips_concurrent_run(monkeypatch, tmp_path, capsys):
     with httpx.Client(transport=httpx.MockTransport(redis)) as c:
         tc.run(tmp_path / "s.enc", "tok", Fernet.generate_key().decode(), client=c)
     assert seen == ["SET"] and "bỏ qua" in capsys.readouterr().out
+
+
+def test_rss_keeps_only_notable_items():
+    symbols = {"MWG", "CEO", "HAI"}
+    news = rss_items(rss("MWG lãi kỷ lục", "CEO chia sẻ bí quyết", "Hai doanh nghiệp bắt tay", "Chuyện hậu trường"), "news", "cafef.vn", symbols)
+    assert [n["symbols"] for n in news] == [["MWG"]]  # viết tắt CEO và chữ thường "Hai" không bị nhận là mã
+    world = rss_items(rss("Fed giữ nguyên lãi suất", "Phát hiện kho báu dưới lòng đất"), "world", "cafef.vn", symbols)
+    assert [n["title"] for n in world] == ["Fed giữ nguyên lãi suất"]
+    laws = rss_items(rss("Nghị định mới về thuế thu nhập", "Từ năm 2028 không dùng điểm cộng"), "laws", "cafef.vn", symbols)
+    assert [n["title"] for n in laws] == ["Nghị định mới về thuế thu nhập"]
