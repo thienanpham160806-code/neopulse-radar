@@ -291,7 +291,7 @@ format_alerts = format_alert_list  # tên cũ
 def alert_list_keyboard(scope: str = "CAO") -> dict:
     return keyboard([(("✓ " if scope == "CAO" else "") + f"{ICON['high']} Chỉ mức cao", "cl:CAO"),
                      (("✓ " if scope == "TB" else "") + f"{ICON['mid']} Từ trung bình", "cl:TB")],
-                    [web_link("Mở trên web", "/?tab=canh-bao")])
+                    [web_link("Mở trên web", "/thi-truong?tab=canh-bao")])
 
 
 def _rows(payload: dict, key: str) -> dict[str, dict]:
@@ -350,7 +350,7 @@ def alert_push_keyboard(alerts: list[dict]) -> dict:
     if len(alerts) == 1:
         s = alerts[0].get("symbol", "")
         return keyboard([(f"{ICON['company']} Thẻ {s}", f"v:ma:{s}"), web_link(f"Xem {s} trên NeoPulse", f"/doanh-nghiep/{s}")])
-    return keyboard([web_link("Xem toàn bộ cảnh báo", "/?tab=canh-bao")])
+    return keyboard([web_link("Xem toàn bộ cảnh báo", "/thi-truong?tab=canh-bao")])
 
 
 def format_card(symbol: str, entry: dict, payload: dict | None, now: float | None = None) -> str:
@@ -537,7 +537,7 @@ def readonly_answer(text: str, catalog: dict[str, dict], load_payload) -> tuple[
         if payload is None:
             return unavailable
         if cmd == "/thitruong":
-            return format_market(payload) + note, keyboard([(f"{ICON['high']} Xem cảnh báo", "v:canhbao"), web_link("Mở trên web", "/?tab=tong-quan")])
+            return format_market(payload) + note, keyboard([(f"{ICON['high']} Xem cảnh báo", "v:canhbao"), web_link("Mở trên web", "/thi-truong?tab=tong-quan")])
         return format_alert_list(payload) + note, alert_list_keyboard("CAO")
     symbol = arg.upper() if cmd == "/ma" else (cmd.upper() if not cmd.startswith("/") and not arg else "")
     if cmd == "/ma" and not arg:

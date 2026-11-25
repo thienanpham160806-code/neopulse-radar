@@ -264,10 +264,10 @@ def digest_events(payload: dict, now: float) -> list[dict]:
     closed = (meta.get("data_status") or {}).get("phase") == "closed"
     if "09:15" <= hm < "11:30":
         out.append({"id": f"digest_open|{today}", "category": "digest_open", "at": now, "symbols": [],
-                    "text": format_open_digest(payload, now), "markup": keyboard([web_link("Mở trên web", "/?tab=tong-quan")])})
+                    "text": format_open_digest(payload, now), "markup": keyboard([web_link("Mở trên web", "/thi-truong?tab=tong-quan")])})
     if closed and hm >= "14:45":
         out.append({"id": f"digest_close|{today}", "category": "digest_close", "at": now, "symbols": [],
-                    "text": format_close_digest(payload, now), "markup": keyboard([web_link("Xem bản tin phiên trên web", "/?tab=tong-quan")])})
+                    "text": format_close_digest(payload, now), "markup": keyboard([web_link("Xem bản tin phiên trên web", "/thi-truong?tab=tong-quan")])})
     return out
 
 

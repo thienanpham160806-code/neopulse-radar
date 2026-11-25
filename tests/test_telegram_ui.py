@@ -71,7 +71,7 @@ def test_market_message_structure_icons_and_escape():
     assert "<b>Căn cứ:</b> Động lượng chỉ số +0,44 và Độ rộng thị trường +0,38 kéo điểm lên; Mất cân bằng sổ lệnh −0,23 kéo xuống" in text
     assert "🏦 Khối ngoại bán ròng 99,1 tỷ đồng" in text and "Ngân hàng +6,2 điểm" in text
     assert text.endswith("<i>SSI FastConnect · Phiên đã kết thúc · Không phải lời khuyên đầu tư</i>")
-    assert [b.get("callback_data") or b["url"] for b in buttons(markup)] == ["v:canhbao", ui.BASE + "/?tab=tong-quan"]
+    assert [b.get("callback_data") or b["url"] for b in buttons(markup)] == ["v:canhbao", ui.BASE + "/thi-truong?tab=tong-quan"]
 
 
 def test_simulated_and_missing_fields_are_labelled_not_invented():
