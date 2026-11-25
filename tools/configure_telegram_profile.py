@@ -4,16 +4,15 @@ import os
 import httpx
 from dotenv import load_dotenv
 
+from neopulse.analytics.telegram_ui import COMMANDS  # một nguồn cho danh sách lệnh của bot
+
 DESCRIPTION = (
-    "NeoPulse Radar — trợ lý theo dõi thị trường chứng khoán Việt Nam.\n"
-    "Xem nhanh nhịp thị trường (/market), cảnh báo (/alerts) và hồ sơ doanh nghiệp (gõ mã, ví dụ MWG).\n"
-    "Đăng ký tự nguyện bằng /start; /watch để chọn mã, /status xem cài đặt, /stop để hủy.\n"
-    "Công cụ phân tích học thuật. Không phải lời khuyên đầu tư."
+    "NeoPulse Radar · trợ lý theo dõi thị trường chứng khoán Việt Nam.\n"
+    "📊 /thitruong nhịp thị trường · 🚨 /canhbao cảnh báo trong phiên · 🏢 /ma HPG thẻ một mã.\n"
+    "⭐ /theodoi mã theo dõi · ⚙️ /caidat bật/tắt từng loại tin · ℹ️ /trangthai · ❓ /huongdan · ⏹ /dung hủy đăng ký.\n"
+    "Số liệu lấy từ website NeoPulse. Công cụ phân tích học thuật. Không phải lời khuyên đầu tư."
 )
-SHORT = "NeoPulse Radar · Nhịp thị trường, cảnh báo, hồ sơ doanh nghiệp và tin theo mã. /help xem hướng dẫn."
-COMMANDS = [("market", "Nhịp thị trường VN30"), ("alerts", "Cảnh báo trong phiên"), ("company", "Tra hồ sơ doanh nghiệp, ví dụ /company MWG"),
-            ("watchlist", "Mã đang theo dõi"), ("status", "Cài đặt nhận tin"), ("start", "Đăng ký nhận cảnh báo"),
-            ("help", "Hướng dẫn"), ("stop", "Hủy và xóa đăng ký")]
+SHORT = "📊 Nhịp thị trường · 🚨 Cảnh báo · 🏢 Thẻ mã · ⭐ Theo dõi. Số liệu khớp website NeoPulse. Không phải lời khuyên đầu tư."
 
 
 def main():
