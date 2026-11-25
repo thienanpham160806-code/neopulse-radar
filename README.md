@@ -15,8 +15,8 @@ Radar nội phiên cho thị trường cổ phiếu Việt Nam: đo nhịp thị
 
 **[Bản web](https://neopulse-radar.vercel.app)** · **[Phương pháp](docs/methodology.md)** · **[Kiến trúc](docs/architecture.md)** · **[Số liệu báo cáo](report/data/SUMMARY.md)** · **[Dàn ý báo cáo](report/README.md)**
 
-![Bản web, tab Tổng quan với dữ liệu SSI thật phiên 20/11/2026](docs/img/web_overview_live.png)
-*Bản web với dữ liệu SSI FastConnect thật, lần cập nhật 11:30 ngày 20/11/2026.*
+![Bản web, tab Tổng quan với dữ liệu SSI thật phiên 25/11/2026](docs/img/web_overview_live_desktop.png)
+*Bản web với dữ liệu SSI FastConnect thật, lần cập nhật cuối 14:56 ngày 25/11/2026. Ảnh điện thoại: [Tổng quan](docs/img/web_overview_live_mobile.png), [Chi tiết mã](docs/img/web_book_live_mobile.png), [Hồ sơ doanh nghiệp](docs/img/web_company_live_mobile.png).*
 
 ## Kết quả chính
 
