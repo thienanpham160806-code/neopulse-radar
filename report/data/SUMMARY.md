@@ -1,6 +1,6 @@
 # Số liệu báo cáo NeoPulse Radar
 
-Sinh bằng `neopulse report-data --source ssi` lúc 16:01 25/11/2026 từ CSDL SQLite (chỉ đọc). Không chỉnh tay; chạy lại lệnh sau mỗi phiên mới. CSV chi tiết cùng thư mục.
+Sinh bằng `neopulse report-data --source ssi` lúc 16:26 25/11/2026 từ CSDL SQLite (chỉ đọc). Không chỉnh tay; chạy lại lệnh sau mỗi phiên mới. CSV chi tiết cùng thư mục.
 
 ## Tổng quan
 
