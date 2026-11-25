@@ -11,11 +11,19 @@ from __future__ import annotations
 
 import os
 from datetime import datetime
+from uuid import uuid4
 
 from ..timeutil import VN_TZ, trading_minutes_elapsed
 
 SILENT_MIN = 5.0
 KEY = "neopulse:health:"
+FINISH = """
+if redis.call('GET', KEYS[1]) ~= ARGV[1] then return 0 end
+if ARGV[2] == 'sent' then
+    return redis.call('SET', KEYS[1], 'sent', 'EX', 86400)
+end
+return redis.call('DEL', KEYS[1])
+"""
 
 
 def _last_update(payload: dict | None) -> datetime | None:
@@ -57,7 +65,17 @@ def notify_owner(payload: dict | None, now: float, store, send) -> bool:
     if not issue:
         return False
     marker, text = issue
-    if not store.call("SET", KEY + marker, "1", "NX", "EX", "86400"):
+    key, claim = KEY + marker, uuid4().hex
+    # A crashed or failed sender must not suppress an incident for the whole day.
+    if not store.call("SET", key, claim, "NX", "EX", "120"):
         return False  # đã báo sự cố này
-    send(chat, text)
+    try:
+        result = send(chat, text)
+    except Exception:
+        store.call("EVAL", FINISH, 1, key, claim, "retry")
+        raise
+    if isinstance(result, dict) and result.get("blocked"):
+        store.call("EVAL", FINISH, 1, key, claim, "retry")
+        return False
+    store.call("EVAL", FINISH, 1, key, claim, "sent")
     return True
