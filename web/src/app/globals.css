@@ -166,6 +166,8 @@ body {
 }
 
 .scroll-x {
+  /* relative: nhãn sr-only (absolute) trong bảng rộng phải bị khung cuộn chứa, nếu không sẽ kéo rộng cả trang trên điện thoại */
+  position: relative;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
