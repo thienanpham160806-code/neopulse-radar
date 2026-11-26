@@ -90,3 +90,15 @@ def test_evaluate_against_truth():
     assert ev["by_kind"]["volume_spike"]["recall"] == 1.0 and ev["by_kind"]["spread_blowout"]["recall"] == 0.0
     assert ev["recall"] == 0.5 and ev["precision"] == 1.0
     assert alerts.detect(pd.DataFrame()).empty
+
+
+def test_auction_bars_skip_volume_rule_and_saturated_z_is_not_high_alone():
+    b = _bars(n=340)  # 09:15 -> 14:54; chỉ số 330 là thanh 14:45 (khớp ATC)
+    assert b.loc[330, "bar"].strftime("%H:%M") == "14:45"
+    b.loc[[200, 330], "vol"] = b["vol"].median() * 40
+    b.loc[260, "spread_bps"] = 200.0  # spread nổ mạnh, đứng một mình
+    a = alerts.detect(b, source="t")
+    spikes = a[a["rule"] == "volume_spike"]
+    assert b.loc[200, "bar"] in set(spikes["ts"]) and b.loc[330, "bar"] not in set(spikes["ts"])  # bỏ thanh ATC
+    spread = a[a["rule"] == "spread_blowout"]
+    assert len(spread) == 1 and spread.iloc[0]["value"] >= 6 and spread.iloc[0]["severity"] == "TRUNG BÌNH"

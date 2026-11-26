@@ -7,8 +7,12 @@ price_jump       |z_ret| >= 3,5                                    thống kê
 foreign_flow     |z_fnet| >= 3,5 và NN chiếm >= 30% GT thanh        thống kê + điều kiện trọng yếu
 book_pressure    |OBI_3| >= 0,6 liên tục >= 3 thanh                 OBI=0,6 <=> một bên dày gấp 4 lần bên kia
 near_limit       |band_pos| >= 0,9                                 quy tắc biên độ trần/sàn của sàn
-Mức ưu tiên: CAO nếu >= 2 quy tắc cùng nổ trên một mã trong một thanh hoặc |z| >= 6; còn lại TRUNG BÌNH,
-riêng near_limit/book_pressure là THẤP khi đứng một mình.
+Mức ưu tiên: CAO nếu >= 2 quy tắc cùng nổ trên một mã trong một thanh hoặc |giá trị| >= 6; còn lại TRUNG BÌNH,
+riêng near_limit/book_pressure là THẤP khi đứng một mình. spread_blowout và foreign_flow chỉ CAO khi đi cùng quy tắc
+khác: trên dữ liệu SSI thật, spread thường đúng 1 bước giá và khối ngoại thường bằng 0 nên MAD ~ 0 và |z| bão hòa
+(93% spread_blowout chạm trần 50), "|z| >= 6" không còn phân biệt được (duyệt 26/11/2026, xem report/data).
+volume_spike bỏ thanh 09:15 (khớp ATO) và 14:45 (khớp ATC): khối lượng đấu giá lớn theo cấu trúc phiên, không phải
+bất thường; 90/499 cảnh báo khối lượng của 4 phiên đầu rơi vào thanh 14:45.
 Cảnh báo là tín hiệu "đáng xem", không phải khuyến nghị mua/bán.
 """
 from __future__ import annotations
@@ -25,6 +29,8 @@ OBI_EXTREME = 0.6
 OBI_PERSIST = 3
 NEAR_LIMIT = 0.9
 FOREIGN_MIN_SHARE = 0.30
+AUCTION_BARS = ("09:15", "14:45")  # thanh chứa lần khớp ATO / ATC (thanh = floor của thời điểm nhận)
+NO_Z_ESCALATION = ("spread_blowout", "foreign_flow")  # |z| bão hòa trên dữ liệu thật, chỉ CAO khi >= 2 quy tắc
 RULE_NAMES = {"volume_spike": "Khối lượng tăng bất thường", "spread_blowout": "Độ chênh giá mua-bán giãn rộng",
               "price_jump": "Giá biến động đột ngột", "foreign_flow": "Khối ngoại giao dịch bất thường",
               "book_pressure": "Mất cân bằng sổ lệnh kéo dài", "near_limit": "Sát trần/sàn"}
@@ -52,7 +58,7 @@ def detect(bars: pd.DataFrame, cfg: AlertConfig | None = None, source: str = "")
     fshare = (b["f_net_val"].abs() / b["val"]).where(b["val"] > 0)
     rules = {
         # có KL TB 20 phiên: so với CÙNG GIỜ các phiên trước (RVOL); không có: z bền vững của KL trong phiên
-        "volume_spike": _volume_rule(b, cfg),
+        "volume_spike": _volume_rule(b, cfg, ~b["bar"].dt.strftime("%H:%M").isin(AUCTION_BARS)),
         "spread_blowout": ((b["z_spread"] >= cfg.z) & (b["spread_bps"] >= 2 * min_spread), b["z_spread"], cfg.z),
         "price_jump": (b["z_ret"].abs() >= cfg.z, b["z_ret"], cfg.z),
         "foreign_flow": ((b["z_fnet"].abs() >= cfg.z) & (fshare >= FOREIGN_MIN_SHARE), b["z_fnet"], cfg.z),
@@ -77,7 +83,8 @@ def detect(bars: pd.DataFrame, cfg: AlertConfig | None = None, source: str = "")
     a = a[step.isna() | (step > unit * cfg.cooldown_bars)].copy()
     n_rules = a.groupby(["trading_date", "symbol", "bar"])["rule"].transform("nunique")
     low = a["rule"].isin(["near_limit", "book_pressure"])
-    a["severity"] = np.where((n_rules >= 2) | ((a["value"].abs() >= 6) & ~low), "CAO",
+    by_value = (a["value"].abs() >= 6) & ~low & ~a["rule"].isin(NO_Z_ESCALATION)
+    a["severity"] = np.where((n_rules >= 2) | by_value, "CAO",
                              np.where(low, "THẤP", "TRUNG BÌNH"))
     a["message"] = [_message(r) for r in a.itertuples()]
     a["ts"] = a["bar"]
@@ -97,11 +104,11 @@ def _signed_run_length(b: pd.DataFrame) -> pd.Series:
     return length.where(sign != 0, 0)
 
 
-def _volume_rule(b: pd.DataFrame, cfg: AlertConfig):
+def _volume_rule(b: pd.DataFrame, cfg: AlertConfig, eligible: pd.Series):
     if "rvol_bar" not in b:
-        return b["z_vol"] >= cfg.z, b["z_vol"], cfg.z
+        return (b["z_vol"] >= cfg.z) & eligible, b["z_vol"], cfg.z
     has = b["rvol_bar"].notna()
-    mask = (has & (b["rvol_bar"] >= RVOL_SPIKE)) | (~has & (b["z_vol"] >= cfg.z))
+    mask = ((has & (b["rvol_bar"] >= RVOL_SPIKE)) | (~has & (b["z_vol"] >= cfg.z))) & eligible
     value = b["rvol_bar"].where(has, b["z_vol"])
     thr = pd.Series(np.where(has, RVOL_SPIKE, cfg.z), index=b.index)
     return mask, value, thr

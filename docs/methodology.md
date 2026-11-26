@@ -91,7 +91,12 @@ z_t = 0,6745 × (x_t − median)/MAD, median và MAD lấy trên 60 thanh **trư
 | Mất cân bằng sổ lệnh kéo dài | \|OBI₃\| ≥ 0,6 cùng dấu 3 thanh liên tiếp | 0,6 ⇔ một bên dày gấp 4 lần bên kia; 3 thanh để loại nhiễu đặt-hủy |
 | Sát trần/sàn | \|vị trí biên độ\| ≥ 0,9 | quy tắc biên độ của sàn |
 
-Mức ưu tiên: **CAO** khi ≥ 2 quy tắc cùng nổ trên một mã trong một thanh hoặc |z| ≥ 6; hai quy tắc cuối là **THẤP** khi đứng một mình; còn lại **TRUNG BÌNH**. Thời gian nguội 10 thanh cho mỗi cặp (mã, quy tắc). Khóa chống lặp khi lưu/gửi.
+Mức ưu tiên: **CAO** khi ≥ 2 quy tắc cùng nổ trên một mã trong một thanh, hoặc |giá trị| ≥ 6 (z, hoặc RVOL với quy tắc khối lượng); hai quy tắc cuối là **THẤP** khi đứng một mình; còn lại **TRUNG BÌNH**. Thời gian nguội 10 thanh cho mỗi cặp (mã, quy tắc). Khóa chống lặp khi lưu/gửi.
+
+**Điều chỉnh sau khi đối chiếu 4 phiên SSI thật (duyệt 26/11/2026):**
+- Độ chênh giá và khối ngoại **chỉ CAO khi đi cùng quy tắc khác**. Spread thường đúng 1 bước giá và khối ngoại thường bằng 0, nên MAD ≈ 0 và |z| bão hòa: 93% cảnh báo độ chênh giá chạm trần 50, 258/264 lượt bị xếp CAO, nên mốc "|z| ≥ 6" không còn phân biệt được.
+- Quy tắc khối lượng **bỏ thanh 09:15 (khớp ATO) và 14:45 (khớp ATC)**: khối lượng đấu giá lớn do cấu trúc phiên, không phải bất thường; 90/499 cảnh báo khối lượng rơi vào thanh 14:45.
+- Giữ ngưỡng sát trần/sàn 0,9: quy tắc không báo lần nào vì trong 4 phiên |vị trí biên độ| lớn nhất chỉ 0,86, không phải do lỗi.
 
 Ngưỡng 30%, 3 thanh, 10 thanh là quy tắc nghiệp vụ do tác giả đặt — nên rà lại bằng dữ liệu thật (tần suất cảnh báo mỗi phiên) trước khi coi là cuối cùng.
 
