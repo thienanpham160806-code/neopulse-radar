@@ -258,9 +258,13 @@ def test_stream_reconnects_before_token_expiry():
 
 def test_build_topics():
     t = build_topics(["VPB"], ["VN30F2612"], ["VN30", "UPCOMINDEX"])
-    assert t == ["market.flag", "trade.VPB", "quote.VPB", "room.VPB", "market.VPB",
-                 "trade.VN30F2612", "quote.VN30F2612", "market.VN30F2612",
-                 "indexsummary.VN30", "indexsummary.UPCOMINDEX"]
+    assert t == ["market.flag", "indexsummary.VN30", "indexsummary.UPCOMINDEX",
+                 "trade.VN30F2612", "quote.VN30F2612", "trade.VPB", "quote.VPB", "room.VPB"]
+    # rổ VN30 + 4 chỉ số + 1 HĐTL vừa dưới giới hạn 100 chủ đề; vượt thì chỉ số vẫn được giữ
+    full = build_topics([f"S{i:02d}" for i in range(30)], ["41I1GC000"], ["VNINDEX", "VN30", "HNXINDEX", "UPCOMINDEX"])
+    assert len(full) == 97
+    big = build_topics([f"S{i:02d}" for i in range(40)], [], ["VN30"])
+    assert len(big) == 100 and "indexsummary.VN30" in big
 
 
 # -------------------------------------------------------------------- config

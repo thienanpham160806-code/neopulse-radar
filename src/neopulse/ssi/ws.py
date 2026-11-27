@@ -25,18 +25,27 @@ log = logging.getLogger(__name__)
 TOPIC_CHUNK = 50  # số chủ đề mỗi yêu cầu đăng ký (giới hạn thật chưa công bố - chia nhỏ cho an toàn)
 
 
+MAX_TOPICS = 100  # 27/11/2026 SSI từ chối phần vượt: "Rejected (subscription limit reached): 28 topic(s)" khi gửi 128
+
+
 def build_topics(stocks: list[str], futures: list[str], indexes: list[str]) -> list[str]:
-    """Chủ đề cần đăng ký. HĐTL chỉ cần trade+quote; cổ phiếu thêm room (ngoại) và market (trần/sàn/TC)."""
+    """Chủ đề cần đăng ký, quan trọng trước: cờ phiên, chỉ số, HĐTL, rồi cổ phiếu (trade, quote, room).
+
+    Không đăng ký market.<MÃ>: trong phiên chủ đề này không gửi tin (19/11/2026), trần/sàn/tham chiếu lấy qua REST
+    masterdata. Giới hạn MAX_TOPICS chủ đề mỗi kết nối; nếu vượt, phần cuối (cổ phiếu) bị cắt chứ không phải chỉ số.
+    """
     topics: list[str] = ["market.flag"]
-    for s in stocks:
-        topics += [f"trade.{s}", f"quote.{s}", f"room.{s}", f"market.{s}"]
-    for s in futures:
-        topics += [f"trade.{s}", f"quote.{s}", f"market.{s}"]
     for code in indexes:
         # indexsummary mang giá trị, thay đổi, %, tăng/giảm/đứng/trần/sàn, KL/GT lũy kế (kiểm chứng 19/11/2026);
         # trade.index chỉ có giá trị + khối lượng nên không dùng. UPCOMINDEX đăng ký được trực tiếp.
         topics.append(f"indexsummary.{code}")
-    return topics
+    for s in futures:
+        topics += [f"trade.{s}", f"quote.{s}"]
+    for s in stocks:
+        topics += [f"trade.{s}", f"quote.{s}", f"room.{s}"]
+    if len(topics) > MAX_TOPICS:
+        log.warning("Có %d chủ đề, SSI chỉ nhận %d; bỏ %d chủ đề cuối", len(topics), MAX_TOPICS, len(topics) - MAX_TOPICS)
+    return topics[:MAX_TOPICS]
 
 
 class SsiStream(MarketStream):
