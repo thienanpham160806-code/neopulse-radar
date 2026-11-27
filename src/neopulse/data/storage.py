@@ -117,6 +117,11 @@ class Storage:
     # ------------------------------------------------------------------ đọc
     def _df(self, sql: str, params: tuple = ()) -> pd.DataFrame:
         df = pd.read_sql_query(sql, self._con, params=params)
+        # Cột REAL toàn NULL (VD total_value trước khớp ATO 09:15) bị pandas đọc thành object -> np.log, fillna lỗi.
+        numeric = (set(QUOTE_COLUMNS) - _TEXT_Q) | (set(INDEX_COLUMNS) - _TEXT_I)
+        for c in df.columns:
+            if c in numeric and df[c].dtype == object:
+                df[c] = pd.to_numeric(df[c], errors="coerce")
         if "ts" in df.columns and len(df):
             df["ts"] = pd.to_datetime(df["ts"], format="ISO8601").dt.tz_convert("Asia/Ho_Chi_Minh")
         return df

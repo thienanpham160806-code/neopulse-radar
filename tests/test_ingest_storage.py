@@ -91,3 +91,13 @@ def test_reset_by_source_and_run_bookkeeping(raw_stock, recv):
     db.reset("sim")
     assert db.sources() == ["neo"]
     assert db.last_update("sim") is None and db.last_update("neo") is not None
+
+
+def test_all_null_real_columns_read_back_as_float(tmp_path):
+    # 27/11/2026: trước khớp ATO cột total_value toàn NULL, pandas đọc thành object và ranking ném TypeError
+    from neopulse.data.storage import Storage
+    db = Storage(tmp_path / "n.sqlite")
+    db.insert_quotes([{"ts": "2026-11-27T09:05:00.000+07:00", "trading_date": "2026-11-27", "symbol": "AAA",
+                       "instrument": "stock", "source": "ssi", "bid1": 10.0}])
+    q = db.quotes(source="ssi")
+    assert q["total_value"].dtype == float and q["maturity_date"].dtype == object
