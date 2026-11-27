@@ -1,38 +1,59 @@
 phiên,quy tắc,mức,số cảnh báo
 2026-11-19,book_pressure,THẤP,44
-2026-11-19,foreign_flow,CAO,3
-2026-11-19,foreign_flow,TRUNG BÌNH,4
+2026-11-19,foreign_flow,TRUNG BÌNH,7
 2026-11-19,price_jump,TRUNG BÌNH,2
-2026-11-19,spread_blowout,CAO,14
-2026-11-19,spread_blowout,TRUNG BÌNH,1
+2026-11-19,spread_blowout,TRUNG BÌNH,15
 2026-11-19,volume_spike,CAO,7
 2026-11-19,volume_spike,TRUNG BÌNH,21
-2026-11-20,book_pressure,CAO,9
-2026-11-20,book_pressure,THẤP,104
-2026-11-20,foreign_flow,CAO,61
-2026-11-20,foreign_flow,TRUNG BÌNH,15
+2026-11-20,book_pressure,CAO,6
+2026-11-20,book_pressure,THẤP,107
+2026-11-20,foreign_flow,CAO,8
+2026-11-20,foreign_flow,TRUNG BÌNH,68
 2026-11-20,price_jump,CAO,10
 2026-11-20,price_jump,TRUNG BÌNH,7
-2026-11-20,spread_blowout,CAO,65
-2026-11-20,spread_blowout,TRUNG BÌNH,3
-2026-11-20,volume_spike,CAO,78
+2026-11-20,spread_blowout,CAO,7
+2026-11-20,spread_blowout,TRUNG BÌNH,61
+2026-11-20,volume_spike,CAO,48
 2026-11-20,volume_spike,TRUNG BÌNH,82
-2026-11-23,book_pressure,CAO,1
-2026-11-23,book_pressure,THẤP,66
-2026-11-23,foreign_flow,CAO,81
-2026-11-23,foreign_flow,TRUNG BÌNH,21
+2026-11-23,book_pressure,THẤP,67
+2026-11-23,foreign_flow,CAO,4
+2026-11-23,foreign_flow,TRUNG BÌNH,98
 2026-11-23,price_jump,CAO,8
 2026-11-23,price_jump,TRUNG BÌNH,11
-2026-11-23,spread_blowout,CAO,67
-2026-11-23,spread_blowout,TRUNG BÌNH,2
-2026-11-23,volume_spike,CAO,63
+2026-11-23,spread_blowout,CAO,8
+2026-11-23,spread_blowout,TRUNG BÌNH,61
+2026-11-23,volume_spike,CAO,33
 2026-11-23,volume_spike,TRUNG BÌNH,80
-2026-11-25,book_pressure,CAO,4
-2026-11-25,book_pressure,THẤP,116
-2026-11-25,foreign_flow,CAO,64
-2026-11-25,foreign_flow,TRUNG BÌNH,31
+2026-11-25,book_pressure,CAO,2
+2026-11-25,book_pressure,THẤP,118
+2026-11-25,foreign_flow,CAO,4
+2026-11-25,foreign_flow,TRUNG BÌNH,91
 2026-11-25,price_jump,CAO,12
 2026-11-25,price_jump,TRUNG BÌNH,8
-2026-11-25,spread_blowout,CAO,112
-2026-11-25,volume_spike,CAO,74
+2026-11-25,spread_blowout,CAO,18
+2026-11-25,spread_blowout,TRUNG BÌNH,94
+2026-11-25,volume_spike,CAO,44
 2026-11-25,volume_spike,TRUNG BÌNH,94
+2026-11-26,book_pressure,CAO,5
+2026-11-26,book_pressure,THẤP,143
+2026-11-26,foreign_flow,CAO,7
+2026-11-26,foreign_flow,TRUNG BÌNH,128
+2026-11-26,near_limit,CAO,1
+2026-11-26,near_limit,THẤP,2
+2026-11-26,price_jump,CAO,15
+2026-11-26,price_jump,TRUNG BÌNH,28
+2026-11-26,spread_blowout,CAO,20
+2026-11-26,spread_blowout,TRUNG BÌNH,99
+2026-11-26,volume_spike,CAO,53
+2026-11-26,volume_spike,TRUNG BÌNH,143
+2026-11-27,book_pressure,CAO,4
+2026-11-27,book_pressure,THẤP,118
+2026-11-27,foreign_flow,CAO,10
+2026-11-27,foreign_flow,TRUNG BÌNH,96
+2026-11-27,near_limit,THẤP,2
+2026-11-27,price_jump,CAO,15
+2026-11-27,price_jump,TRUNG BÌNH,10
+2026-11-27,spread_blowout,CAO,23
+2026-11-27,spread_blowout,TRUNG BÌNH,99
+2026-11-27,volume_spike,CAO,47
+2026-11-27,volume_spike,TRUNG BÌNH,96
