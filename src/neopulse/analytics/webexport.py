@@ -288,7 +288,8 @@ def _futures(v: SessionView) -> dict:
 def build_validation_block(db: Storage, source: str, freq: str = "1min") -> dict:
     """Khối kiểm chứng + chất lượng dữ liệu (nặng - gọi thưa, không gọi mỗi 20 giây)."""
     # Bars never cross a session: reduce each day before combining, rather than loading every raw tick at once.
-    pieces = [micro.make_bars(db.quotes(day, source=source), freq) for day in db.trading_dates(source)]
+    pieces = [micro.make_bars(validation.stocks_only(db.quotes(day, source=source)), freq)
+              for day in db.trading_dates(source)]  # chỉ cổ phiếu (CX-023)
     pieces = [b for b in pieces if not b.empty]
     bars = pd.concat(pieces, ignore_index=True) if pieces else pd.DataFrame()
     res = validation.validate_signals(bars) if len(bars) else {"train": [], "test": [], "table": pd.DataFrame(),

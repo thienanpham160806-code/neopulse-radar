@@ -10,8 +10,9 @@ Thiết kế:
       - ic_tstat_session: IC trung bình từng phiên, n = số phiên (mỗi phiên một quan sát).
   * Q5-Q1 (spread_bps) là chênh lợi suất giá giữa nhóm tín hiệu cao nhất - thấp nhất, CHƯA trừ chi phí.
     q5q1_net_bps: mua Q5 ở giá bán_t, bán ở giá mua_{t+h}; bán khống Q1 ở giá mua_t, mua lại ở giá bán_{t+h};
-    trừ thêm phí GIẢ ĐỊNH 0,15%/chiều (FEE_BPS) cho mỗi chiều. q5_long_net_bps: chỉ chân mua Q5 (thị trường cơ sở
-    Việt Nam không cho bán khống trong ngày nên đây là chân thực hiện được).
+    trừ thêm phí GIẢ ĐỊNH 0,15%/chiều (FEE_BPS) cho mỗi chiều. q5_long_net_bps: benchmark giả định chỉ chân mua Q5
+    (không bán khống); chưa kiểm khả năng khớp ở mức 1, tồn kho để bán sau h thanh hay quy định thanh toán (CX-022).
+  * Phạm vi: chỉ cổ phiếu (stocks_only); HĐTL có bước giá và chi phí khác nên không trộn vào mặt cắt (CX-023).
   * Placebo (placebo_table): xáo tín hiệu giữa các mã trong cùng thanh, và dùng tín hiệu cũ t-h; IC phải gần 0.
   * Tín hiệu và giá giữa tại t lấy cùng một ảnh chụp sổ lệnh (finance.microstructure.make_bars, CX-016).
   * Tách THEO THỜI GIAN: các phiên đầu (in-sample) dùng để chọn tín hiệu/chiều; các phiên cuối
@@ -28,6 +29,13 @@ SIGNALS = ("obi3", "obi_w", "obi1", "micro_dev_bps")
 FEE_BPS = 15.0  # GIẢ ĐỊNH phí giao dịch 0,15% mỗi chiều (không phải biểu phí của công ty chứng khoán cụ thể)
 PLACEBO_REPS = 20
 MIN_SESSIONS_T = 3  # t theo phiên với 2 phiên (1 bậc tự do) không có nghĩa
+
+
+def stocks_only(quotes: pd.DataFrame) -> pd.DataFrame:
+    """Chỉ giữ cổ phiếu cho kiểm chứng; dữ liệu không có cột instrument (mô phỏng cũ, test) giữ nguyên."""
+    if "instrument" not in quotes.columns:
+        return quotes
+    return quotes[quotes["instrument"].fillna("stock") == "stock"]
 
 
 def add_forward_returns(bars: pd.DataFrame, horizons: tuple[int, ...] = (1, 5)) -> pd.DataFrame:

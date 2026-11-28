@@ -188,7 +188,7 @@ def cmd_validate(args, s: Settings) -> int:
         print(f"Chưa có dữ liệu nguồn '{src}'.")
         return 1
     pd.set_option("display.width", 200)
-    bars = make_bars(quotes, args.freq)
+    bars = make_bars(validation.stocks_only(quotes), args.freq)  # kiểm chứng chỉ trên cổ phiếu (CX-023)
     print(f"== Kiểm chứng · nguồn={src}{' (MÔ PHỎNG)' if src == 'sim' else ''} · thanh={args.freq} ==")
     dq = validation.data_quality_report(db, src)
     print(f"\n[1] Dữ liệu: {dq['n_quotes']:,} ảnh chụp · {dq['n_symbols']} mã · {dq['n_sessions']} phiên · "

@@ -139,7 +139,8 @@ z-score mặt cắt ngang trong rổ, cắt đuôi ±3: động lượng (30%), 
 
 **Chi phí:** `Q5−Q1` là chênh lợi suất giá giữa của nhóm 20% tín hiệu cao nhất trừ thấp nhất, **trước chi phí**.
 - `Q5−Q1 ròng`: mua Q5 ở giá bán tốt nhất tại t, bán ở giá mua tốt nhất tại t+h; bán khống Q1 ở giá mua, mua lại ở giá bán. Mỗi chiều trừ phí **giả định** 0,15%.
-- `Q5 ròng`: chỉ chân mua. Thị trường cơ sở không cho bán khống trong ngày, nên đây là chân thực hiện được.
+- `Q5 ròng`: benchmark **giả định** chỉ chân mua (không bán khống). Chưa kiểm khả năng khớp ở mức giá 1, tồn kho để bán sau h thanh hay quy định thanh toán, nên không phải bằng chứng một giao dịch thực hiện được.
+- Phạm vi: chỉ cổ phiếu trong rổ. HĐTL 41I1GC000 có bước giá và chi phí khác nên không đưa vào mặt cắt kiểm chứng.
 
 **Placebo:** xáo tín hiệu giữa các mã trong cùng thanh (20 lần), và dùng tín hiệu cũ của thanh t−h. IC placebo gần 0 nghĩa là đường tính không tự tạo liên hệ.
 
