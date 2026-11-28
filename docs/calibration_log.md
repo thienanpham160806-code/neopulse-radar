@@ -172,6 +172,65 @@ Kết luận theo ngân sách ≤ 2: cấu hình ít chặt nhất đạt ngân 
 
 Kết luận: **CAO_VALUE = 10** là mức ít chặt nhất đạt CAO ≤ 1 (0,842). Mức 8 cho 1,183.
 
+### 10. Kiểm lại toàn bộ sau khi sửa MAD (CX-015) và ảnh chụp sổ lệnh (CX-016)
+
+Lần 1-9 chạy trước hai bản sửa này. Hai bản sửa đổi z bền vững (price_jump, nhánh z của volume_spike) và đổi cách lấy sổ lệnh cuối thanh, nên cache lại thanh và chạy lại các lưới với bộ tham số cuối.
+
+| K (bước) | q | spread/mã/phiên | CAO/mã/phiên | tổng/mã/phiên | thu hồi MP spread |
+|---|---|---|---|---|---|
+| 2 | 0,950 | 2,575 | 1,100 | 8,567 | 1 |
+| 2 | 0,990 | 2,017 | 1,017 | 8,008 | 0,944 |
+| 3 | 0,950 | 1,383 | 0,900 | 7,375 | 1 |
+| 3 | 0,990 | 1,167 | 0,867 | 7,158 | 0,944 |
+| 4 | 0,950 | 0,933 | 0,850 | 6,925 | 1 |
+| 4 | 0,990 | 0,808 | 0,817 | 6,800 | 0,944 |
+| 5 | 0,950 | 0,642 | 0,842 | 6,633 | 1 |
+| 5 | 0,990 | 0,567 | 0,808 | 6,558 | 0,944 |
+
+| W | q | NN/mã/phiên | CAO/mã/phiên | tổng/mã/phiên | thu hồi MP NN |
+|---|---|---|---|---|---|
+| 1 | 0,950 | 2,733 | 0,858 | 8,500 | 0,974 |
+| 1 | 0,990 | 1,600 | 0,842 | 7,367 | 0,947 |
+| 3 | 0,950 | 2,333 | 0,917 | 8,100 | 0,921 |
+| 3 | 0,990 | 1,608 | 0,900 | 7,375 | 0,816 |
+
+| RVOL | OBI | số thanh OBI | KL/mã/phiên | sổ lệnh/mã/phiên | CAO/mã/phiên | tổng/mã/phiên |
+|---|---|---|---|---|---|---|
+| 3 | 0,600 | 3 | 3,408 | 2,867 | 0,925 | 9,850 |
+| 3 | 0,600 | 5 | 3,408 | 1,875 | 0,875 | 8,858 |
+| 3 | 0,700 | 3 | 3,408 | 1,792 | 0,875 | 8,775 |
+| 3 | 0,700 | 5 | 3,408 | 1,075 | 0,842 | 8,058 |
+| 3 | 0,800 | 3 | 3,408 | 0,833 | 0,825 | 7,817 |
+| 3 | 0,800 | 5 | 3,408 | 0,475 | 0,775 | 7,458 |
+| 4 | 0,600 | 3 | 2,533 | 2,867 | 0,983 | 8,975 |
+| 4 | 0,600 | 5 | 2,533 | 1,875 | 0,900 | 7,983 |
+| 4 | 0,700 | 3 | 2,533 | 1,792 | 0,933 | 7,900 |
+| 4 | 0,700 | 5 | 2,533 | 1,075 | 0,883 | 7,183 |
+| 4 | 0,800 | 3 | 2,533 | 0,833 | 0,867 | 6,942 |
+| 4 | 0,800 | 5 | 2,533 | 0,475 | 0,817 | 6,583 |
+| 5 | 0,600 | 3 | 1,925 | 2,867 | 0,983 | 8,367 |
+| 5 | 0,600 | 5 | 1,925 | 1,875 | 0,900 | 7,375 |
+| 5 | 0,700 | 3 | 1,925 | 1,792 | 0,933 | 7,292 |
+| 5 | 0,700 | 5 | 1,925 | 1,075 | 0,883 | 6,575 |
+| 5 | 0,800 | 3 | 1,925 | 0,833 | 0,867 | 6,333 |
+| 5 | 0,800 | 5 | 1,925 | 0,475 | 0,817 | 5,975 |
+
+| CAO_VALUE | CAO/mã/phiên | tổng/mã/phiên | CAO ngoài mẫu (chỉ báo cáo) |
+|---|---|---|---|
+| 6 | 1,900 | 7,375 | 3,600 |
+| 8 | 1,242 | 7,375 | 2,267 |
+| 10 | 0,900 | 7,375 | 1,633 |
+| 12 | 0,767 | 7,375 | 1,500 |
+
+Kết luận: quy tắc chọn cho **cùng kết quả**:
+- spread: 3 bước, q 0,95 (1,383; 2 bước q 0,99 vượt ngân sách với 2,017).
+- khối ngoại: W3 q 0,99 (W1 q 0,99 bị loại vì lý do dữ liệu như lần 4).
+- RVOL: 5.
+- sổ lệnh: 0,6 trong 5 thanh.
+- CAO_VALUE: 10 (CAO 0,90; mức 8 cho 1,242).
+
+Độ thu hồi mô phỏng của volume_spike tăng từ 0,722 lên 0,833, vì z đúng công thức nhạy hơn. Đổi lại, độ chính xác chung trên mô phỏng giảm còn 0,588, do nhánh z bắt cả các đỉnh khối lượng tự nhiên không có trong đáp án cài sẵn (xem test `test_planted_anomalies_are_recovered`).
+
 ## Tham số cuối
 
 | tham số | trước | sau |
@@ -185,36 +244,39 @@ Kết luận: **CAO_VALUE = 10** là mức ít chặt nhất đạt CAO ≤ 1 (0
 
 ## Trước và sau, theo phiên
 
+Trước: mã ở 4dcfb34. Sau: mã cuối (gồm CX-015, CX-016).
+
 | phiên | mẫu | tổng trước | tổng sau | CAO trước | CAO sau | volume_spike trước/sau | spread_blowout trước/sau | price_jump trước/sau | foreign_flow trước/sau | book_pressure trước/sau | near_limit trước/sau |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | 2026-11-19 | trong mẫu | 96 | 88 | 7 | 8 | 28/14 | 15/24 | 2/2 | 7/15 | 44/33 | 0/0 |
-| 2026-11-20 | trong mẫu | 404 | 276 | 79 | 38 | 130/85 | 68/52 | 17/17 | 76/56 | 113/66 | 0/0 |
+| 2026-11-20 | trong mẫu | 404 | 281 | 79 | 41 | 130/85 | 68/52 | 17/22 | 76/56 | 113/66 | 0/0 |
 | 2026-11-23 | trong mẫu | 370 | 217 | 53 | 23 | 113/58 | 69/37 | 19/19 | 102/65 | 67/38 | 0/0 |
-| 2026-11-25 | trong mẫu | 485 | 292 | 80 | 32 | 138/74 | 112/53 | 20/20 | 95/57 | 120/88 | 0/0 |
-| 2026-11-26 | ngoài mẫu | 644 | 369 | 101 | 53 | 196/128 | 119/54 | 43/43 | 135/42 | 148/99 | 3/3 |
-| 2026-11-27 | ngoài mẫu | 520 | 300 | 99 | 43 | 143/93 | 122/52 | 25/25 | 106/52 | 122/76 | 2/2 |
+| 2026-11-25 | trong mẫu | 485 | 299 | 80 | 36 | 138/74 | 112/53 | 20/27 | 95/57 | 120/88 | 0/0 |
+| 2026-11-26 | ngoài mẫu | 644 | 373 | 101 | 57 | 196/128 | 119/54 | 43/47 | 135/42 | 148/99 | 3/3 |
+| 2026-11-27 | ngoài mẫu | 520 | 308 | 99 | 41 | 143/93 | 122/52 | 25/33 | 106/52 | 122/76 | 2/2 |
 
 | chỉ số | trước | sau |
 |---|---|---|
-| CAO/mã/phiên trong mẫu | 1,825 | 0,842 |
-| tổng/mã/phiên trong mẫu | 11,292 | 7,275 |
-| CAO/mã/phiên ngoài mẫu | 3,333 | 1,600 |
-| tổng/mã/phiên ngoài mẫu | 19,400 | 11,150 |
-| độ chính xác mô phỏng | 0,864 | 0,877 |
+| CAO/mã/phiên trong mẫu | 1,825 | 0,900 |
+| tổng/mã/phiên trong mẫu | 11,292 | 7,375 |
+| CAO/mã/phiên ngoài mẫu | 3,333 | 1,633 |
+| tổng/mã/phiên ngoài mẫu | 19,400 | 11,350 |
+| độ chính xác mô phỏng | 0,864 | 0,588 |
 | thu hồi mô phỏng foreign_dump | 0,895 | 0,816 |
 | thu hồi mô phỏng spread_blowout | 0,806 | 1 |
-| thu hồi mô phỏng volume_spike | 0,722 | 0,722 |
+| thu hồi mô phỏng volume_spike | 0,722 | 0,833 |
 
-## Đọc kết quả
+## Đọc kết quả (mã cuối)
 
-- **Trong mẫu**, cả hai ngân sách đều đạt: CAO 0,84/mã/phiên, mỗi quy tắc ≤ 1,93.
-- **Ngoài mẫu**, CAO là 1,60/mã/phiên, **vượt ngân sách 1**; tổng 11,2/mã/phiên. Hai phiên 26-27/11 sôi động hơn: 26/11 có 484.447 bản ghi giá, nhiều nhất trong 6 phiên. Ngưỡng chọn trên 4 phiên không giữ được ngân sách khi thị trường sôi động hơn. Đây là kết quả ngoài mẫu, ghi nguyên, không chỉnh lại theo nó.
+- **Trong mẫu**, cả hai ngân sách đều đạt: CAO 0,90/mã/phiên, mỗi quy tắc ≤ 1,93.
+- **Ngoài mẫu**, CAO là 1,63/mã/phiên, **vượt ngân sách 1**; tổng 11,35/mã/phiên. Hai phiên 26-27/11 sôi động hơn: 26/11 có 484.447 bản ghi giá, nhiều nhất trong 6 phiên. Ngưỡng chọn trên 4 phiên không giữ được ngân sách khi thị trường sôi động hơn. Đây là kết quả ngoài mẫu, ghi nguyên, không chỉnh lại theo nó.
 - Độ thu hồi mô phỏng:
   - spread tăng từ 0,806 lên 1.
-  - khối ngoại giảm từ 0,895 xuống 0,816, vẫn ≥ 0,8.
-  - khối lượng giữ 0,722 (nhánh z, không đổi).
-- Cái giá phải trả: một phần sự kiện khối ngoại ngắn (2-4 phút) bị pha loãng khi cộng 3 thanh.
+  - khối ngoại giảm từ 0,895 xuống 0,816, vẫn ≥ 0,8. Cái giá phải trả: một phần sự kiện khối ngoại ngắn (2-4 phút) bị pha loãng khi cộng 3 thanh.
+  - khối lượng tăng từ 0,722 lên 0,833, do sửa MAD (CX-015).
+- Độ chính xác trên mô phỏng giảm từ 0,864 xuống 0,588, cùng nguyên nhân. Riêng spread và khối ngoại vẫn > 0,9.
 - Giới hạn của cách hiệu chỉnh:
   - Chỉ có 4 phiên trong mẫu.
   - Ngân sách là lựa chọn thiết kế, không phải kết quả thống kê.
   - Không có "đáp án đúng" cho dữ liệu thật, nên không đo được độ chính xác trên dữ liệu thật.
+  - Mô phỏng không có KL nền, nên không kiểm được ngưỡng RVOL.
