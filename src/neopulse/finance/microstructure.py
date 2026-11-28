@@ -101,6 +101,23 @@ def walk_book(row: pd.Series | dict, qty: float, side: str = "buy") -> dict:
     return {"filled": filled, "avg_price": avg, "slippage_bps": slip, "unfilled": left, "fill_ratio": filled / qty}
 
 
+BOOK_RAW = [f"{side}{i}" for side in ("bid", "ask") for i in LEVELS] + \
+    [f"{side}_vol{i}" for side in ("bid", "ask") for i in LEVELS]
+BOOK_DERIVED = ["bid1", "ask1", "mid", "spread", "spread_bps", "obi1", "obi3", "obi_w", "micro_dev_bps", "pressure",
+                "depth_value", "bid_depth", "ask_depth"]
+
+
+def last_snapshot(df: pd.DataFrame, keys: list[str], book_cols: list[str], valid: pd.Series) -> pd.DataFrame:
+    """Gộp theo `keys` (df đã sắp theo ts). Cột sổ lệnh lấy NGUYÊN một ảnh chụp: ảnh cuối có `valid`;
+    cột còn lại (lũy kế, giá khớp, tham chiếu) lấy giá trị khác rỗng cuối cùng. Không ghép giá giữa của ảnh này
+    với OBI của ảnh khác (groupby.last() bỏ NaN theo từng cột nên có thể ghép như vậy)."""
+    book_cols = [c for c in book_cols if c in df.columns]
+    other = [c for c in df.columns if c not in book_cols and c not in keys]
+    base = df.groupby(keys, sort=True)[other].last()
+    snap = df[valid].drop_duplicates(keys, keep="last").set_index(keys)[book_cols]
+    return base.join(snap, how="left").reset_index()
+
+
 def make_bars(quotes: pd.DataFrame, freq: str = "1min") -> pd.DataFrame:
     """Gom ảnh chụp sổ lệnh thành thanh thời gian theo từng mã trong từng phiên.
 
@@ -111,10 +128,10 @@ def make_bars(quotes: pd.DataFrame, freq: str = "1min") -> pd.DataFrame:
         return pd.DataFrame()
     q = add_book_metrics(quotes).sort_values("ts")
     q["bar"] = q["ts"].dt.floor(freq)
-    keep = ["bid1", "ask1", "mid", "last", "spread", "spread_bps", "obi1", "obi3", "obi_w", "micro_dev_bps", "pressure", "depth_value",
-            "bid_depth", "ask_depth", "total_volume", "total_value", "f_buy_val", "f_sell_val", "band_pos",
-            "ref", "pct_change"]
-    bars = q.groupby(["trading_date", "symbol", "bar"], sort=True)[keep].last().reset_index()
+    keep = ["last", "total_volume", "total_value", "f_buy_val", "f_sell_val", "band_pos", "ref", "pct_change"]
+    keys = ["trading_date", "symbol", "bar"]
+    # tín hiệu và giá giữa tại t cùng MỘT ảnh chụp: ảnh cuối thanh có sổ lệnh hợp lệ
+    bars = last_snapshot(q[keys + keep + BOOK_DERIVED], keys, BOOK_DERIVED, q["mid"].notna())
     g = bars.groupby(["trading_date", "symbol"], sort=False)
     bars["vol"] = g["total_volume"].diff()
     bars["val"] = g["total_value"].diff()

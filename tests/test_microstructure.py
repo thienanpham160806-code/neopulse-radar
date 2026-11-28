@@ -77,3 +77,24 @@ def test_liquidity_table_ranks_tight_deep_book_higher(make_quote):
     t = liquidity_table(latest, order_value=50e6)
     assert t.index[0] == "LIQ" and t.loc["LIQ", "liq_score"] > t.loc["ILL", "liq_score"]
     assert t.loc["ILL", "slippage_bps"] > t.loc["LIQ", "slippage_bps"]
+
+
+def test_bar_book_signals_come_from_one_snapshot(make_quote):
+    """CX-016: giá giữa và OBI/microprice của thanh phải cùng một ảnh chụp, không ghép cột từ nhiều ảnh."""
+    lv = {f"{s}_vol{i}": v for s, v in (("bid", 300.0), ("ask", 100.0)) for i in (1, 2, 3)}
+    zero = {f"{s}_vol{i}": 0.0 for s in ("bid", "ask") for i in (1, 2, 3)}
+    rows = [make_quote(ts="2026-11-12T09:00:01+07:00", bid1=99.0, ask1=101.0, bid2=98.0, ask2=102.0, bid3=97.0,
+                       ask3=103.0, **lv),
+            make_quote(ts="2026-11-12T09:00:59+07:00", bid1=109.0, ask1=111.0, bid2=108.0, ask2=112.0, bid3=107.0,
+                       ask3=113.0, **zero)]
+    b = make_bars(pd.DataFrame(rows)).iloc[0]
+    assert b["mid"] == 110.0 and math.isnan(b["obi3"]) and math.isnan(b["micro_dev_bps"])  # ảnh cuối, không lấy 0,5 cũ
+
+
+def test_latest_per_symbol_keeps_book_levels_of_one_snapshot(make_quote):
+    from neopulse.analytics.view import latest_per_symbol
+    rows = [make_quote(ts="2026-11-12T10:00:00+07:00", bid_vol1=5000.0, ref=10000.0),
+            make_quote(ts="2026-11-12T10:00:05+07:00", bid1=10010.0, bid_vol1=np.nan, ref=np.nan)]
+    r = latest_per_symbol(pd.DataFrame(rows)).iloc[0]
+    assert r["bid1"] == 10010.0 and math.isnan(r["bid_vol1"])  # không ghép KL 5000 của ảnh trước vào giá mới
+    assert r["ref"] == 10000.0                                   # cột không thuộc sổ lệnh vẫn lấy giá trị cuối có

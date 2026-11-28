@@ -68,7 +68,9 @@ class SessionView:
 def latest_per_symbol(quotes: pd.DataFrame) -> pd.DataFrame:
     if quotes.empty:
         return quotes
-    return quotes.sort_values("ts").groupby("symbol", as_index=False).last()
+    q = quotes.sort_values("ts")
+    # sổ lệnh 3 mức lấy nguyên ảnh chụp cuối có giá mua/bán, không ghép cột từ nhiều ảnh (CX-016)
+    return micro.last_snapshot(q, ["symbol"], micro.BOOK_RAW, q[["bid1", "ask1"]].notna().any(axis=1))
 
 
 def pulse_timeseries(bars: pd.DataFrame, index: pd.DataFrame, sigma_pct: float, freq: str = "1min") -> pd.DataFrame:
