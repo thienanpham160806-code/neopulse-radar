@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import pytest
 
 from neopulse.analytics import alerts
 from neopulse.analytics.anomaly import Z_CAP, robust_z, score_bars
@@ -25,6 +26,14 @@ def test_robust_z_flags_spike_and_ignores_normal_points():
     z = robust_z(x)
     assert z.iloc[150] > 10 and (z.drop(150).abs().dropna() < 6).all()
     assert z.iloc[:20].isna().all()                      # chưa đủ lịch sử => không kết luận
+
+
+def test_robust_z_matches_hand_computed_modified_z():
+    """CX-015: MAD quanh median của CÙNG cửa sổ x_{t-60..t-1}; đủ 20 quan sát là tính."""
+    z = robust_z(pd.Series(np.arange(100, dtype=float)), window=60, min_periods=20)
+    assert z[90] == pytest.approx(0.6745 * (90 - 59.5) / 15)   # cửa sổ 30..89: median 59,5, MAD 15
+    assert z[20] == pytest.approx(0.6745 * (20 - 9.5) / 5)     # cửa sổ 0..19: median 9,5, MAD 5
+    assert np.isnan(z[19])
 
 
 def test_robust_z_has_no_lookahead():

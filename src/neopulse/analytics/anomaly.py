@@ -20,9 +20,10 @@ Z_CAP = 50.0  # chuỗi gần như đứng yên cho MAD rất nhỏ => z khổng
 
 def robust_z(x: pd.Series, window: int = 60, min_periods: int = 20) -> pd.Series:
     """z-score bền vững của từng điểm so với cửa sổ `window` điểm liền trước nó."""
-    prev = x.shift(1)
-    med = prev.rolling(window, min_periods=min_periods).median()
-    mad = (prev - med).abs().rolling(window, min_periods=min_periods).median()
+    prev = x.shift(1).rolling(window, min_periods=min_periods)
+    med = prev.median()
+    # MAD của đúng cửa sổ x_{t-W..t-1} quanh median của chính cửa sổ đó (không phải median trượt lần hai)
+    mad = prev.apply(lambda a: np.median(np.abs(a[~np.isnan(a)] - np.median(a[~np.isnan(a)]))), raw=True)
     # MAD = 0 (chuỗi đứng yên) => không xác định được độ lệch, trả NaN thay vì vô cực
     return (MAD_SCALE * (x - med) / mad.where(mad > 0)).clip(-Z_CAP, Z_CAP)
 

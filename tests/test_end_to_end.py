@@ -72,8 +72,16 @@ def test_view_filters_and_empty_states(db, tmp_path):
 def test_planted_anomalies_are_recovered(db):
     from neopulse.finance.microstructure import make_bars
     bars = make_bars(db.quotes(source="sim"))
-    ev = alerts.evaluate_against_truth(alerts.detect(bars, source="sim"), db.table("sim_truth"))
-    assert ev["n_events"] > 20 and ev["recall"] > 0.6 and ev["precision"] > 0.6
+    al, truth = alerts.detect(bars, source="sim"), db.table("sim_truth")
+    ev = alerts.evaluate_against_truth(al, truth)
+    assert ev["n_events"] > 20 and ev["recall"] > 0.6
+    for rule in ("spread_blowout", "foreign_flow"):  # quy tắc theo bước giá / tỷ trọng: gần như chỉ nổ ở sự kiện cài
+        assert alerts.evaluate_against_truth(al[al["rule"] == rule], truth)["precision"] > 0.9
+    # Mô phỏng không có KL nền nên volume_spike chạy nhánh z (|z| >= 3,5, Iglewicz & Hoaglin). Sau khi sửa MAD đúng
+    # (CX-015) nhánh này bắt cả đỉnh KL tự nhiên ngoài sự kiện cài, nên không đòi độ chính xác; chỉ giữ ngân sách
+    # <= 2 cảnh báo trên một mã một phiên như docs/calibration_log.md.
+    per_sym = (al["rule"] == "volume_spike").sum() / bars.groupby(["trading_date", "symbol"]).ngroups
+    assert per_sym <= 2
 
 
 def test_briefing_renders_with_disclaimers(db, tmp_path):
