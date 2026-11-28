@@ -79,26 +79,42 @@ z_t = 0,6745 × (x_t − median)/MAD, median và MAD lấy trên 60 thanh **trư
 - Median/MAD thay cho trung bình/độ lệch chuẩn: chính điểm bất thường làm phình độ lệch chuẩn và che lấp nhau.
 - 0,6745 đưa z về thang chuẩn tắc; ngưỡng |z| ≥ 3,5 theo Iglewicz & Hoaglin (1993).
 - Khối lượng lấy log(1 + x) vì lệch phải mạnh. MAD = 0 → không kết luận. |z| chặn ở 50 để dễ đọc.
+- MAD là median của |x_j − median| với j chạy trong **cùng** cửa sổ 60 thanh trước t, và median cũng là median của cửa sổ đó.
+  - Bản trước 28/11/2026 lấy median trượt lần hai của các độ lệch so với những median khác nhau. Cách đó sai công thức và cần gấp đôi số quan sát mới ra z.
+  - Đã sửa theo nghiệm thu CX-015, có test đối chiếu tính tay.
 
 ## 7. Cảnh báo — `analytics/alerts.py`
 
 | Quy tắc | Điều kiện | Cơ sở |
 |---|---|---|
-| Khối lượng tăng bất thường | z_vol ≥ 3,5 | thống kê |
-| Độ chênh giá mua-bán giãn rộng | z_spread ≥ 3,5 **và** spread ≥ 2 × spread nhỏ nhất đã thấy trong phiên | thống kê + loại nhiễu một bước giá |
+| Khối lượng tăng bất thường | RVOL thanh ≥ 5 (có KL nền cùng khung giờ); không có KL nền thì z_vol ≥ 3,5. Bỏ thanh 09:15 (ATO) và 14:45 (ATC) | ngân sách cảnh báo (RVOL); Iglewicz & Hoaglin (z) |
+| Độ chênh giá mua-bán giãn rộng | spread tính bằng **số bước giá HOSE** ≥ 3 **và vượt** phân vị 95% của chính mã trên các thanh trước trong phiên; chưa đủ 20 thanh trước thì chỉ dùng sàn 3 bước | spread rời rạc theo bước giá, MAD ≈ 0 nên không dùng z |
 | Giá biến động đột ngột | \|z_ret\| ≥ 3,5 | thống kê |
-| Khối ngoại giao dịch bất thường | \|z_fnet\| ≥ 3,5 **và** khối ngoại ≥ 30% giá trị thanh | thống kê + điều kiện trọng yếu |
-| Mất cân bằng sổ lệnh kéo dài | \|OBI₃\| ≥ 0,6 cùng dấu 3 thanh liên tiếp | 0,6 ⇔ một bên dày gấp 4 lần bên kia; 3 thanh để loại nhiễu đặt-hủy |
+| Khối ngoại giao dịch bất thường | trên cửa sổ 3 thanh: NN ròng ≠ 0, chiếm ≥ 30% giá trị khớp, và \|ròng\| ≥ phân vị 99% các cửa sổ có NN trước đó của chính mã; chưa đủ 20 cửa sổ thì không báo | phân phối dồn về 0; room NN về theo cục ~1 lần/phút |
+| Mất cân bằng sổ lệnh kéo dài | \|OBI₃\| ≥ 0,6 cùng dấu 5 thanh liên tiếp | 0,6 ⇔ một bên dày gấp 4 lần bên kia; 5 thanh theo ngân sách |
 | Sát trần/sàn | \|vị trí biên độ\| ≥ 0,9 | quy tắc biên độ của sàn |
 
-Mức ưu tiên: **CAO** khi ≥ 2 quy tắc cùng nổ trên một mã trong một thanh, hoặc |giá trị| ≥ 6 (z, hoặc RVOL với quy tắc khối lượng); hai quy tắc cuối là **THẤP** khi đứng một mình; còn lại **TRUNG BÌNH**. Thời gian nguội 10 thanh cho mỗi cặp (mã, quy tắc). Khóa chống lặp khi lưu/gửi.
+Bước giá cổ phiếu HOSE:
+- dưới 10.000 đồng: 10 đồng;
+- 10.000–49.950 đồng: 50 đồng;
+- từ 50.000 đồng: 100 đồng.
 
-**Điều chỉnh sau khi đối chiếu 4 phiên SSI thật (duyệt 26/11/2026):**
-- Độ chênh giá và khối ngoại **chỉ CAO khi đi cùng quy tắc khác**. Spread thường đúng 1 bước giá và khối ngoại thường bằng 0, nên MAD ≈ 0 và |z| bão hòa: 93% cảnh báo độ chênh giá chạm trần 50, 258/264 lượt bị xếp CAO, nên mốc "|z| ≥ 6" không còn phân biệt được.
-- Quy tắc khối lượng **bỏ thanh 09:15 (khớp ATO) và 14:45 (khớp ATC)**: khối lượng đấu giá lớn do cấu trúc phiên, không phải bất thường; 90/499 cảnh báo khối lượng rơi vào thanh 14:45.
-- Giữ ngưỡng sát trần/sàn 0,9: quy tắc không báo lần nào vì trong 4 phiên |vị trí biên độ| lớn nhất chỉ 0,86, không phải do lỗi.
+Nguồn: HOSE, *Quy định cần biết khi giao dịch chứng khoán trên HOSE*, T2/2026. Bước giá lấy theo giá mua tốt nhất.
 
-Ngưỡng 30%, 3 thanh, 10 thanh là quy tắc nghiệp vụ do tác giả đặt — nên rà lại bằng dữ liệu thật (tần suất cảnh báo mỗi phiên) trước khi coi là cuối cùng.
+**Mức ưu tiên:**
+- **CAO** khi ≥ 2 quy tắc cùng nổ trên một mã trong một thanh, hoặc khi giá trị của quy tắc khối lượng/giá (RVOL hoặc z) ≥ 10.
+- Độ chênh giá và khối ngoại đo bằng đơn vị riêng (bước giá, tỷ trọng) nên chỉ CAO khi đi cùng quy tắc khác.
+- Sổ lệnh và sát trần/sàn là **THẤP** khi đứng một mình; còn lại **TRUNG BÌNH**.
+
+Thời gian nguội 10 thanh cho mỗi cặp (mã, quy tắc). Khóa chống lặp khi lưu/gửi.
+
+**Hiệu chỉnh ngày 28/11/2026** (chi tiết, kể cả phương án bị loại: [calibration_log.md](calibration_log.md)):
+- Chỉ chọn tham số trên 4 phiên trong mẫu (19, 20, 23, 25/11); 26-27/11 chỉ để báo cáo.
+- Ngân sách: CAO ≤ 1 và mỗi quy tắc ≤ 2 trên một mã trong một phiên.
+- Quy tắc chọn: lấy cấu hình ít chặt nhất đạt ngân sách, với điều kiện độ thu hồi trên sự kiện mô phỏng cài sẵn vẫn ≥ 0,8.
+- Kết quả: tổng cảnh báo mỗi phiên giảm từ 96–644 xuống 88–373. CAO trong mẫu 0,90/mã/phiên.
+- **Ngoài mẫu CAO là 1,63/mã/phiên, vượt ngân sách.** Hai phiên 26-27/11 sôi động hơn các phiên dùng để chọn.
+- Giữ ngưỡng sát trần/sàn 0,9: trong các phiên đầu, |vị trí biên độ| lớn nhất chỉ 0,86, nên quy tắc không báo không phải do lỗi.
 
 ## 8. Xếp hạng đa yếu tố — `analytics/ranking.py`
 
@@ -108,12 +124,29 @@ z-score mặt cắt ngang trong rổ, cắt đuôi ±3: động lượng (30%), 
 
 **Câu hỏi:** tín hiệu sổ lệnh cuối thanh t có liên hệ với lợi suất giá giữa t → t+h không?
 
+**Chống nhìn trước:**
 - Tín hiệu chỉ dùng thông tin đến t; lợi suất tương lai không vượt ranh giới phiên.
-- IC = tương quan hạng Spearman theo mặt cắt ngang từng thanh, lấy trung bình qua các thanh (kiểu Fama–MacBeth, 1973); t = trung bình/(độ lệch chuẩn/√n).
-- **Tách theo thời gian**: 60% phiên đầu là trong mẫu, phần còn lại là ngoài mẫu; không xáo trộn.
-- Báo thêm tỷ lệ đúng chiều và chênh lệch lợi suất nhóm 20% tín hiệu cao nhất − thấp nhất.
+- Giá giữa tại t dùng tính lợi suất và các tín hiệu tại t lấy **cùng một ảnh chụp** sổ lệnh: ảnh cuối thanh có sổ lệnh hợp lệ (CX-016). Có test.
 
-**Cách đọc có trách nhiệm.** t-stat bị thổi phồng do thanh liền kề tự tương quan. Q5−Q1 chưa trừ spread và phí: với spread VN30 thường 5–20 bps, một tín hiệu vài bps **không** là lợi nhuận khả thi. Dưới 5 phiên, kết quả chỉ minh họa. Trên dữ liệu mô phỏng, tín hiệu được cài sẵn — kết quả chỉ xác nhận mã tính đúng.
+**Tính IC:** IC = tương quan hạng Spearman theo mặt cắt ngang từng thanh, lấy trung bình qua các thanh (kiểu Fama–MacBeth, 1973).
+
+**Ba thống kê t**, từ lạc quan nhất đến thận trọng nhất:
+- `t` = trung bình/(độ lệch chuẩn/√số thanh). Coi các thanh là độc lập, nên **bị thổi phồng**.
+- `t NW`: sai số chuẩn Newey–West (1987), trọng số Bartlett, độ trễ L = max(h, ⌊4(n/100)^(2/9)⌋) (Newey & West, 1994). Tự hiệp phương sai chỉ tính trong cùng phiên.
+- `t phiên`: IC trung bình từng phiên là một quan sát, n = số phiên. Với 2–4 phiên, thống kê này rất yếu.
+
+**Chia mẫu:** tách theo thời gian. 60% phiên đầu (19, 20, 23, 25/11) là trong mẫu, phần còn lại (26, 27/11) là ngoài mẫu. Không xáo trộn. Bảng "chỉ phiên đủ" dùng lại đúng cách chia này (CX-017).
+
+**Chi phí:** `Q5−Q1` là chênh lợi suất giá giữa của nhóm 20% tín hiệu cao nhất trừ thấp nhất, **trước chi phí**.
+- `Q5−Q1 ròng`: mua Q5 ở giá bán tốt nhất tại t, bán ở giá mua tốt nhất tại t+h; bán khống Q1 ở giá mua, mua lại ở giá bán. Mỗi chiều trừ phí **giả định** 0,15%.
+- `Q5 ròng`: chỉ chân mua. Thị trường cơ sở không cho bán khống trong ngày, nên đây là chân thực hiện được.
+
+**Placebo:** xáo tín hiệu giữa các mã trong cùng thanh (20 lần), và dùng tín hiệu cũ của thanh t−h. IC placebo gần 0 nghĩa là đường tính không tự tạo liên hệ.
+
+**Cách đọc có trách nhiệm.**
+- Dưới 5 phiên, kết quả chỉ minh họa.
+- Trên dữ liệu mô phỏng, tín hiệu được cài sẵn; kết quả chỉ xác nhận mã tính đúng.
+- Kết quả dữ liệu thật và kết luận nằm trong [report/data/SUMMARY.md](../report/data/SUMMARY.md).
 
 ## 10. Diễn giải bằng ngôn ngữ — `analytics/explain.py`
 
@@ -121,12 +154,15 @@ Mặc định dùng mẫu câu xác định dựng từ số liệu. Nếu bật
 
 ## Tài liệu tham khảo
 
-*Đã đối chiếu tác giả, năm, tập, số và trang với IDEAS/RePEc, arXiv và danh mục ASQ ngày 25/11/2026.*
+*Đã đối chiếu tác giả, năm, tập, số và trang với IDEAS/RePEc, arXiv và danh mục ASQ ngày 25/11/2026; hai bài Newey–West đối chiếu Crossref ngày 28/11/2026.*
 
 - Amihud, Y. (2002). Illiquidity and stock returns: cross-section and time-series effects. *Journal of Financial Markets*, 5(1), 31–56.
 - Chordia, T., Roll, R., & Subrahmanyam, A. (2002). Order imbalance, liquidity, and market returns. *Journal of Financial Economics*, 65(1), 111–130. https://doi.org/10.1016/S0304-405X(02)00136-8
 - Cont, R., Kukanov, A., & Stoikov, S. (2014). The price impact of order book events. *Journal of Financial Econometrics*, 12(1), 47–88. https://doi.org/10.1093/jjfinec/nbt003
 - Fama, E. F., & MacBeth, J. D. (1973). Risk, return, and equilibrium: Empirical tests. *Journal of Political Economy*, 81(3), 607–636. https://doi.org/10.1086/260061
+- Newey, W. K., & West, K. D. (1987). A simple, positive semi-definite, heteroskedasticity and autocorrelation consistent covariance matrix. *Econometrica*, 55(3), 703–708. https://doi.org/10.2307/1913610
+- Newey, W. K., & West, K. D. (1994). Automatic lag selection in covariance matrix estimation. *Review of Economic Studies*, 61(4), 631–653. https://doi.org/10.2307/2297912
+- HOSE (2026). *Quy định cần biết khi giao dịch chứng khoán trên HOSE* (T2/2026). https://staticfile.hsx.vn/Uploads/UploadDocuments/2453338/HTGD_Quy%20dinh%20can%20biet%20khi%20GDCK%20tren%20HOSE_T2.2026.pdf
 - Iglewicz, B., & Hoaglin, D. C. (1993). *How to Detect and Handle Outliers* (ASQC Basic References in Quality Control: Statistical Techniques, Vol. 16). Milwaukee: ASQC Quality Press.
 - Stoikov, S. (2018). The micro-price: a high-frequency estimator of future prices. *Quantitative Finance*, 18(12), 1959–1966.
 - VPBankS. *NeoAPI Docs* v1.0.0. https://neoinvest.vpbanks.com.vn/neo-openapi/docs/overview (truy cập 14/11/2026; kiểm tra lại 25/11/2026: trang công khai, tiêu đề "Overview - NeoAPI Docs", phiên bản v1.0.0).
