@@ -108,7 +108,7 @@ def test_single_alert_push_matches_target_layout():
     lines = text.split("\n")
     assert lines[0] == "🚨 <b>Khối lượng bất thường · HPG</b> · 10:42"
     assert lines[1] == "HPG khớp lệnh gấp 3,4 lần mức thường thấy cùng khung giờ; giá 27.350 🟢 ▲ +1,30%."
-    assert lines[2] == "<b>Căn cứ:</b> vượt ngưỡng cảnh báo 3,0 lần mức thường thấy; sổ lệnh nghiêng về bên mua (OBI₃ +0,42)."
+    assert lines[2] == "<b>Căn cứ:</b> khối lượng gấp 3,4 lần mức thường thấy cùng khung giờ (ngưỡng 3,0 lần); sổ lệnh nghiêng về bên mua (OBI₃ +0,42)."
     assert lines[3].startswith("<b>Bối cảnh:</b> VN30 1.967,70 🟢 ▲ +0,45%")
     assert lines[-1].endswith("Không phải lời khuyên đầu tư</i>")
     urls = [b.get("url") for b in buttons(ui.alert_push_keyboard([p["alerts"]["items"][0]]))]
@@ -297,3 +297,16 @@ def test_symbols_in_messages_open_card_without_subscribing():
     assert text.startswith("🏢") and "Lệnh mới" not in text and buttons(markup)[0]["callback_data"] == "c:HPG"
     s = {"users": {}}
     assert "/ma HPG" in tc.command(s, msg("/start ma_HPG"), VALID, 100)[1] and s["users"] == {}
+
+
+def test_alert_basis_constants_match_detector_and_units():
+    from neopulse.analytics import alerts, telegram_ui
+    from neopulse.analytics.anomaly import Z_THRESHOLD
+    assert (telegram_ui.Z_VOL, telegram_ui.OBI_PERSIST, telegram_ui.FOREIGN_WINDOW) == (
+        Z_THRESHOLD, alerts.OBI_PERSIST, alerts.FOREIGN_WINDOW)
+    b = telegram_ui._basis
+    assert "gấp 6,2 lần" in b({"rule": "volume_spike", "value": 6.2, "threshold": 5.0})
+    assert "điểm z" in b({"rule": "volume_spike", "value": 4.1, "threshold": 3.5})
+    assert "4 bước giá" in b({"rule": "spread_blowout", "value": 4.0, "threshold": 3.0})
+    assert "bán ròng bằng 40%" in b({"rule": "foreign_flow", "value": -0.4, "threshold": 0.3})
+    assert "liền 5 thanh" in b({"rule": "book_pressure", "value": 0.8, "threshold": 0.6})

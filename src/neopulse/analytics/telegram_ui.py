@@ -18,6 +18,10 @@ DISCLAIMER = "Không phải lời khuyên đầu tư"
 VN = timezone(timedelta(hours=7))
 LIMIT = 4000  # Telegram cho tối đa 4096 ký tự; chừa chỗ cho thẻ HTML
 
+# Bản sao hằng số của analytics/anomaly.py và alerts.py: bundle Vercel không có pandas nên không import được.
+# tests/test_telegram_ui.py kiểm hai bên luôn khớp.
+Z_VOL, OBI_PERSIST, FOREIGN_WINDOW = 3.5, 5, 3
+
 # Bộ icon duy nhất của bot (docs/bot_style.md). Không dùng icon trang trí ngoài bộ này.
 ICON = {
     "up": "🟢", "down": "🔴", "flat": "🟡", "ceil": "🟣", "floor": "🔵",
@@ -303,12 +307,17 @@ def _basis(a: dict) -> str | None:
     v, thr, rule = a.get("value"), a.get("threshold"), a.get("rule")
     if v is None or thr is None:
         return None
-    if rule == "volume_spike" and thr < 3.5:
-        return f"vượt ngưỡng cảnh báo {num(thr, 1)} lần mức thường thấy"
+    if rule == "volume_spike" and thr != Z_VOL:  # ngưỡng khác 3,5 là RVOL (bội số), không phải z
+        return f"khối lượng gấp {num(v, 1)} lần mức thường thấy cùng khung giờ (ngưỡng {num(thr, 1)} lần)"
     if rule == "near_limit":
         return f"giá đã đi {num(abs(v) * 100, 0)}% khoảng từ tham chiếu đến giá {'trần' if v > 0 else 'sàn'} (ngưỡng {num(thr * 100, 0)}%)"
     if rule == "book_pressure":
-        return f"OBI₃ {num(v, 2, signed=True)} vượt ngưỡng ±{num(thr, 2)} liên tục 3 thanh 1 phút"
+        return f"OBI₃ {num(v, 2, signed=True)} vượt ngưỡng ±{num(thr, 2)} liền {OBI_PERSIST} thanh 1 phút"
+    if rule == "spread_blowout":  # đơn vị: số bước giá HOSE
+        return f"độ chênh giá mua-bán {num(v, 0)} bước giá, vượt mức thường thấy của mã (ngưỡng {num(thr, 0)} bước)"
+    if rule == "foreign_flow":  # đơn vị: tỷ trọng ròng có dấu trên cửa sổ
+        return (f"khối ngoại {'mua' if v > 0 else 'bán'} ròng bằng {num(abs(v) * 100, 0)}% giá trị khớp "
+                f"{FOREIGN_WINDOW} phút gần nhất (ngưỡng {num(thr * 100, 0)}%)")
     if abs(v) >= 50:  # thang điểm z bị chặn ở 50
         return f"điểm z bền vững vượt 50 (ngưỡng {num(thr, 1)}): lệch rất xa so với mức thường thấy trong phiên"
     level = "rất xa" if abs(v) >= 6 else "đáng kể"
