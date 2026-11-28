@@ -18,12 +18,16 @@ Kiểm tra ngày 28/11/2026. Nguồn số liệu:
 
 Ngày 20/11:
 - 96 lỗi `SsiApiError` và `gaierror` nằm trong khoảng **12:46:46 đến 13:57:59**: 17 lỗi trong giờ 12, 79 lỗi trong giờ 13.
-- Lỗi `gaierror` nghĩa là máy ghi không phân giải được tên miền SSI. Lỗi `ConnectError` nghĩa là không mở được kết nối TCP. Cả hai là **mất mạng phía máy ghi** (mạng ký túc xá), không phải lỗi của SSI hay của mã.
-- Bộ ghi thử lại với độ trễ tăng dần, tối đa 60 giây (`neo_api/ws.py`, `max_backoff_s`). Vì vậy một lần mất mạng khoảng 71 phút sinh ra hàng trăm lần thử, và bộ đếm `n_reconnects` cộng cả các lần thử thất bại.
-- Dữ liệu giá trống từ 13:04:09 đến 14:00:03. Khớp với `sessions.csv`: khoảng trống lớn nhất 56 phút giao dịch, bắt đầu 13:04.
+- Lỗi `gaierror` nghĩa là máy ghi không phân giải được tên miền SSI. Lỗi `ConnectError` nghĩa là không mở được kết nối TCP.
+  - Đây là lỗi phân giải tên miền và lỗi kết nối **quan sát từ máy ghi**. Nghi ngờ do mạng cục bộ (ký túc xá), nhưng **chưa cô lập được nguyên nhân**: không có log chẩn đoán mạng riêng.
+- Bộ ghi thử lại với độ trễ tăng dần, tối đa 60 giây (`neo_api/ws.py`, `max_backoff_s`). Bộ đếm `n_reconnects` của ngày (121) cộng cả các lần thử thất bại; 96 trong số đó là lỗi nhóm này.
+- Hai khoảng phải tách riêng:
+  - **Khoảng có lỗi:** 12:46:46 đến 13:57:59.
+  - **Khoảng thiếu dữ liệu đã đo:** 13:04:09 đến 14:00:03. Từ 13:00 vẫn có giá tới 13:04:09, nên khoảng có lỗi không chứng minh mất kết nối liên tục suốt 71 phút.
+  - `sessions.csv` ghi khoảng trống lớn nhất 56 phút giao dịch, bắt đầu 13:04.
 
-**Không liên quan tới giới hạn 100 chủ đề.**
-- Ngày 20/11 bộ ghi đăng ký 128 chủ đề, SSI nhận đủ, không có dòng "Rejected". Log ghi "đăng ký 128 chủ đề" 143 lần từ 20 đến 27/11. SSI chỉ từ chối vào ngày 27/11.
+**Chưa có bằng chứng do giới hạn 100 chủ đề.**
+- Ngày 20/11 bộ ghi gửi đăng ký 128 chủ đề và log không có dòng "Rejected". Điều này chưa tương đương xác nhận đã nhận đủ mọi chủ đề, vì SSI không gửi xác nhận cho từng chủ đề. Log ghi "đăng ký 128 chủ đề" 143 lần từ 20 đến 27/11. SSI chỉ từ chối vào ngày 27/11.
 - Ngày 27/11, lúc 08:51:16 và 09:04:14, SSI trả `Rejected (subscription limit reached): 28 topic(s)`. Phần bị từ chối gồm các chủ đề chỉ số, nên web giữ dữ liệu 26/11.
 - Sửa ở commit 55b5934: đăng ký tối đa 100 chủ đề, chỉ số đứng đầu. Sau khi khởi động lại lúc 09:13:59, log ghi "đăng ký 97 chủ đề" 54 lần và không còn bị từ chối.
 
@@ -38,7 +42,7 @@ Ngày 20/11:
 Các lần nối lại còn lại (23 đến 27/11) chủ yếu là `ConnectionClosedError: sent 1011 (internal error) keepalive ping timeout`:
 - Kết nối bị đóng khi gói ping giữ kết nối không được trả lời kịp.
 - Bộ ghi tự nối lại sau vài giây, không mất phút dữ liệu nào đáng kể: khoảng trống lớn nhất ba phiên 25 đến 27/11 là 4, 10, 13 phút và đều rơi vào cuối phiên (`sessions.csv`).
-- **Không có lỗi mã cần sửa thêm.** Giới hạn còn lại: máy ghi chạy trên mạng ký túc xá không ổn định.
+- Chưa thấy lỗi mã nào giải thích các lần đóng kết nối này. Giới hạn còn lại: chưa có log chẩn đoán mạng; máy ghi chạy trên mạng ký túc xá.
 
 ## Hợp đồng tương lai VN30 (41I1GC000) và tab Phái sinh
 

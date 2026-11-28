@@ -5,8 +5,8 @@ Ngày: 28/11/2026. Mã: [src/neopulse/analytics/alerts.py](../src/neopulse/analy
 Cách tái lập:
 - Baseline "trước" chạy chính công cụ trên mã ở commit 4dcfb34, đủ phụ thuộc (RVOL 3, MAD cũ, make_bars cũ), qua `git worktree` và `PYTHONPATH`. Lệnh ghi ở đầu công cụ.
 - Chạy lại ngày 28/11 cho đúng từng số với bảng dưới (CX-020).
-- Lần 1–9 dùng các nhánh mã trung gian không còn trong mã cuối, ví dụ sàn V của khối ngoại hay so sánh "≥" của spread. Muốn chạy lại các lần đó phải lấy mã ở commit tương ứng (c008081 cho lần 1–9).
-- Công cụ hiện tại chỉ tái lập lần 10–11 và bảng cuối.
+- Lần 1–9 dùng các nhánh mã trung gian chưa được lưu đầy đủ, ví dụ sàn V của khối ngoại hay so sánh "≥" của spread. **Chưa tái lập được toàn bộ lần 1–9.** Commit c008081 chỉ giữ logic đã chọn sau các lần đó, không chứa các nhánh thử (CX-020).
+- Công cụ hiện tại tái lập được baseline, lần 10–11 và bảng cuối.
 
 ## Quy tắc chống quá khớp
 
