@@ -1010,8 +1010,8 @@ export function Validation({ p }: { p: Payload }) {
           </div>
         ) : null}
         <Note>
-          IC: tương quan hạng Spearman giữa tín hiệu cuối thanh t và lợi suất giá giữa t→t+h, tính theo mặt cắt ngang từng thanh rồi lấy trung bình. t-stat chưa hiệu chỉnh tự tương quan nên bị thổi phồng phần nào.
-          Q5−Q1 chưa trừ spread và phí nên không phải lợi nhuận khả thi. Dưới 5 phiên, kết quả chỉ minh họa.
+          IC: tương quan hạng Spearman giữa tín hiệu cuối thanh t và lợi suất giá giữa t→t+h, tính theo mặt cắt ngang từng thanh rồi lấy trung bình. t-stat coi các thanh độc lập nên bị thổi phồng; t Newey-West hiệu chỉnh tự tương quan, t theo phiên lấy mỗi phiên là một quan sát.
+          Q5−Q1 trước chi phí không phải lợi nhuận khả thi; cột sau chi phí vào ở giá bán, ra ở giá mua và trừ phí giả định 0,15%/chiều. Dưới 5 phiên, kết quả chỉ minh họa.
         </Note>
       </Card>
       {v.ic_by_session.length ? (
@@ -1086,7 +1086,7 @@ export function Method() {
           <li><b>Rổ theo dõi hữu hạn</b> (mặc định VN30): khối ngoại và sổ lệnh là của rổ, không phải toàn thị trường; độ rộng lấy từ số của sàn.</li>
           <li><b>Giá trị giao dịch lũy kế từ SSI là ước lượng</b> (giá trung bình × khối lượng), nên các chỉ báo theo giá trị kém chính xác hơn.</li>
           <li><b>Trọng số điểm nhịp là lựa chọn thiết kế</b>, không phải ước lượng; xem độ nhạy ở tab Tổng quan. Điểm mô tả hiện trạng, không dự báo.</li>
-          <li><b>IC chưa trừ độ chênh giá mua-bán và phí</b>; t-stat chưa hiệu chỉnh tự tương quan. Kết quả yếu hoặc không có ý nghĩa được báo đúng như vậy.</li>
+          <li><b>IC đo liên hệ, không phải lợi nhuận.</b> Bảng kiểm chứng có thêm Q5−Q1 sau độ chênh giá mua-bán và phí giả định 0,15%/chiều, cùng t Newey-West và t theo phiên. Kết quả yếu hoặc không có ý nghĩa được báo đúng như vậy.</li>
           <li>Phiên định kỳ (ATO/ATC): giá mức 1 không phải giá giới hạn, nên chỉ báo sổ lệnh để trống.</li>
           <li>Sản phẩm <b>không đặt lệnh</b>; các API giao dịch và tài khoản bị chặn trong mã nguồn.</li>
         </ul>
