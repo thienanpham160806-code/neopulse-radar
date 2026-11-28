@@ -77,3 +77,7 @@ def test_ic_conclusion_follows_the_numbers():
     assert "cần kiểm lại đường tính" in null and "dương ở mọi cặp" in null and "Giả thuyết" not in null
     empty = reportdata.ic_conclusion(_ic_rows(float("nan"), float("nan"), float("nan")), pd.DataFrame(), meta)
     assert "Chưa đủ dữ liệu" in empty[-1]
+    missing = " ".join(reportdata.ic_conclusion(_ic_rows(0.2, 20.0, float("nan")), pd.DataFrame(
+        {"kiểu": ["xáo giữa các mã (20 lần)"], "ic_mean": [float("nan")]}), meta))
+    assert "Chưa đánh giá được sau chi phí" in missing and "không còn dương" not in missing
+    assert "chưa đủ dữ liệu để tính" in missing and "không về gần 0" not in missing and "Giả thuyết" not in missing

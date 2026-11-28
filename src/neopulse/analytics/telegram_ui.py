@@ -317,7 +317,7 @@ def _basis(a: dict) -> str | None:
         return f"độ chênh giá mua-bán {num(v, 0)} bước giá, vượt mức thường thấy của mã (ngưỡng {num(thr, 0)} bước)"
     if rule == "foreign_flow":  # đơn vị: tỷ trọng ròng có dấu trên cửa sổ
         return (f"khối ngoại {'mua' if v > 0 else 'bán'} ròng bằng {num(abs(v) * 100, 0)}% giá trị khớp "
-                f"{FOREIGN_WINDOW} phút gần nhất (ngưỡng {num(thr * 100, 0)}%)")
+                f"{FOREIGN_WINDOW} thanh 1 phút có dữ liệu gần nhất (ngưỡng {num(thr * 100, 0)}%)")
     if abs(v) >= 50:  # thang điểm z bị chặn ở 50
         return f"điểm z bền vững vượt 50 (ngưỡng {num(thr, 1)}): lệch rất xa so với mức thường thấy trong phiên"
     level = "rất xa" if abs(v) >= 6 else "đáng kể"

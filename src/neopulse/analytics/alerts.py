@@ -5,7 +5,7 @@ volume_spike     RVOL thanh >= 5 (có KL nền) hoặc z_vol >= 3,5           RV
 spread_blowout   spread (số bước giá HOSE) >= 3 và > phân vị 95% của    spread rời rạc theo bước giá nên đo bằng bước;
                  chính mã trên các thanh trước trong phiên)              MAD ~ 0 làm z vô nghĩa
 price_jump       |z_ret| >= 3,5                                         thống kê
-foreign_flow     cửa sổ 3 thanh: NN ròng khác 0, chiếm >= 30% GT khớp,   phân phối dồn về 0, room NN về theo cục
+foreign_flow     3 thanh có dữ liệu gần nhất: NN ròng khác 0, >= 30% GT,  phân phối dồn về 0, room NN về theo cục
                  |ròng| >= phân vị 99% các cửa sổ có NN trước của mã     ~1 lần/phút; không dùng z
 book_pressure    |OBI_3| >= 0,6 cùng dấu >= 5 thanh liền nhau            OBI=0,6 <=> một bên dày gấp 4 lần bên kia
 near_limit       |band_pos| >= 0,9                                      quy tắc biên độ trần/sàn của sàn
@@ -165,7 +165,8 @@ def _message(r) -> str:
         return f"Giá đã đi {abs(r.value) * 100:.0f}% khoảng cách từ giá tham chiếu đến giá {'trần' if r.value > 0 else 'sàn'}"
     if r.rule == "foreign_flow":
         return (f"Khối ngoại {'mua' if r.value > 0 else 'bán'} ròng bằng {abs(r.value) * 100:.0f}% giá trị khớp "
-                f"{FOREIGN_WINDOW} phút gần nhất, lớn hơn {FOREIGN_Q:.0%} các cửa sổ có khối ngoại trước đó của mã")
+                f"{FOREIGN_WINDOW} thanh có dữ liệu gần nhất (có thể dài hơn {FOREIGN_WINDOW} phút nếu mất tin), lớn hơn "
+                f"{FOREIGN_Q:.0%} các cửa sổ có khối ngoại trước đó của mã")
     if r.rule == "spread_blowout":
         return (f"Độ chênh giá mua-bán {r.value:.0f} bước giá (cần từ {SPREAD_MIN_TICKS:.0f} bước và vượt phân vị "
                 f"{SPREAD_Q:.0%} của chính mã trong phiên; mức đối chiếu {r.threshold:.0f} bước)")

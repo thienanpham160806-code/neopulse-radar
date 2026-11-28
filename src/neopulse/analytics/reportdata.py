@@ -241,31 +241,36 @@ def ic_conclusion(table: pd.DataFrame, plac: pd.DataFrame, meta: dict | None = N
     if len(plac):
         shuf = plac[plac["kiểu"].str.startswith("xáo")]["ic_mean"].abs().max()
         stale = plac[plac["kiểu"].str.startswith("tín hiệu cũ")]["ic_mean"]
-        if pd.notna(shuf) and shuf < SHUFFLE_OK:
+        if pd.isna(shuf):
+            p = "- **Placebo xáo giữa các mã:** chưa đủ dữ liệu để tính."
+        elif shuf < SHUFFLE_OK:
             p = (f"- **Placebo xáo giữa các mã:** |IC| lớn nhất {f(shuf)} (< {f(SHUFFLE_OK)}). Kết quả kiểm soát này "
                  "phù hợp với việc đường tính không tự tạo liên hệ; nó không chứng minh loại trừ mọi dạng rò rỉ.")
         else:
             p = (f"- **Placebo xáo giữa các mã cho |IC| {f(shuf)} (≥ {f(SHUFFLE_OK)})**: placebo không về gần 0, "
                  "cần kiểm lại đường tính trước khi diễn giải IC.")
-        if len(stale):
+        if stale.notna().any():
             p += (f" Tín hiệu cũ t-h cho IC {f(stale.min())} đến {f(stale.max())}; giá trị khác 0 có thể phản ánh "
                   "tín hiệu bền theo thời gian.")
         lines.append(p)
-    net = out["q5_long_net_bps"]
+    net = out["q5_long_net_bps"].dropna()
     pos = int((net > 0).sum())
     cost = (f"Q5-Q1 trước chi phí {rng('spread_bps')} bps. Benchmark giả định chỉ chân mua Q5 (mua ở giá bán tại t, "
             f"bán ở giá mua tại t+h, phí giả định {f(FEE_BPS / 100)}%/chiều; chưa kiểm khả năng khớp, tồn kho, thanh toán) "
-            f"cho {rng('q5_long_net_bps')} bps, {pos}/{n} cặp dương.")
-    if pos == 0:
+            f"cho {rng('q5_long_net_bps')} bps, {pos}/{len(net)} cặp dương"
+            + (f" ({n - len(net)} cặp chưa có số)." if len(net) < n else "."))
+    if net.empty:
+        lines.append("- **Chưa đánh giá được sau chi phí:** không cặp nào có số benchmark.")
+    elif pos == 0:
         only = net + 2 * FEE_BPS
         lines.append(f"- **Sau chi phí không còn dương.** {cost} Chỉ tính độ chênh giá mua-bán, chưa tính phí, "
                      f"benchmark đã là {f(only.min())} đến {f(only.max())} bps.")
-    elif pos == n:
+    elif pos == len(net):
         lines.append(f"- **Benchmark sau chi phí dương ở mọi cặp.** {cost} Đây là phép tính giả định trên ít phiên, "
                      "không phải bằng chứng có chiến lược sinh lời.")
     else:
         lines.append(f"- **Sau chi phí không nhất quán.** {cost}")
-    if sig.any() and pos == 0:
+    if sig.any() and len(net) and pos == 0:
         lines.append("- **Giả thuyết (chưa kiểm riêng trong nghiên cứu này)** vì sao IC cao mà benchmark âm: lợi suất đo "
                      "trên giá giữa; khi một phía sổ lệnh mỏng, mức giá tốt nhất phía đó dễ bị ăn hết và giá giữa nhích "
                      "khoảng nửa bước giá. Muốn hưởng phần đó phải trả cả độ chênh mua-bán (thường 1 bước) cộng phí.")
