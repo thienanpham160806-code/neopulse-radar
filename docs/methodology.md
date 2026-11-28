@@ -88,10 +88,10 @@ z_t = 0,6745 × (x_t − median)/MAD, median và MAD lấy trên 60 thanh **trư
 | Quy tắc | Điều kiện | Cơ sở |
 |---|---|---|
 | Khối lượng tăng bất thường | RVOL thanh ≥ 5 (có KL nền cùng khung giờ); không có KL nền thì z_vol ≥ 3,5. Bỏ thanh 09:15 (ATO) và 14:45 (ATC) | ngân sách cảnh báo (RVOL); Iglewicz & Hoaglin (z) |
-| Độ chênh giá mua-bán giãn rộng | spread tính bằng **số bước giá HOSE** ≥ 3 **và vượt** phân vị 95% của chính mã trên các thanh trước trong phiên; chưa đủ 20 thanh trước thì chỉ dùng sàn 3 bước | spread rời rạc theo bước giá, MAD ≈ 0 nên không dùng z |
+| Độ chênh giá mua-bán giãn rộng | spread tính bằng **số bước giá HOSE**, đếm trên lưới giá kể cả khi vắt qua mốc 10.000/50.000, ≥ 3 **và vượt** phân vị 95% của chính mã trên các thanh trước trong phiên; chưa đủ 20 thanh trước thì chỉ dùng sàn 3 bước | spread rời rạc theo bước giá, MAD ≈ 0 nên không dùng z |
 | Giá biến động đột ngột | \|z_ret\| ≥ 3,5 | thống kê |
 | Khối ngoại giao dịch bất thường | trên cửa sổ 3 thanh: NN ròng ≠ 0, chiếm ≥ 30% giá trị khớp, và \|ròng\| ≥ phân vị 99% các cửa sổ có NN trước đó của chính mã; chưa đủ 20 cửa sổ thì không báo | phân phối dồn về 0; room NN về theo cục ~1 lần/phút |
-| Mất cân bằng sổ lệnh kéo dài | \|OBI₃\| ≥ 0,6 cùng dấu 5 thanh liên tiếp | 0,6 ⇔ một bên dày gấp 4 lần bên kia; 5 thanh theo ngân sách |
+| Mất cân bằng sổ lệnh kéo dài | \|OBI₃\| ≥ 0,6 cùng dấu 5 thanh liền nhau (mất thanh hoặc qua nghỉ trưa thì đếm lại) | 0,6 ⇔ một bên dày gấp 4 lần bên kia; 5 thanh theo ngân sách |
 | Sát trần/sàn | \|vị trí biên độ\| ≥ 0,9 | quy tắc biên độ của sàn |
 
 Bước giá cổ phiếu HOSE:
@@ -99,7 +99,7 @@ Bước giá cổ phiếu HOSE:
 - 10.000–49.950 đồng: 50 đồng;
 - từ 50.000 đồng: 100 đồng.
 
-Nguồn: HOSE, *Quy định cần biết khi giao dịch chứng khoán trên HOSE*, T2/2026. Bước giá lấy theo giá mua tốt nhất.
+Nguồn: HOSE, *Quy định cần biết khi giao dịch chứng khoán trên HOSE*, T2/2026. Số bước giữa giá mua và giá bán đếm theo từng vùng: 9.990 → 10.050 là 2 bước.
 
 **Mức ưu tiên:**
 - **CAO** khi ≥ 2 quy tắc cùng nổ trên một mã trong một thanh, hoặc khi giá trị của quy tắc khối lượng/giá (RVOL hoặc z) ≥ 10.
@@ -112,8 +112,8 @@ Thời gian nguội 10 thanh cho mỗi cặp (mã, quy tắc). Khóa chống l�
 - Chỉ chọn tham số trên 4 phiên trong mẫu (19, 20, 23, 25/11); 26-27/11 chỉ để báo cáo.
 - Ngân sách: CAO ≤ 1 và mỗi quy tắc ≤ 2 trên một mã trong một phiên.
 - Quy tắc chọn: lấy cấu hình ít chặt nhất đạt ngân sách, với điều kiện độ thu hồi trên sự kiện mô phỏng cài sẵn vẫn ≥ 0,8.
-- Kết quả: tổng cảnh báo mỗi phiên giảm từ 96–644 xuống 88–373. CAO trong mẫu 0,90/mã/phiên.
-- **Ngoài mẫu CAO là 1,63/mã/phiên, vượt ngân sách.** Hai phiên 26-27/11 sôi động hơn các phiên dùng để chọn.
+- Kết quả: tổng cảnh báo mỗi phiên giảm từ 96–644 xuống 90–371. CAO trong mẫu 0,90/mã/phiên.
+- **Ngoài mẫu CAO là 1,67/mã/phiên, vượt ngân sách.** Hai phiên 26-27/11 sôi động hơn các phiên dùng để chọn.
 - Giữ ngưỡng sát trần/sàn 0,9: trong các phiên đầu, |vị trí biên độ| lớn nhất chỉ 0,86, nên quy tắc không báo không phải do lỗi.
 
 ## 8. Xếp hạng đa yếu tố — `analytics/ranking.py`

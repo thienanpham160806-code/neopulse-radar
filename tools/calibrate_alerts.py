@@ -1,14 +1,19 @@
 """Hiệu chỉnh ngưỡng cảnh báo (docs/calibration_log.md). Chỉ đọc CSDL thật; mô phỏng ghi vào CSDL tạm trong --cache.
 
   python tools/calibrate_alerts.py CACHE prepare          # cache thanh 1 phút từng phiên SSI + 6 phiên mô phỏng seed 7
-  python tools/calibrate_alerts.py CACHE old              # cần bản cũ của alerts.py ở neopulse/analytics/_alerts_old.py
   python tools/calibrate_alerts.py CACHE spread '{...}'   # lưới một nhóm tham số, phần còn lại lấy từ base + JSON
-  python tools/calibrate_alerts.py CACHE final            # hằng số đang có trong mã
+  python tools/calibrate_alerts.py CACHE final            # hằng số đang có trong mã, KÈM kết quả ngoài mẫu
 
-Chỉ CHỌN tham số theo các cột in_* (19, 20, 23, 25/11); out_* (26-27/11) chỉ để báo cáo.
+Lưới chỉ in cột in_* (19, 20, 23, 25/11). Cột out_* (26-27/11) chỉ in ở `final`, sau khi đã khóa tham số.
+
+Baseline "trước" (mã 4dcfb34) chạy bằng CHÍNH công cụ này trên mã cũ, đủ mọi phụ thuộc (RVOL_SPIKE=3, MAD cũ,
+make_bars cũ), không chép riêng một tệp:
+  git worktree add ../np-4dcfb34 4dcfb34
+  PYTHONPATH=../np-4dcfb34/src python tools/calibrate_alerts.py CACHE_OLD prepare
+  PYTHONPATH=../np-4dcfb34/src python tools/calibrate_alerts.py CACHE_OLD final
+Công cụ in `neopulse` đang được nạp từ đâu để kiểm tra PYTHONPATH có hiệu lực.
 """
 
-import importlib
 import itertools
 import json
 import sys
@@ -72,10 +77,7 @@ def summarize(mod, params):
             "sim_precision": round(ev["precision"], 3), "table": t.drop(columns="n_sym").astype(int).to_dict("index")}
 
 
-if stage == "old":
-    old = importlib.import_module("neopulse.analytics._alerts_old")
-    print(json.dumps(summarize(old, {}), ensure_ascii=False))
-    sys.exit()
+print(f"# neopulse nạp từ: {Path(A.__file__).resolve()}", file=sys.stderr)
 base = {"SPREAD_MIN_TICKS": 3.0, "SPREAD_Q": 0.99, "FOREIGN_MIN_SHARE": 0.30, "FOREIGN_Q": 0.95, "FOREIGN_MIN_VALUE": 0.0, "FOREIGN_WINDOW": 5, "CAO_VALUE": 6.0}
 grids = {
     "spread": [{"SPREAD_MIN_TICKS": k, "SPREAD_Q": q} for k, q in itertools.product([2.0, 3.0, 4.0, 5.0], [0.95, 0.99])],
@@ -92,4 +94,6 @@ for g in grids[stage] if stage in grids else [{}]:
     r = summarize(A, {} if stage == "final" else {**base, **extra, **g})
     if stage != "final":
         r.pop("table")
+        for k in [k for k in r if k.startswith("out_")]:
+            r.pop(k)  # không xem ngoài mẫu khi còn đang chọn tham số
     print(json.dumps(r, ensure_ascii=False), flush=True)
