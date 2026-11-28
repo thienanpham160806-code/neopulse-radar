@@ -27,6 +27,7 @@ import pandas as pd
 SIGNALS = ("obi3", "obi_w", "obi1", "micro_dev_bps")
 FEE_BPS = 15.0  # GIẢ ĐỊNH phí giao dịch 0,15% mỗi chiều (không phải biểu phí của công ty chứng khoán cụ thể)
 PLACEBO_REPS = 20
+MIN_SESSIONS_T = 3  # t theo phiên với 2 phiên (1 bậc tự do) không có nghĩa
 
 
 def add_forward_returns(bars: pd.DataFrame, horizons: tuple[int, ...] = (1, 5)) -> pd.DataFrame:
@@ -98,7 +99,7 @@ def ic_summary(d: pd.DataFrame, signal: str, target: str, h: int = 1) -> dict:
             "ic_tstat": float(ic.mean() / (ic.std(ddof=1) / np.sqrt(n))) if ic.std(ddof=1) > 0 else np.nan,
             "ic_tstat_nw": newey_west_t(ic, bar_day, lag), "nw_lag": lag, "n_sessions": int(len(by_day)),
             "ic_tstat_session": (float(by_day.mean() / (by_day.std(ddof=1) / np.sqrt(len(by_day))))
-                                 if len(by_day) >= 2 and by_day.std(ddof=1) > 0 else np.nan),
+                                 if len(by_day) >= MIN_SESSIONS_T and by_day.std(ddof=1) > 0 else np.nan),
             "hit_rate": hit, "spread_bps": float(spread), **net}
 
 

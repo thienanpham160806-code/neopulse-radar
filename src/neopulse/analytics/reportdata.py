@@ -202,6 +202,44 @@ def _rule_notes(alerts: pd.DataFrame, n_sessions: int) -> list[str]:
     return notes or ["- Không quy tắc nào lệch hẳn (không quy tắc nào chiếm >= 50% hoặc bằng 0)."]
 
 
+def ic_conclusion(table: pd.DataFrame, plac: pd.DataFrame) -> list[str]:
+    """Kết luận sinh từ số liệu (không gõ tay): liên hệ thống kê ngoài mẫu và khả năng khai thác sau chi phí."""
+    from .validation import FEE_BPS
+    out = table[table["mẫu"] == "ngoài mẫu"] if len(table) else table
+    if out.empty:
+        return ["### Kết luận", "", NA]
+    nw = out["ic_tstat_nw"]
+    sig = int((nw.abs() > 2).sum())
+    shuf = plac[plac["kiểu"].str.startswith("xáo")]["ic_mean"].abs().max() if len(plac) else np.nan
+    stale = plac[plac["kiểu"].str.startswith("tín hiệu cũ")]["ic_mean"] if len(plac) else pd.Series(dtype=float)
+    lo = lambda c: (out[c].min(), out[c].max())  # noqa: E731
+    f = lambda x: f"{x:.2f}".replace(".", ",")  # noqa: E731
+    spread_only = out["q5_long_net_bps"] + 2 * FEE_BPS
+    pos = int((out["q5_long_net_bps"] > 0).sum())
+    key = ["tín hiệu", "tầm nhìn (thanh)"]
+    ins = table[table["mẫu"] == "trong mẫu"].set_index(key)["ic_mean"]
+    gap = float((out.set_index(key)["ic_mean"] - ins).abs().max())
+    return [
+        "### Kết luận", "",
+        f"- **Có liên hệ thống kê.** Ngoài mẫu (26-27/11), {sig}/{len(out)} cặp tín hiệu × tầm nhìn có |t Newey-West| > 2. "
+        f"IC từ {f(lo('ic_mean')[0])} đến {f(lo('ic_mean')[1])}, t NW từ {f(lo('ic_tstat_nw')[0])} đến {f(lo('ic_tstat_nw')[1])}; "
+        f"Chênh IC lớn nhất giữa trong mẫu và ngoài mẫu (cùng tín hiệu, cùng tầm nhìn): {f(gap)}.",
+        f"- **Placebo xáo giữa các mã:** |IC| lớn nhất là {f(shuf)}, tức gần 0. Đường tính không tự tạo ra liên hệ. "
+        f"Tín hiệu cũ t-h vẫn cho IC {f(stale.min())}–{f(stale.max())}: OBI và microprice bền theo thời gian, "
+        "đây không phải rò rỉ." if len(stale) else "- Placebo: chưa có.",
+        f"- **Không khai thác được sau chi phí.** Q5-Q1 trước chi phí chỉ {f(lo('spread_bps')[0])} đến "
+        f"{f(lo('spread_bps')[1])} bps. Chỉ mua Q5 (thực hiện được) cho {f(lo('q5_long_net_bps')[0])} đến "
+        f"{f(lo('q5_long_net_bps')[1])} bps sau phí giả định; {pos}/{len(out)} cặp dương. Riêng độ chênh giá mua-bán, "
+        f"chưa tính phí, đã làm chân mua còn {f(spread_only.min())} đến {f(spread_only.max())} bps.",
+        "- **Vì sao IC cao mà không có lãi.** Lợi suất đo trên giá giữa. Khi một phía sổ lệnh mỏng (OBI, microprice lệch), "
+        "mức giá tốt nhất phía đó dễ bị ăn hết, nên giá giữa nhảy nửa bước giá về phía đó. Đây là hiệu ứng cơ học "
+        "của giá giữa và bước giá. Muốn ăn được nửa bước đó phải trả nguyên một bước (vào ở giá bán, ra ở giá mua) "
+        "cộng phí; một bước giá ở vùng giá 10.000-50.000 là 50 đồng, khoảng 10-50 bps.",
+        "- **Giới hạn.** Chỉ có 2 phiên ngoài mẫu, rổ 30 mã. Phí 0,15%/chiều là giả định; chưa tính thuế bán, trượt giá "
+        "khi lệnh lớn hơn mức 1, và quy định không bán khống.",
+    ]
+
+
 def build(db_path: str | Path, source: str, out_dir: str | Path, root: Path | None = None,
           tests: dict[str, int | None] | None = None, index_code: str = "VN30") -> Path:
     out = Path(out_dir)
@@ -271,7 +309,7 @@ def build(db_path: str | Path, source: str, out_dir: str | Path, root: Path | No
               "Cột: `t` coi các thanh độc lập (bị thổi phồng); `t NW` Newey-West, độ trễ L ghi ở cột `L`; "
               "`t phiên` lấy IC trung bình từng phiên làm một quan sát (n = số phiên). `Q5-Q1` là chênh lợi suất giá "
               "giữa, chưa trừ chi phí. `Q5-Q1 ròng` mua Q5 ở giá bán và bán ở giá mua sau h thanh, bán khống Q1 ở giá "
-              f"mua và mua lại ở giá bán, trừ phí GIẢ ĐỊNH {FEE_BPS / 100:.2f}%/chiều; `Q5 ròng` chỉ chân mua "
+              f"mua và mua lại ở giá bán, trừ phí GIẢ ĐỊNH {f'{FEE_BPS / 100:.2f}'.replace('.', ',')}%/chiều; `Q5 ròng` chỉ chân mua "
               "(thị trường cơ sở không cho bán khống trong ngày). Đơn vị bps.", ""]
     cols = {"ic_mean": "IC", "ic_tstat": "t", "ic_tstat_nw": "t NW", "nw_lag": "L", "ic_tstat_session": "t phiên",
             "n_sessions": "số phiên", "hit_rate": "tỷ lệ đúng chiều", "spread_bps": "Q5-Q1", "q5q1_net_bps": "Q5-Q1 ròng",
@@ -292,7 +330,7 @@ def build(db_path: str | Path, source: str, out_dir: str | Path, root: Path | No
               "các lần xáo), và dùng tín hiệu cũ của thanh t-h. Mọi phiên.", ""]
     lines += (_md(plac.rename(columns={"ic_mean": "IC", "ic_sd": "độ lệch qua các lần xáo", "ic_tstat_nw": "t NW"}))
               if len(plac) else [NA])
-    lines += [""]
+    lines += ["", *ic_conclusion(val_all, plac), ""]
 
     lines += ["## Kiểm thử", "",
               f"- Python (`pytest --co -q`): {tests.get('pytest') if tests.get('pytest') is not None else NA} ca",

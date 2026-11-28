@@ -108,9 +108,10 @@ def test_newey_west_matches_hand_formula_and_session_t():
     want = ic.mean() / np.sqrt((g0 + 2 * 0.5 * g1) / 6)   # lag 1, Bartlett 1 - 1/2; không nối qua ranh giới phiên
     assert validation.newey_west_t(ic, day, 1) == pytest.approx(want)
     assert validation.nw_lag(100, 5) == 5 and validation.nw_lag(1000, 1) == 6
-    t = validation.validate_signals(synthetic_bars(0.001), horizons=(1,))["table"].set_index(["tín hiệu", "mẫu"])
+    t = validation.validate_signals(synthetic_bars(0.001, n_days=6), horizons=(1,))["table"].set_index(["tín hiệu", "mẫu"])
     row = t.loc[("obi3", "trong mẫu")]
-    assert row["n_sessions"] == 2 and row["ic_tstat_session"] > 0 and row["ic_tstat_nw"] > 0
+    assert row["n_sessions"] == 4 and row["ic_tstat_session"] > 0 and row["ic_tstat_nw"] > 0
+    assert np.isnan(t.loc[("obi3", "ngoài mẫu"), "ic_tstat_session"])  # 2 phiên: không báo t theo phiên
 
 
 def test_placebo_ic_is_near_zero_when_signal_is_real():
