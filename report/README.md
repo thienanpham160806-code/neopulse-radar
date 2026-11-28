@@ -47,13 +47,13 @@ Có tái sử dụng có chọn lọc từ dự án cá nhân trước của tá
 
 ## Checklist hoàn thiện trước khi nộp (30/11/2026)
 
-- [ ] Ghi thêm phiên 26/11 và 27/11 (máy cắm sạc, không tắt; kiểm tra lịch theo README mục "Lịch ghi tự động").
-- [ ] Sau mỗi phiên, `scripts/run_record_session.ps1` tự chạy `neopulse report-data`; kiểm tra `report/data/SUMMARY.md` rồi commit.
-- [ ] Phần 1 và 4 của báo cáo: nêu việc đã xin ý kiến giảng viên dùng SSI thay NEO (README đã ghi).
-- [ ] Ảnh dữ liệu thật `docs/img/*_live*.png` (desktop và điện thoại); ảnh `_sim` chỉ dùng minh họa và ghi rõ "mô phỏng".
+- [x] Ghi thêm phiên 26/11 và 27/11: đã có trong `report/data/SUMMARY.md` (6 phiên, 3 phiên đủ).
+- [x] `report/data/SUMMARY.md` sinh lại bằng `neopulse report-data` sau hiệu chỉnh (28/11/2026) và đã commit.
+- [ ] Phần 1 và 4 của báo cáo: nêu việc đã xin ý kiến giảng viên dùng SSI thay NEO; điền ngày và hình thức chấp thuận vào chỗ `[ngày]`, `[hình thức]` trong README.
+- [x] Ảnh dữ liệu thật cuối ở `docs/img/final/` (desktop và điện thoại, phiên 27/11); ảnh `_sim` chỉ dùng minh họa và ghi rõ "mô phỏng".
 - [ ] Bảng IC và tần suất cảnh báo lấy từ `report/data/SUMMARY.md`; nói rõ số phiên trong/ngoài mẫu và giới hạn.
 - [ ] Ảnh đối chiếu 3–5 mã với bảng giá công khai cùng thời điểm; ảnh thử lỗi (dừng bộ ghi, web báo dữ liệu cũ).
-- [ ] Ghi rõ việc dùng công cụ AI hỗ trợ lập trình và biên tập (Mục 13 của đề).
+- [ ] Ghi rõ việc dùng công cụ AI hỗ trợ lập trình và biên tập (Mục 13 của đề); README đã có mục riêng, báo cáo cần nêu lại.
 
 ## Kịch bản video (5–7 phút)
 
