@@ -222,11 +222,11 @@ def ic_conclusion(table: pd.DataFrame, plac: pd.DataFrame) -> list[str]:
     return [
         "### Kết luận", "",
         f"- **Có liên hệ thống kê.** Ngoài mẫu (26-27/11), {sig}/{len(out)} cặp tín hiệu × tầm nhìn có |t Newey-West| > 2. "
-        f"IC từ {f(lo('ic_mean')[0])} đến {f(lo('ic_mean')[1])}, t NW từ {f(lo('ic_tstat_nw')[0])} đến {f(lo('ic_tstat_nw')[1])}; "
+        f"IC từ {f(lo('ic_mean')[0])} đến {f(lo('ic_mean')[1])}, t NW từ {f(lo('ic_tstat_nw')[0])} đến {f(lo('ic_tstat_nw')[1])}. "
         f"Chênh IC lớn nhất giữa trong mẫu và ngoài mẫu (cùng tín hiệu, cùng tầm nhìn): {f(gap)}.",
         f"- **Placebo xáo giữa các mã:** |IC| lớn nhất là {f(shuf)}, tức gần 0. Đường tính không tự tạo ra liên hệ. "
-        f"Tín hiệu cũ t-h vẫn cho IC {f(stale.min())}–{f(stale.max())}: OBI và microprice bền theo thời gian, "
-        "đây không phải rò rỉ." if len(stale) else "- Placebo: chưa có.",
+        f"Tín hiệu cũ t-h vẫn cho IC {f(stale.min())}–{f(stale.max())}: phù hợp với việc OBI và microprice bền theo thời gian, "
+        "không phải dấu hiệu rò rỉ (tín hiệu thanh t-h vẫn tương quan với tín hiệu thanh t)." if len(stale) else "- Placebo: chưa có.",
         f"- **Không khai thác được sau chi phí.** Q5-Q1 trước chi phí chỉ {f(lo('spread_bps')[0])} đến "
         f"{f(lo('spread_bps')[1])} bps. Chỉ mua Q5 (thực hiện được) cho {f(lo('q5_long_net_bps')[0])} đến "
         f"{f(lo('q5_long_net_bps')[1])} bps sau phí giả định; {pos}/{len(out)} cặp dương. Riêng độ chênh giá mua-bán, "
