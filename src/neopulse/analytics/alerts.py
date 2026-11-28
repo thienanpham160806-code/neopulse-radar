@@ -1,18 +1,22 @@
 """Bộ quy tắc cảnh báo có mức ưu tiên, thời gian nguội (cooldown) và khóa chống lặp.
 
-Quy tắc          Điều kiện                                         Cơ sở ngưỡng
-volume_spike     z_vol >= 3,5                                      Iglewicz & Hoaglin (1993)
-spread_blowout   z_spread >= 3,5 và spread >= 2 bước giá tối thiểu  thống kê + loại nhiễu 1 bước giá
-price_jump       |z_ret| >= 3,5                                    thống kê
-foreign_flow     |z_fnet| >= 3,5 và NN chiếm >= 30% GT thanh        thống kê + điều kiện trọng yếu
-book_pressure    |OBI_3| >= 0,6 liên tục >= 3 thanh                 OBI=0,6 <=> một bên dày gấp 4 lần bên kia
-near_limit       |band_pos| >= 0,9                                 quy tắc biên độ trần/sàn của sàn
-Mức ưu tiên: CAO nếu >= 2 quy tắc cùng nổ trên một mã trong một thanh hoặc |giá trị| >= 6; còn lại TRUNG BÌNH,
-riêng near_limit/book_pressure là THẤP khi đứng một mình. spread_blowout và foreign_flow chỉ CAO khi đi cùng quy tắc
-khác: trên dữ liệu SSI thật, spread thường đúng 1 bước giá và khối ngoại thường bằng 0 nên MAD ~ 0 và |z| bão hòa
-(93% spread_blowout chạm trần 50), "|z| >= 6" không còn phân biệt được (duyệt 26/11/2026, xem report/data).
+Quy tắc          Điều kiện                                              Cơ sở ngưỡng
+volume_spike     RVOL thanh >= 5 (có KL nền) hoặc z_vol >= 3,5           RVOL: ngân sách cảnh báo; z: Iglewicz & Hoaglin
+spread_blowout   spread (số bước giá HOSE) >= 3 và > phân vị 95% của    spread rời rạc theo bước giá nên đo bằng bước;
+                 chính mã trên các thanh trước trong phiên)              MAD ~ 0 làm z vô nghĩa
+price_jump       |z_ret| >= 3,5                                         thống kê
+foreign_flow     cửa sổ 3 thanh: NN ròng khác 0, chiếm >= 30% GT khớp,   phân phối dồn về 0, room NN về theo cục
+                 |ròng| >= phân vị 99% các cửa sổ có NN trước của mã     ~1 lần/phút; không dùng z
+book_pressure    |OBI_3| >= 0,6 cùng dấu liên tục >= 5 thanh             OBI=0,6 <=> một bên dày gấp 4 lần bên kia
+near_limit       |band_pos| >= 0,9                                      quy tắc biên độ trần/sàn của sàn
+Mức ưu tiên: CAO nếu >= 2 quy tắc cùng nổ trên một mã trong một thanh hoặc giá trị của volume_spike/price_jump
+>= CAO_VALUE; còn lại TRUNG BÌNH, riêng near_limit/book_pressure là THẤP khi đứng một mình. spread_blowout và
+foreign_flow đo bằng đơn vị riêng (bước giá, tỷ trọng) nên chỉ CAO khi đi cùng quy tắc khác.
+Ngưỡng RVOL 5, 3 bước giá + phân vị 95%, khối ngoại phân vị 99% trên cửa sổ 3 thanh, 5 thanh OBI và CAO_VALUE 10 chọn ngày 28/11/2026 CHỈ trên 4 phiên
+trong mẫu 19, 20, 23, 25/11 theo ngân sách cảnh báo (CAO <= 1, mỗi quy tắc <= 2 trên một mã một phiên; lấy cấu hình ít chặt nhất
+đạt ngân sách và giữ độ thu hồi mô phỏng >= 0,8); 26-27/11 chỉ để báo cáo ngoài mẫu. Mọi lần thử, kể cả phương án bị loại: docs/calibration_log.md.
 volume_spike bỏ thanh 09:15 (khớp ATO) và 14:45 (khớp ATC): khối lượng đấu giá lớn theo cấu trúc phiên, không phải
-bất thường; 90/499 cảnh báo khối lượng của 4 phiên đầu rơi vào thanh 14:45.
+bất thường.
 Cảnh báo là tín hiệu "đáng xem", không phải khuyến nghị mua/bán.
 """
 from __future__ import annotations
@@ -22,15 +26,22 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
+from ..finance.microstructure import tick_size
 from ..finance.rvol import RVOL_SPIKE
 from .anomaly import Z_CAP, Z_THRESHOLD, score_bars
 
 OBI_EXTREME = 0.6
-OBI_PERSIST = 3
+OBI_PERSIST = 5
 NEAR_LIMIT = 0.9
 FOREIGN_MIN_SHARE = 0.30
+FOREIGN_Q = 0.99
+FOREIGN_WINDOW = 3  # thanh; room NN về theo cục nên tỷ trọng 1 thanh hay > 100% (12% số thanh trong mẫu, 3 thanh: 5%)
+SPREAD_MIN_TICKS = 3.0
+SPREAD_Q = 0.95
+HIST_MIN = 20  # số giá trị trước (cùng mã, cùng phiên) tối thiểu để tính phân vị riêng của mã
+CAO_VALUE = 10.0
 AUCTION_BARS = ("09:15", "14:45")  # thanh chứa lần khớp ATO / ATC (thanh = floor của thời điểm nhận)
-NO_Z_ESCALATION = ("spread_blowout", "foreign_flow")  # |z| bão hòa trên dữ liệu thật, chỉ CAO khi >= 2 quy tắc
+NO_VALUE_ESCALATION = ("spread_blowout", "foreign_flow")  # đơn vị riêng, chỉ CAO khi >= 2 quy tắc
 RULE_NAMES = {"volume_spike": "Khối lượng tăng bất thường", "spread_blowout": "Độ chênh giá mua-bán giãn rộng",
               "price_jump": "Giá biến động đột ngột", "foreign_flow": "Khối ngoại giao dịch bất thường",
               "book_pressure": "Mất cân bằng sổ lệnh kéo dài", "near_limit": "Sát trần/sàn"}
@@ -51,17 +62,13 @@ def detect(bars: pd.DataFrame, cfg: AlertConfig | None = None, source: str = "")
     if bars.empty:
         return pd.DataFrame(columns=cols)
     b = score_bars(bars, cfg.window, cfg.min_periods)
-    g = b.groupby(["trading_date", "symbol"], sort=False)
-    # spread tối thiểu trong phiên của mã ~ 1 bước giá => dùng làm thước đo "2 bước giá"
-    min_spread = g["spread_bps"].transform(lambda s: s.expanding(min_periods=5).min().shift(1))
     run = _signed_run_length(b)
-    fshare = (b["f_net_val"].abs() / b["val"]).where(b["val"] > 0)
     rules = {
         # có KL TB 20 phiên: so với CÙNG GIỜ các phiên trước (RVOL); không có: z bền vững của KL trong phiên
         "volume_spike": _volume_rule(b, cfg, ~b["bar"].dt.strftime("%H:%M").isin(AUCTION_BARS)),
-        "spread_blowout": ((b["z_spread"] >= cfg.z) & (b["spread_bps"] >= 2 * min_spread), b["z_spread"], cfg.z),
+        "spread_blowout": _spread_rule(b),
         "price_jump": (b["z_ret"].abs() >= cfg.z, b["z_ret"], cfg.z),
-        "foreign_flow": ((b["z_fnet"].abs() >= cfg.z) & (fshare >= FOREIGN_MIN_SHARE), b["z_fnet"], cfg.z),
+        "foreign_flow": _foreign_rule(b),
         "book_pressure": (run == OBI_PERSIST, b["obi3"], OBI_EXTREME),
         "near_limit": (b["band_pos"].abs() >= NEAR_LIMIT, b["band_pos"], NEAR_LIMIT),
     }
@@ -83,7 +90,7 @@ def detect(bars: pd.DataFrame, cfg: AlertConfig | None = None, source: str = "")
     a = a[step.isna() | (step > unit * cfg.cooldown_bars)].copy()
     n_rules = a.groupby(["trading_date", "symbol", "bar"])["rule"].transform("nunique")
     low = a["rule"].isin(["near_limit", "book_pressure"])
-    by_value = (a["value"].abs() >= 6) & ~low & ~a["rule"].isin(NO_Z_ESCALATION)
+    by_value = (a["value"].abs() >= CAO_VALUE) & ~low & ~a["rule"].isin(NO_VALUE_ESCALATION)
     a["severity"] = np.where((n_rules >= 2) | by_value, "CAO",
                              np.where(low, "THẤP", "TRUNG BÌNH"))
     a["message"] = [_message(r) for r in a.itertuples()]
@@ -102,6 +109,37 @@ def _signed_run_length(b: pd.DataFrame) -> pd.Series:
     run_id = changed.groupby(keys).cumsum()
     length = sign.groupby(keys + [run_id]).cumcount() + 1
     return length.where(sign != 0, 0)
+
+
+def _prior_quantile(x: pd.Series, keys: list, q: float) -> pd.Series:
+    """Phân vị q của các giá trị TRƯỚC thanh hiện tại (cùng mã, cùng phiên), bỏ NaN; < HIST_MIN giá trị -> NaN."""
+    return x.groupby(keys).transform(lambda s: s.shift(1).expanding(min_periods=HIST_MIN).quantile(q))
+
+
+def _spread_rule(b: pd.DataFrame):
+    """Spread tính bằng số bước giá HOSE. Báo khi >= SPREAD_MIN_TICKS và > phân vị SPREAD_Q của chính mã.
+    Chưa đủ HIST_MIN thanh trước: chỉ dùng sàn SPREAD_MIN_TICKS (fallback rõ ràng, không cần MAD)."""
+    if "spread" not in b or "bid1" not in b:
+        return pd.Series(False, index=b.index), pd.Series(np.nan, index=b.index), SPREAD_MIN_TICKS
+    ticks = b["spread"] / tick_size(b["bid1"])
+    own = _prior_quantile(ticks, [b["trading_date"], b["symbol"]], SPREAD_Q)
+    thr = np.maximum(own.fillna(SPREAD_MIN_TICKS), SPREAD_MIN_TICKS)
+    # spread rời rạc: phải VƯỢT phân vị riêng (mã thường trực 5 bước thì 5 bước không bất thường)
+    return (ticks >= SPREAD_MIN_TICKS) & ~(ticks <= own), ticks, thr
+
+
+def _foreign_rule(b: pd.DataFrame):
+    """Cộng FOREIGN_WINDOW thanh gần nhất (cùng mã, cùng phiên). Báo khi NN ròng khác 0, chiếm >= FOREIGN_MIN_SHARE
+    giá trị khớp của cửa sổ và |ròng| >= phân vị FOREIGN_Q của các cửa sổ có NN trước đó của chính mã. Chưa đủ HIST_MIN cửa sổ trước -> không báo (fallback rõ ràng). Giá trị = tỷ trọng có dấu."""
+    keys = [b["trading_date"], b["symbol"]]
+    roll = lambda c: b[c].groupby(keys).transform(  # noqa: E731
+        lambda x: x.rolling(FOREIGN_WINDOW, min_periods=FOREIGN_WINDOW).sum())
+    net, val = roll("f_net_val"), roll("val")
+    traded = net.notna() & (net != 0)
+    share = (net.abs() / val).where(val > 0)
+    own = _prior_quantile(net.abs().where(traded), keys, FOREIGN_Q)
+    mask = traded & (share >= FOREIGN_MIN_SHARE) & (net.abs() >= own)
+    return mask, np.sign(net) * share, FOREIGN_MIN_SHARE
 
 
 def _volume_rule(b: pd.DataFrame, cfg: AlertConfig, eligible: pd.Series):
@@ -124,8 +162,11 @@ def _message(r) -> str:
     if r.rule == "near_limit":
         return f"Giá đã đi {abs(r.value) * 100:.0f}% khoảng cách từ giá tham chiếu đến giá {'trần' if r.value > 0 else 'sàn'}"
     if r.rule == "foreign_flow":
-        z = f"|z| ≥ {Z_CAP:.0f}" if abs(r.value) >= Z_CAP else f"z = {r.value:+.1f}"
-        return f"Khối ngoại {'mua' if r.value > 0 else 'bán'} ròng cao bất thường (điểm z bền vững: {z})"
+        return (f"Khối ngoại {'mua' if r.value > 0 else 'bán'} ròng bằng {abs(r.value) * 100:.0f}% giá trị khớp "
+                f"{FOREIGN_WINDOW} phút gần nhất, lớn hơn {FOREIGN_Q:.0%} các cửa sổ có khối ngoại trước đó của mã")
+    if r.rule == "spread_blowout":
+        return (f"Độ chênh giá mua-bán {r.value:.0f} bước giá (ngưỡng {r.threshold:.0f} bước: tối thiểu "
+                f"{SPREAD_MIN_TICKS:.0f} bước hoặc phân vị {SPREAD_Q:.0%} của chính mã trong phiên)")
     z = f"|z| ≥ {Z_CAP:.0f}" if abs(r.value) >= Z_CAP else f"z = {r.value:+.1f}"
     return f"{name}: điểm z bền vững {z} (ngưỡng {r.threshold:g})"
 

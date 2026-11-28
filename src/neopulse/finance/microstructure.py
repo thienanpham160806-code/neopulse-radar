@@ -22,6 +22,15 @@ import pandas as pd
 LEVELS = (1, 2, 3)
 
 
+def tick_size(price):
+    """Bước giá cổ phiếu HOSE theo vùng giá (đồng): < 10.000: 10; 10.000-49.950: 50; >= 50.000: 100."""
+    if np.isscalar(price):
+        return 10.0 if price < 10_000 else 50.0 if price < 50_000 else 100.0
+    p = np.asarray(price, dtype=float)
+    out = np.select([p < 10_000, p < 50_000], [10.0, 50.0], 100.0)
+    return pd.Series(out, index=price.index) if isinstance(price, pd.Series) else out
+
+
 def add_book_metrics(df: pd.DataFrame) -> pd.DataFrame:
     """Thêm các cột chỉ báo sổ lệnh. Hàng thiếu một phía sổ lệnh nhận NaN (không suy diễn)."""
     out = df.copy()
@@ -102,7 +111,7 @@ def make_bars(quotes: pd.DataFrame, freq: str = "1min") -> pd.DataFrame:
         return pd.DataFrame()
     q = add_book_metrics(quotes).sort_values("ts")
     q["bar"] = q["ts"].dt.floor(freq)
-    keep = ["mid", "last", "spread_bps", "obi1", "obi3", "obi_w", "micro_dev_bps", "pressure", "depth_value",
+    keep = ["bid1", "ask1", "mid", "last", "spread", "spread_bps", "obi1", "obi3", "obi_w", "micro_dev_bps", "pressure", "depth_value",
             "bid_depth", "ask_depth", "total_volume", "total_value", "f_buy_val", "f_sell_val", "band_pos",
             "ref", "pct_change"]
     bars = q.groupby(["trading_date", "symbol", "bar"], sort=True)[keep].last().reset_index()

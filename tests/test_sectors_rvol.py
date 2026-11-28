@@ -113,16 +113,16 @@ def test_history_with_large_internal_gap_is_not_complete():
 
 
 def test_volume_alert_uses_rvol_when_available():
-    """Thanh có RVOL 4 (>= 3) phải báo dù z khối lượng thô không đủ cửa sổ; RVOL 2 thì không báo."""
+    """Thanh có RVOL 6 (>= 5) phải báo dù z khối lượng thô không đủ cửa sổ; RVOL 4 thì không báo."""
     n = 6
     ts = [pd.Timestamp("2026-11-19T10:00:00+07:00") + pd.Timedelta(minutes=i) for i in range(n)]
     b = pd.DataFrame({"trading_date": "2026-11-19", "symbol": "AAA", "bar": ts, "vol": 1000.0, "val": 1e7,
                       "spread_bps": 10.0, "ret": 0.0, "f_net_val": 0.0, "obi3": 0.0, "band_pos": 0.0, "last": 10.0,
-                      "pct_change": 0.0, "rvol_bar": [1, 1, 4.0, 1, 2.0, 1]})
+                      "pct_change": 0.0, "rvol_bar": [1, 1, 6.0, 1, 4.0, 1]})
     a = al.detect(b)
     vs = a[a.rule == "volume_spike"]
-    assert len(vs) == 1 and vs.iloc[0]["value"] == pytest.approx(4.0) and vs.iloc[0]["threshold"] == rvol.RVOL_SPIKE
-    assert "cao gấp 4.0 lần" in vs.iloc[0]["message"]
+    assert len(vs) == 1 and vs.iloc[0]["value"] == pytest.approx(6.0) and vs.iloc[0]["threshold"] == rvol.RVOL_SPIKE
+    assert "cao gấp 6.0 lần" in vs.iloc[0]["message"]
     assert al.detect(b.drop(columns=["rvol_bar"])).query("rule == 'volume_spike'").empty   # z thô: chưa đủ cửa sổ
 
 

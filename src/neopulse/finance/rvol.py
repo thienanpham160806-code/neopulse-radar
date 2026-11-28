@@ -18,7 +18,7 @@ import pandas as pd
 from ..timeutil import trading_minutes_elapsed
 
 SESSION_MIN = 270.0
-RVOL_SPIKE = 3.0  # thanh có khối lượng >= 3 lần mức thường thấy ở cùng thời điểm
+RVOL_SPIKE = 5.0  # thanh có KL >= 5 lần mức thường thấy cùng thời điểm; 3 -> 5 ngày 28/11 (docs/calibration_log.md)
 
 
 def linear_profile(minutes: np.ndarray | float) -> np.ndarray:
