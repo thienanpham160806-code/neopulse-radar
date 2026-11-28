@@ -167,10 +167,10 @@ def _message(r) -> str:
         return (f"Khối ngoại {'mua' if r.value > 0 else 'bán'} ròng bằng {abs(r.value) * 100:.0f}% giá trị khớp "
                 f"{FOREIGN_WINDOW} phút gần nhất, lớn hơn {FOREIGN_Q:.0%} các cửa sổ có khối ngoại trước đó của mã")
     if r.rule == "spread_blowout":
-        return (f"Độ chênh giá mua-bán {r.value:.0f} bước giá (ngưỡng {r.threshold:.0f} bước: tối thiểu "
-                f"{SPREAD_MIN_TICKS:.0f} bước hoặc phân vị {SPREAD_Q:.0%} của chính mã trong phiên)")
+        return (f"Độ chênh giá mua-bán {r.value:.0f} bước giá (cần từ {SPREAD_MIN_TICKS:.0f} bước và vượt phân vị "
+                f"{SPREAD_Q:.0%} của chính mã trong phiên; mức đối chiếu {r.threshold:.0f} bước)")
     z = f"|z| ≥ {Z_CAP:.0f}" if abs(r.value) >= Z_CAP else f"z = {r.value:+.1f}"
-    return f"{name}: điểm z bền vững {z} (ngưỡng {r.threshold:g})"
+    return f"{name}: điểm {z} (z bền vững, ngưỡng |z| ≥ {r.threshold:g})"
 
 
 def to_rows(alerts: pd.DataFrame) -> list[dict]:
