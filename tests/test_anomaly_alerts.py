@@ -12,7 +12,7 @@ def _bars(n=120, symbol="AAA", seed=0, **over):
     d = pd.DataFrame({"trading_date": "2026-11-12", "symbol": symbol, "bar": bar,
                       "vol": rng.lognormal(8, 0.3, n), "val": rng.lognormal(20, 0.3, n),
                       "spread_bps": 10 + rng.normal(0, 0.3, n), "ret": rng.normal(0, 0.0005, n),
-                      "bid1": 10000.0, "spread": 50.0,  # 1 bước giá HOSE ở vùng 10.000-49.950
+                      "bid1": 10000.0, "ask1": 10050.0,  # 1 bước giá HOSE ở vùng 10.000-49.950
                       "f_net_val": rng.normal(0, 1e7, n), "obi3": rng.uniform(-0.3, 0.3, n),
                       "band_pos": 0.0, "last": 10000.0, "pct_change": 0.0})
     for k, v in over.items():
@@ -106,7 +106,7 @@ def test_auction_bars_skip_volume_rule_and_saturated_z_is_not_high_alone():
     b = _bars(n=340)  # 09:15 -> 14:54; chỉ số 330 là thanh 14:45 (khớp ATC)
     assert b.loc[330, "bar"].strftime("%H:%M") == "14:45"
     b.loc[[200, 330], "vol"] = b["vol"].median() * 40
-    b.loc[260, "spread"] = 400.0  # 8 bước giá, đứng một mình
+    b.loc[260, "ask1"] = 10400.0  # 8 bước giá, đứng một mình
     a = alerts.detect(b, source="t")
     spikes = a[a["rule"] == "volume_spike"]
     assert b.loc[200, "bar"] in set(spikes["ts"]) and b.loc[330, "bar"] not in set(spikes["ts"])  # bỏ thanh ATC
@@ -122,14 +122,14 @@ def test_tick_size_follows_hose_price_bands():
 
 def test_spread_rule_uses_ticks_floor_then_symbol_quantile():
     b = _bars()
-    b.loc[10, "spread"] = 150.0          # 3 bước nhưng chưa đủ 20 thanh trước: chỉ dùng sàn 3 bước -> báo
-    b.loc[[30, 50], "spread"] = 100.0    # 2 bước < sàn 3 bước -> không báo
-    b.loc[70, "spread"] = 250.0          # 5 bước, phân vị 95% của mã (chủ yếu 1 bước) thấp hơn -> báo
+    b.loc[10, "ask1"] = 10150.0          # 3 bước nhưng chưa đủ 20 thanh trước: chỉ dùng sàn 3 bước -> báo
+    b.loc[[30, 50], "ask1"] = 10100.0   # 2 bước < sàn 3 bước -> không báo
+    b.loc[70, "ask1"] = 10250.0          # 5 bước, phân vị 95% của mã (chủ yếu 1 bước) thấp hơn -> báo
     a = alerts.detect(b, source="t")
     hits = a[a["rule"] == "spread_blowout"].sort_values("ts")
     assert list(hits["ts"]) == [b.loc[10, "bar"], b.loc[70, "bar"]] and list(hits["value"]) == [3, 5]
-    wide = _bars(spread=250.0)           # mã thường xuyên 5 bước: phân vị riêng = 5 -> 5 bước không bất thường
-    wide.loc[90, "spread"] = 300.0
+    wide = _bars(ask1=10250.0)           # mã thường xuyên 5 bước: phân vị riêng = 5 -> 5 bước không bất thường
+    wide.loc[90, "ask1"] = 10300.0
     w = alerts.detect(wide, source="t")
     assert set(w.loc[w["rule"] == "spread_blowout", "ts"]) - {wide.loc[i, "bar"] for i in range(20)} == {wide.loc[90, "bar"]}
 
@@ -143,3 +143,28 @@ def test_foreign_rule_needs_share_and_own_quantile_on_3_bar_window():
     f = a[a["rule"] == "foreign_flow"]
     assert len(f) == 1 and f.iloc[0]["ts"] == b.loc[111, "bar"] and round(f.iloc[0]["value"], 6) == -0.4
     assert "bán ròng bằng 40%" in f.iloc[0]["message"]
+
+
+def test_grid_ticks_count_steps_across_price_bands():
+    """CX-018: spread vắt qua mốc 10.000 / 50.000 đếm trên lưới giá từng vùng."""
+    from neopulse.finance.microstructure import grid_ticks
+    assert list(grid_ticks([9990, 49950, 10000, 50000], [10050, 50100, 10150, 50300])) == [2, 2, 3, 3]
+    assert np.isnan(grid_ticks([np.nan], [10050])[0])
+    b = _bars()
+    b["bid1"], b["ask1"] = 9990.0, 10000.0                   # 1 bước
+    b.loc[60, "ask1"] = 10050.0                              # 2 bước thật (không phải 6): không báo
+    b.loc[80, "bid1"], b.loc[80, "ask1"] = 9970.0, 10050.0   # 3 + 1 = 4 bước: báo
+    a = alerts.detect(b, source="t")
+    hits = a[a["rule"] == "spread_blowout"]
+    assert list(hits["ts"]) == [b.loc[80, "bar"]] and hits.iloc[0]["value"] == 4
+
+
+def test_book_pressure_run_resets_on_missing_bars():
+    """CX-019: 5 thanh cực đoan nhưng mất 10 phút ở giữa thì không phải "5 thanh liên tiếp"."""
+    b = _bars(obi3=0.0)
+    b.loc[40:44, "obi3"] = 0.8
+    gappy = b.drop(index=[42 + i for i in range(0)]).copy()
+    gappy.loc[[42, 43, 44], "bar"] = gappy.loc[[42, 43, 44], "bar"] + pd.Timedelta(minutes=10)
+    gappy = gappy.drop(index=range(45, 56))                  # bỏ các thanh trùng giờ sau khi dời
+    assert alerts.detect(gappy, source="t").query("rule == 'book_pressure'").empty
+    assert len(alerts.detect(b, source="t").query("rule == 'book_pressure'")) == 1

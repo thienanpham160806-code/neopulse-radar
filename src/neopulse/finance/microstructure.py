@@ -31,6 +31,17 @@ def tick_size(price):
     return pd.Series(out, index=price.index) if isinstance(price, pd.Series) else out
 
 
+TICK_BANDS = ((0.0, 10_000.0, 10.0), (10_000.0, 50_000.0, 50.0), (50_000.0, np.inf, 100.0))
+
+
+def grid_ticks(bid, ask):
+    """Số bước giá HOSE giữa bid và ask, đếm trên lưới giá theo từng vùng (CX-018): 9.990 -> 10.050 là 2 bước
+    (9.990 -> 10.000 -> 10.050), không phải 60/10 = 6. NaN nếu thiếu một phía."""
+    bid, ask = np.asarray(bid, dtype=float), np.asarray(ask, dtype=float)
+    n = sum((np.clip(ask, lo, hi) - np.clip(bid, lo, hi)) / t for lo, hi, t in TICK_BANDS)
+    return np.round(n, 6)
+
+
 def add_book_metrics(df: pd.DataFrame) -> pd.DataFrame:
     """Thêm các cột chỉ báo sổ lệnh. Hàng thiếu một phía sổ lệnh nhận NaN (không suy diễn)."""
     out = df.copy()

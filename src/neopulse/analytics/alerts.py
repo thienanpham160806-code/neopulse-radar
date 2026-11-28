@@ -7,7 +7,7 @@ spread_blowout   spread (số bước giá HOSE) >= 3 và > phân vị 95% của
 price_jump       |z_ret| >= 3,5                                         thống kê
 foreign_flow     cửa sổ 3 thanh: NN ròng khác 0, chiếm >= 30% GT khớp,   phân phối dồn về 0, room NN về theo cục
                  |ròng| >= phân vị 99% các cửa sổ có NN trước của mã     ~1 lần/phút; không dùng z
-book_pressure    |OBI_3| >= 0,6 cùng dấu liên tục >= 5 thanh             OBI=0,6 <=> một bên dày gấp 4 lần bên kia
+book_pressure    |OBI_3| >= 0,6 cùng dấu >= 5 thanh liền nhau            OBI=0,6 <=> một bên dày gấp 4 lần bên kia
 near_limit       |band_pos| >= 0,9                                      quy tắc biên độ trần/sàn của sàn
 Mức ưu tiên: CAO nếu >= 2 quy tắc cùng nổ trên một mã trong một thanh hoặc giá trị của volume_spike/price_jump
 >= CAO_VALUE; còn lại TRUNG BÌNH, riêng near_limit/book_pressure là THẤP khi đứng một mình. spread_blowout và
@@ -26,7 +26,7 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
-from ..finance.microstructure import tick_size
+from ..finance.microstructure import grid_ticks
 from ..finance.rvol import RVOL_SPIKE
 from .anomaly import Z_CAP, Z_THRESHOLD, score_bars
 
@@ -62,7 +62,9 @@ def detect(bars: pd.DataFrame, cfg: AlertConfig | None = None, source: str = "")
     if bars.empty:
         return pd.DataFrame(columns=cols)
     b = score_bars(bars, cfg.window, cfg.min_periods)
-    run = _signed_run_length(b)
+    bar_len = bars["bar"].sort_values().diff().dropna()
+    unit = bar_len[bar_len > pd.Timedelta(0)].min() if len(bar_len) else pd.Timedelta("1min")
+    run = _signed_run_length(b, unit)
     rules = {
         # có KL TB 20 phiên: so với CÙNG GIỜ các phiên trước (RVOL); không có: z bền vững của KL trong phiên
         "volume_spike": _volume_rule(b, cfg, ~b["bar"].dt.strftime("%H:%M").isin(AUCTION_BARS)),
@@ -85,8 +87,6 @@ def detect(bars: pd.DataFrame, cfg: AlertConfig | None = None, source: str = "")
     a = pd.concat(frames).sort_values(["trading_date", "symbol", "rule", "bar"])
     # cooldown: cùng mã + cùng quy tắc chỉ báo lại sau `cooldown_bars` thanh
     step = a.groupby(["trading_date", "symbol", "rule"])["bar"].diff()
-    bar_len = bars["bar"].sort_values().diff().dropna()
-    unit = bar_len[bar_len > pd.Timedelta(0)].min() if len(bar_len) else pd.Timedelta("1min")
     a = a[step.isna() | (step > unit * cfg.cooldown_bars)].copy()
     n_rules = a.groupby(["trading_date", "symbol", "bar"])["rule"].transform("nunique")
     low = a["rule"].isin(["near_limit", "book_pressure"])
@@ -101,11 +101,13 @@ def detect(bars: pd.DataFrame, cfg: AlertConfig | None = None, source: str = "")
     return a[cols].sort_values("ts", ascending=False).reset_index(drop=True)
 
 
-def _signed_run_length(b: pd.DataFrame) -> pd.Series:
-    """Độ dài chuỗi thanh liên tiếp mà OBI_3 vượt ngưỡng cực đoan VÀ giữ nguyên dấu (theo mã, theo phiên)."""
+def _signed_run_length(b: pd.DataFrame, unit: pd.Timedelta) -> pd.Series:
+    """Độ dài chuỗi thanh LIỀN NHAU (cách đúng một thanh) mà OBI_3 vượt ngưỡng cực đoan VÀ giữ nguyên dấu
+    (theo mã, theo phiên). Mất thanh giữa chừng hoặc qua nghỉ trưa thì đếm lại (CX-019)."""
     sign = np.sign(b["obi3"]).where(b["obi3"].abs() >= OBI_EXTREME, 0.0).fillna(0.0)
     keys = [b["trading_date"], b["symbol"]]
-    changed = sign.ne(sign.groupby(keys).shift(1))
+    gap = b["bar"].groupby(keys).diff() != unit
+    changed = sign.ne(sign.groupby(keys).shift(1)) | gap
     run_id = changed.groupby(keys).cumsum()
     length = sign.groupby(keys + [run_id]).cumcount() + 1
     return length.where(sign != 0, 0)
@@ -119,9 +121,9 @@ def _prior_quantile(x: pd.Series, keys: list, q: float) -> pd.Series:
 def _spread_rule(b: pd.DataFrame):
     """Spread tính bằng số bước giá HOSE. Báo khi >= SPREAD_MIN_TICKS và > phân vị SPREAD_Q của chính mã.
     Chưa đủ HIST_MIN thanh trước: chỉ dùng sàn SPREAD_MIN_TICKS (fallback rõ ràng, không cần MAD)."""
-    if "spread" not in b or "bid1" not in b:
+    if "bid1" not in b or "ask1" not in b:
         return pd.Series(False, index=b.index), pd.Series(np.nan, index=b.index), SPREAD_MIN_TICKS
-    ticks = b["spread"] / tick_size(b["bid1"])
+    ticks = pd.Series(grid_ticks(b["bid1"], b["ask1"]), index=b.index)  # đếm trên lưới giá, kể cả khi vắt qua mốc
     own = _prior_quantile(ticks, [b["trading_date"], b["symbol"]], SPREAD_Q)
     thr = np.maximum(own.fillna(SPREAD_MIN_TICKS), SPREAD_MIN_TICKS)
     # spread rời rạc: phải VƯỢT phân vị riêng (mã thường trực 5 bước thì 5 bước không bất thường)
