@@ -57,7 +57,7 @@ Số ca không ghi cứng ở đây. Đếm bằng `python -m pytest --co -q` (P
 | Mạng rớt: thử lại lùi dần, không crash, log không lộ token | pytest | chờ 1 s, 2 s...; `failures>0` nhưng vòng lặp vẫn chạy đủ chu kỳ |
 | CSDL thiếu: đẩy trạng thái `error` để web hiện rõ | pytest | `latest.json` có `data_status.state="error"` |
 | Token Ably công khai vẫn chỉ subscribe, TTL ngắn và không lộ khóa | vitest + HTTP production | 200, capability chỉ subscribe; thiếu key:503 |
-| Bố cục di động 390 px, không tràn ngang, 5 tab, sáng/tối | trình duyệt chụp từng tab | `scrollWidth` = 390; ảnh `docs/img/*_live*.png` (thật) và `web_*_sim.png` (mô phỏng) |
+| Bố cục di động 390 px, không tràn ngang, 5 tab, sáng/tối | trình duyệt chụp từng tab | `scrollWidth` = 390; ảnh bản cuối trong `docs/img/final/`, ảnh trước/sau trong `docs/img/ux/` |
 
 ## 3. Kiểm chứng với dữ liệu thật — **việc còn phải làm**
 
@@ -73,7 +73,7 @@ Số ca không ghi cứng ở đây. Đếm bằng `python -m pytest --co -q` (P
 
 ## 4. Kết quả trên dữ liệu mô phỏng (chỉ xác nhận mã chạy đúng)
 
-Chạy `neopulse simulate --sessions 6 --reset && neopulse validate`. Với seed mặc định: IC(OBI₃, 1 thanh) ngoài mẫu ≈ 0,13; độ thu hồi cảnh báo ≈ 79%, độ chính xác ≈ 86% trên 126 sự kiện cài. Tín hiệu và sự kiện đều do bộ mô phỏng cài sẵn nên các con số này **không nói gì về thị trường thật** và không được trình bày như kết quả nghiên cứu.
+Chạy `neopulse simulate --sessions 6 --reset` rồi `neopulse validate` trong môi trường thử riêng. Đọc IC, độ thu hồi, độ chính xác và số sự kiện từ đầu ra của đúng phiên bản đang dùng; các kết quả thay đổi khi bộ mô phỏng hoặc quy tắc cảnh báo thay đổi. Tín hiệu và sự kiện đều do bộ mô phỏng cài sẵn nên các con số này **không nói gì về thị trường thật** và không được trình bày như kết quả nghiên cứu. Lịch sử hiệu chỉnh trên dữ liệu thật nằm trong [`calibration_log.md`](calibration_log.md).
 
 ### Bổ sung 19/11/2026: giao diện bản tin
 

@@ -1,0 +1,247 @@
+1
+00:00:00,906 --> 00:00:08,394
+Em chào thầy. Em là Phạm Ngọc Thiên An, mã số sinh viên K244141653.
+
+2
+00:00:08,844 --> 00:00:17,556
+Hôm nay em xin trình bày đồ án cuối kỳ của em: NeoPulse Radar, một radar theo dõi nhịp thị trường cổ phiếu Việt Nam ngay trong phiên giao dịch.
+
+3
+00:00:19,081 --> 00:00:28,153
+Trước hết là bài toán. Trong phiên, bảng giá nhảy liên tục với hàng trăm con số, nhưng không cho biết điều gì thật sự đáng chú ý.
+
+4
+00:00:28,613 --> 00:00:37,037
+Nhà đầu tư cá nhân khó ngồi nhìn ba mươi mã suốt cả phiên, và mức tăng của chỉ số cũng dễ che mất việc chỉ vài mã lớn đang kéo thị trường.
+
+5
+00:00:37,503 --> 00:00:50,007
+Vì vậy em đặt mục tiêu: sản phẩm phải trả lời được ba câu hỏi. Thị trường đang khỏe hay yếu? Vì sao? Và mã nào đang lệch khỏi mức bình thường của chính nó?
+
+6
+00:00:50,456 --> 00:00:58,616
+Một nguyên tắc em giữ xuyên suốt: hệ thống chỉ mô tả và phân tích, không dự báo giá, không khuyến nghị mua bán và không đặt lệnh.
+
+7
+00:01:00,116 --> 00:01:03,548
+Về kiến trúc, dữ liệu đi qua sáu lớp.
+
+8
+00:01:04,007 --> 00:01:13,679
+Bộ thu thập kết nối WebSocket của SSI FastConnect, nhận giá khớp, sổ lệnh ba mức, khối ngoại, chỉ số và hợp đồng tương lai VN30.
+
+9
+00:01:14,147 --> 00:01:19,955
+Dữ liệu được chuẩn hóa, khử trùng lặp, loại tin đến muộn rồi ghi vào SQLite.
+
+10
+00:01:20,413 --> 00:01:27,781
+Python tính toàn bộ chỉ báo và phân tích, sau đó xuất ra ba giao diện: web, bot Telegram và dashboard.
+
+11
+00:01:28,225 --> 00:01:37,441
+Ban đầu em dùng NEO API, nhưng NEO yêu cầu IP cố định, nên em chuyển sang SSI FastConnect và đã được thầy đồng ý.
+
+12
+00:01:37,897 --> 00:01:50,065
+Em đã ghi được sáu phiên thật, từ 19/11 đến 27/11, với hơn 1,7 triệu bản ghi giá. Ba phiên đầu còn thiếu dữ liệu, em có ghi rõ trong báo cáo.
+
+13
+00:01:51,588 --> 00:01:57,876
+Đây là trang chủ của web, em triển khai trên Vercel, ai cũng truy cập được mà không cần đăng nhập.
+
+14
+00:01:58,338 --> 00:02:05,298
+Web có hai khu vực chính: Nhịp thị trường để theo dõi trong phiên, và Hồ sơ doanh nghiệp để tìm hiểu từng mã.
+
+15
+00:02:05,744 --> 00:02:08,936
+Em sẽ đi vào phần Nhịp thị trường trước.
+
+16
+00:02:10,466 --> 00:02:17,066
+Tab Tổng quan được sắp xếp đúng theo ba câu hỏi: khỏe hay yếu, vì sao, và có gì bất thường.
+
+17
+00:02:17,513 --> 00:02:27,017
+Thanh trạng thái phía trên luôn ghi rõ nguồn dữ liệu, giờ cập nhật cuối và phiên đang xem. Ở đây là bản cuối phiên ngày 27/11.
+
+18
+00:02:27,482 --> 00:02:41,186
+Ô đầu tiên là điểm nhịp thị trường, thang từ 0 đến 100. Phiên này đạt 74 điểm, tín hiệu chung khá tích cực: VN30 tăng 1,43%, có 24 mã tăng và chỉ 2 mã giảm.
+
+19
+00:02:41,638 --> 00:02:53,590
+Điểm nhịp gộp năm nhóm tín hiệu. Vì trọng số là lựa chọn thiết kế, em hiển thị thêm độ nhạy: thay đổi mỗi trọng số 50% thì điểm vẫn nằm trong khoảng 69 đến 78.
+
+20
+00:02:54,060 --> 00:03:03,228
+Cột thứ hai giải thích vì sao. Phiên này độ rộng và động lượng kéo điểm lên mạnh nhất, còn thanh khoản thấp hơn cùng giờ nên kéo xuống một chút.
+
+21
+00:03:03,685 --> 00:03:12,085
+Cột thứ ba tóm tắt các biến động đáng chú ý, chia theo mức Cao, Trung bình và Thấp. Bấm vào mã là soi được ngay.
+
+22
+00:03:12,544 --> 00:03:18,328
+Kéo xuống là biểu đồ giá VN30 trong phiên, có đường trung bình để nhìn xu hướng.
+
+23
+00:03:18,779 --> 00:03:28,787
+Tiếp theo là đóng góp của từng ngành: bất động sản và ngân hàng đóng góp nhiều nhất. Em ghi chú rõ đây là ước lượng, vì chưa điều chỉnh free float.
+
+24
+00:03:29,247 --> 00:03:38,295
+Cuối trang là bản tóm tắt bằng lời. Câu chữ dựng từ mẫu cố định gắn với số liệu, nên không có con số nào nằm ngoài dữ liệu.
+
+25
+00:03:38,763 --> 00:03:43,947
+Và khung mức độ bằng chứng cho biết hệ thống đã kiểm tra gì, còn thiếu gì.
+
+26
+00:03:45,485 --> 00:03:49,637
+Tab Vì sao đi sâu vào từng nguyên nhân, gồm bốn mục.
+
+27
+00:03:50,094 --> 00:03:59,838
+Mục Ngành và độ rộng đối chiếu số tăng giảm của chỉ số với số em tự tính trên rổ 30 mã: 0,85 so với 0,87, khá khớp nhau.
+
+28
+00:04:00,297 --> 00:04:12,177
+Mục Sổ lệnh và thanh khoản có bản đồ áp lực sổ lệnh. Mỗi ô là một mã, diện tích là giá trị khớp; màu xanh là bên mua chờ dày hơn, màu đỏ là bên bán dày hơn.
+
+29
+00:04:12,641 --> 00:04:20,729
+Bên dưới là bảng thanh khoản và trượt giá: độ chênh giá mua bán, độ sâu ba mức giá và trượt giá ước lượng khi mua một lệnh lớn.
+
+30
+00:04:21,188 --> 00:04:28,772
+Mục Khối ngoại tách chiều mua bán khỏi quy mô tham gia, vì mua ròng lớn nhưng chỉ chiếm phần nhỏ thanh khoản thì ý nghĩa khác hẳn.
+
+31
+00:04:29,219 --> 00:04:34,907
+Phiên này FPT được khối ngoại mua ròng mạnh nhất, khoảng 182 tỷ đồng.
+
+32
+00:04:35,375 --> 00:04:44,999
+Mục Phái sinh so hợp đồng tương lai với chỉ số cơ sở: chênh lệch dương 3,57 điểm, tức trạng thái contango, còn 20 ngày nữa đến đáo hạn.
+
+33
+00:04:46,519 --> 00:04:57,367
+Tab Bất thường là phần em đầu tư nhiều nhất. Mỗi mã được so với chính nó trong phiên bằng điểm z bền vững, dựa trên trung vị, chứ không dùng một ngưỡng chung cho cả rổ.
+
+34
+00:04:57,831 --> 00:05:09,471
+Hệ thống có sáu quy tắc: khối lượng tăng bất thường, độ chênh giá mua bán giãn rộng, giá biến động đột ngột, khối ngoại giao dịch bất thường, mất cân bằng sổ lệnh kéo dài, và sát trần sàn.
+
+35
+00:05:09,925 --> 00:05:16,981
+Người dùng lọc được theo mức độ. Ví dụ em chỉ xem mức Cao, còn 43 cảnh báo.
+
+36
+00:05:17,441 --> 00:05:24,401
+Mỗi cảnh báo đều mở ra được giá trị kiểm tra và ngưỡng quy tắc, để người xem biết vì sao nó bị gắn cờ.
+
+37
+00:05:24,847 --> 00:05:32,791
+Em chọn ngưỡng theo nguyên tắc ngân sách cảnh báo: trung bình không quá một cảnh báo Cao trên một mã mỗi phiên, hiệu chỉnh trên bốn phiên đầu.
+
+38
+00:05:33,253 --> 00:05:42,277
+Em cũng xin nói thẳng: ở hai phiên ngoài mẫu, con số này là 1,67, vẫn vượt ngân sách, nên đây là điểm em cần cải thiện tiếp.
+
+39
+00:05:43,834 --> 00:05:50,002
+Tab Chi tiết mã cho phép soi từng mã trong phiên. Em chọn thử FPT.
+
+40
+00:05:50,459 --> 00:05:58,283
+Ở đây có mất cân bằng sổ lệnh OBI ba mức, giá vi mô, độ chênh giá mua bán và tỷ lệ áp lực bán trên mua.
+
+41
+00:05:58,741 --> 00:06:08,125
+Trượt giá ước lượng được tính bằng cách mô phỏng khớp lần lượt qua ba mức giá. Vì chỉ có ba mức, con số này là cận dưới của chi phí thật.
+
+42
+00:06:08,600 --> 00:06:13,832
+Bên cạnh là khối ngoại của riêng mã và danh sách cảnh báo trong phiên của mã đó.
+
+43
+00:06:14,303 --> 00:06:20,711
+Biểu đồ theo phút đặt giá giữa cạnh OBI, để thấy áp lực sổ lệnh thay đổi cùng giá ra sao.
+
+44
+00:06:21,162 --> 00:06:29,394
+Cuối cùng là bảng xếp hạng đa yếu tố, chấm điểm 30 mã theo động lượng, sổ lệnh, khối ngoại, thanh khoản và chi phí.
+
+45
+00:06:30,915 --> 00:06:36,363
+Tab Phương pháp công khai toàn bộ công thức, để thầy và người dùng có thể kiểm tra lại.
+
+46
+00:06:36,821 --> 00:06:45,485
+Mọi chỉ báo đều tính bằng Python, web chỉ hiển thị kết quả. Bên dưới em liệt kê các giới hạn cần biết khi đọc số.
+
+47
+00:06:45,946 --> 00:06:52,330
+Phần Kiểm chứng trả lời câu hỏi: tín hiệu sổ lệnh có liên hệ với biến động giá ngay sau đó không?
+
+48
+00:06:52,805 --> 00:07:07,445
+Kết quả ngoài mẫu: hệ số IC từ 0,17 đến 0,29, thống kê t Newey–West trên 13, còn kiểm định placebo xáo trộn giữa các mã cho IC gần bằng 0. Tức là có liên hệ thật về mặt thống kê.
+
+49
+00:07:07,915 --> 00:07:20,347
+Nhưng sau khi trừ chi phí giao dịch thì không còn lãi, vì riêng độ chênh giá mua bán đã ăn hết phần chênh lệch. Với hai phiên ngoài mẫu, em xem đây là kết quả ban đầu, chưa phải kết luận chắc chắn.
+
+50
+00:07:21,872 --> 00:07:32,048
+Ngoài nhịp thị trường, web có phần Hồ sơ doanh nghiệp, tra cứu được hơn 1.500 mã trên ba sàn, lọc theo VN30, VN100 hoặc theo sàn giao dịch.
+
+51
+00:07:33,594 --> 00:07:43,170
+Ví dụ hồ sơ của FPT. Phần một giới thiệu doanh nghiệp và ngành, cổ đông lớn, ban lãnh đạo và diễn biến giá so với thị trường.
+
+52
+00:07:43,625 --> 00:07:50,777
+Phần hai là tài chính và kết quả kinh doanh: dòng tiền, khả năng sinh lời và phân rã ROE theo DuPont.
+
+53
+00:07:51,235 --> 00:07:55,987
+Phần ba tóm tắt rủi ro, sự kiện công bố và tin gần đây.
+
+54
+00:07:56,453 --> 00:08:02,789
+Phần bốn là định giá chiết khấu dòng tiền kèm bảng độ nhạy, và em ghi rõ đây chỉ là minh họa.
+
+55
+00:08:04,317 --> 00:08:13,269
+Cuối cùng là kênh Telegram. Người dùng chọn nội dung muốn nhận: cảnh báo thị trường mức cao, tin doanh nghiệp và tin chính sách.
+
+56
+00:08:13,739 --> 00:08:24,971
+Bot có các lệnh xem nhanh thị trường, xem cảnh báo, tra một mã, theo dõi mã và cài đặt. Bản tin gộp gửi lúc 8 giờ 30 và 15 giờ mỗi ngày làm việc.
+
+57
+00:08:25,426 --> 00:08:32,050
+Website không yêu cầu tài khoản hay số điện thoại, và mỗi tin đều ghi rõ đây không phải lời khuyên đầu tư.
+
+58
+00:08:33,571 --> 00:08:45,115
+Về kiểm thử, dự án có 294 ca kiểm thử Python và 100 ca kiểm thử web: so công thức với tính tay, kiểm tra không nhìn trước tương lai, dữ liệu bẩn và mất kết nối.
+
+59
+00:08:45,571 --> 00:08:55,747
+Về an toàn, khóa API chỉ nằm trong tệp env trên máy, kho mã chỉ có tệp mẫu, và mọi endpoint đặt lệnh hay tài khoản đều bị chặn cứng trong mã nguồn.
+
+60
+00:08:57,277 --> 00:09:05,845
+Đồ án vẫn còn hạn chế: mới có sáu phiên dữ liệu, cảnh báo ngoài mẫu còn vượt ngân sách, và đóng góp ngành chưa điều chỉnh free float.
+
+61
+00:09:06,324 --> 00:09:13,836
+Hướng tiếp theo của em là thu thêm phiên, mở rộng ra toàn sàn HOSE và hiệu chỉnh lại ngưỡng cảnh báo theo dữ liệu mới.
+
+62
+00:09:15,374 --> 00:09:24,374
+Mã nguồn, hướng dẫn cài đặt và báo cáo chi tiết em đã nộp kèm. Em cảm ơn thầy đã dành thời gian xem phần trình bày của em.

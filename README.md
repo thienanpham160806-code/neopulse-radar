@@ -13,7 +13,9 @@ Radar nội phiên cho thị trường cổ phiếu Việt Nam: đo nhịp thị
 [![tests](https://img.shields.io/badge/tests-pytest%20%C2%B7%20vitest-2EA44F?style=flat&logo=pytest&logoColor=white)](report/data/SUMMARY.md#kiểm-thử)
 [![license](https://img.shields.io/badge/license-MIT-lightgrey?style=flat)](LICENSE)
 
-**[Bản web](https://neopulse-radar.vercel.app)** · **[Phương pháp](docs/methodology.md)** · **[Kiến trúc](docs/architecture.md)** · **[Số liệu báo cáo](report/data/SUMMARY.md)** · **[Dàn ý báo cáo](report/README.md)**
+**[Bản web](https://neopulse-radar.vercel.app)** · **[Phương pháp](docs/methodology.md)** · **[Kiến trúc](docs/architecture.md)** · **[Số liệu báo cáo](report/data/SUMMARY.md)** · **[Báo cáo PDF](report/K244141653_PhamNgocThienAn_BaoCao.pdf)** · **[Video demo](report/video/K244141653_PhamNgocThienAn_Demo.mp4)**
+
+Bản Word, phụ đề và hướng dẫn nộp bài: [`report/`](report/README.md).
 
 ![Bản web, tab Tổng quan với dữ liệu SSI thật phiên 27/11/2026](docs/img/final/tong_quan_desktop.png)
 *Bản web production với dữ liệu SSI FastConnect thật, bản cuối phiên 27/11/2026. Các ảnh khác: [`docs/img/final/`](docs/img/final/README.md).*
@@ -80,7 +82,7 @@ flowchart LR
 | Bất thường | z = 0,6745·(x − median)/MAD trên 60 thanh trước đó (khối lượng khi chưa có RVOL, lợi suất); ngưỡng 3,5 |
 | Cảnh báo spread | số bước giá HOSE (đếm trên lưới giá) ≥ 3 và vượt phân vị 95% của chính mã trong phiên |
 | Cảnh báo khối ngoại | 3 thanh có dữ liệu gần nhất: ròng ≥ 30% giá trị khớp và vượt phân vị 99% của chính mã |
-| Điểm nhịp | 50 + 50·Σwᵢcᵢ: độ rộng 30%, động lượng 25%, sổ lệnh 20%, khối ngoại 15%, thanh khoản 10% |
+| Điểm nhịp | 50 + 50·Σ(wᵢcᵢ)/Σwᵢ, chỉ cộng các thành phần có dữ liệu: độ rộng 30%, động lượng 25%, sổ lệnh 20%, khối ngoại 15%, thanh khoản 10%; dưới 50% trọng số có dữ liệu thì không kết luận |
 
 Nguyên tắc tính toán:
 
@@ -193,7 +195,7 @@ scripts/                lịch ghi phiên trên Windows
 tests/                  kiểm thử offline (máy chủ giả, không cần mạng)
 data_sample/            dữ liệu MÔ PHỎNG mẫu
 docs/                   kiến trúc, phương pháp, từ điển dữ liệu, kế hoạch kiểm thử, ghi chú API
-report/                 dàn ý báo cáo; report/data/ là số liệu sinh bằng `neopulse report-data`
+report/                 báo cáo PDF/Word, video; report/data/ là số liệu sinh bằng `neopulse report-data`
 ```
 
 ## Đầu ra

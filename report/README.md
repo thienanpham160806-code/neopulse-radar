@@ -1,9 +1,15 @@
-# Báo cáo cuối kỳ — dàn ý theo Mục 12 của đề
+# Báo cáo cuối kỳ — tệp nộp và hướng dẫn theo Mục 12 của đề
 
 Tên tệp nộp: `K244141653_PhamNgocThienAn_BaoCao.pdf` · mã nguồn: `K244141653_PhamNgocThienAn_NEOAPI_FinTech.zip` · video: `K244141653_PhamNgocThienAn_Demo.mp4`.
 Khuyến nghị 8–12 trang A4, không tính phụ lục.
 
-Dàn ý dưới đây chỉ ra **lấy nội dung ở đâu trong repo**. Phần chữ, số liệu thật và ảnh chụp phải do bạn viết và thu — đề yêu cầu giải thích được mọi công thức và quyết định thiết kế khi bảo vệ.
+## Tệp đã chuẩn bị
+
+- [Báo cáo PDF](K244141653_PhamNgocThienAn_BaoCao.pdf) và [bản Word để chỉnh sửa](K244141653_PhamNgocThienAn_BaoCao.docx).
+- [Video trình diễn](video/K244141653_PhamNgocThienAn_Demo.mp4), thời lượng 9 phút 26 giây, kèm [phụ đề tiếng Việt](video/K244141653_PhamNgocThienAn_Demo.srt).
+- [Số liệu tổng hợp](data/SUMMARY.md), [câu hỏi bảo vệ](defense_qa.md) và [ghi chú video](video/README.md).
+
+Dàn ý dưới đây chỉ ra **lấy nội dung ở đâu trong repo**. Báo cáo đã có số liệu, ảnh và phần công khai việc dùng AI hỗ trợ. Tác giả cần đọc lại, xác nhận thông tin cá nhân và giải thích được mọi công thức, quyết định thiết kế khi bảo vệ. Mục triển khai snapshot ban đầu được giữ như lịch sử; kiến trúc hiện tại có Ably và được mô tả ở phần bổ sung bên dưới cùng `docs/web_architecture.md`.
 
 | # | Phần | Viết gì | Nguồn trong repo |
 |---|---|---|---|
@@ -12,7 +18,7 @@ Dàn ý dưới đây chỉ ra **lấy nội dung ở đâu trong repo**. Phần
 | 3 | Thiết kế sản phẩm | sơ đồ kiến trúc; nhiệm vụ từng lớp; lý do chọn SQLite, tách bộ ghi, web Next.js + Ably, bot Telegram | `docs/architecture.md`, `docs/web_architecture.md` |
 | 4 | Dữ liệu | SSI FastConnect (nguồn chính): endpoint, kênh, tần suất, làm sạch; vì sao không dùng được NEO (IP cố định) và việc được chấp thuận thay thế; số phiên, bản ghi, độ phủ, khoảng trống | `docs/ssi_notes.md`, `docs/neo_api_notes.md`, `docs/data_dictionary.md`, `report/data/SUMMARY.md` (bảng "Từng phiên") |
 | 5 | Phương pháp | công thức, giả định, cơ sở ngưỡng, trọng số và độ nhạy | `docs/methodology.md` |
-| 6 | Triển khai | bản web 5 tab (ảnh `docs/img/*_live*.png`), bot Telegram, dashboard Streamlit cục bộ; trạng thái lỗi/dữ liệu cũ | web production, `docs/test_plan.md` §2 |
+| 6 | Triển khai | bản web 5 tab (ảnh `docs/img/final/`), bot Telegram, dashboard Streamlit cục bộ; trạng thái lỗi/dữ liệu cũ | web production, `docs/test_plan.md` §2 |
 | 7 | Kiểm thử và kết quả | số ca pytest/vitest (đếm bằng lệnh); đối chiếu bảng giá; IC trong/ngoài mẫu; tần suất cảnh báo theo mức và quy tắc; lỗi đã thử | `report/data/SUMMARY.md`, `docs/test_plan.md` |
 | 8 | Hạn chế và sử dụng có trách nhiệm | ít phiên, phiên ghi thiếu, 3 mức giá, thời điểm nhận, rổ hữu hạn, trọng số thiết kế, không dự báo, bảo mật | README mục "Hạn chế" và "Bảo mật" |
 | 9 | Hướng phát triển | lịch nghỉ lễ; bộ ghi chạy trên máy chủ (`deploy/collector/`); mô hình hóa tác động giá; thêm phiên để kiểm chứng | README mục "Hạn chế" |
@@ -32,7 +38,7 @@ Nội dung nên viết (lấy từ `docs/web_architecture.md`):
   Đường Blob (`neopulse publish`) vẫn còn trong mã như tùy chọn, tốn hạn mức, chưa chạy với Blob thật.
 - **Trạng thái dữ liệu minh bạch:** nguồn, giờ snapshot, "cách đây X", chấm màu (snapshot cuối phiên không bị báo đỏ chỉ vì cũ), số mã tính/loại, nhãn MÔ PHỎNG.
 - **Bảo mật:** khóa SSI chỉ ở `.env` máy ghi; Vercel giữ ABLY_API_KEY dạng Secret và chỉ cấp token subscribe-only; web không có đăng nhập; chỉ xuất chỉ báo tổng hợp, không xuất bảng giá/sổ lệnh thô.
-- **Ảnh minh họa:** ảnh dữ liệu thật `docs/img/*_live*.png`; ảnh `docs/img/web_*_sim.png` là MÔ PHỎNG, chỉ dùng minh họa giao diện và phải ghi rõ trong chú thích.
+- **Ảnh minh họa:** bản web cuối dùng dữ liệu thật ở `docs/img/final/`; ảnh trước/sau ở `docs/img/ux/`; ảnh dashboard `docs/img/dashboard_*_sim.png` là MÔ PHỎNG và phải ghi rõ trong chú thích.
 
 ## Triển khai sản phẩm: bổ sung về giao diện và thời gian thực (19/11/2026)
 
@@ -51,11 +57,11 @@ Có tái sử dụng có chọn lọc từ dự án cá nhân trước của tá
 - [x] `report/data/SUMMARY.md` sinh lại bằng `neopulse report-data` sau hiệu chỉnh (28/11/2026) và đã commit.
 - [ ] Phần 1 và 4 của báo cáo: nêu việc đã xin ý kiến giảng viên dùng SSI thay NEO; điền ngày và hình thức chấp thuận vào chỗ `[ngày]`, `[hình thức]` trong README.
 - [x] Ảnh dữ liệu thật cuối ở `docs/img/final/` (desktop và điện thoại, phiên 27/11); ảnh `_sim` chỉ dùng minh họa và ghi rõ "mô phỏng".
-- [ ] Bảng IC và tần suất cảnh báo lấy từ `report/data/SUMMARY.md`; nói rõ số phiên trong/ngoài mẫu và giới hạn.
+- [x] Bảng IC và tần suất cảnh báo trong báo cáo khớp `report/data/SUMMARY.md`; đã nêu số phiên trong/ngoài mẫu và giới hạn.
 - [ ] Ảnh đối chiếu 3–5 mã với bảng giá công khai cùng thời điểm; ảnh thử lỗi (dừng bộ ghi, web báo dữ liệu cũ).
-- [ ] Ghi rõ việc dùng công cụ AI hỗ trợ lập trình và biên tập (Mục 13 của đề); README đã có mục riêng, báo cáo cần nêu lại.
+- [x] Báo cáo đã ghi việc dùng công cụ AI hỗ trợ lập trình và biên tập (Mục 13 của đề).
 
-## Kịch bản video (5–7 phút)
+## Kịch bản tham khảo (5–7 phút; bản video hiện có dài 9 phút 26 giây)
 
 1. **Vấn đề và người dùng** (30 giây): nhà đầu tư cá nhân cần biết trong phiên thị trường đang thế nào, vì sao, mã nào bất thường.
 2. **Dữ liệu** (1 phút): `neopulse check` (chỉ in trạng thái khóa), log `out/record_YYYYMMDD.log` của phiên đang ghi; nói ngắn vì sao dùng SSI thay NEO và đã được chấp thuận.

@@ -42,3 +42,9 @@ web/.env*
 # Snapshot web THẬT (SSI/NEO): KHÔNG bao giờ vào git. Chỉ web/public/sample/ (mô phỏng) được commit.
 web/public/data/
 web/serverpkg/
+# Video: local rendering environment, intermediate clips and logs
+report/video/demo_tool/.venv_demo/
+report/video/demo_tool/_build*/
+report/video/demo_tool/*.log
+report/video/demo_tool/*.mp4
+report/video/demo_tool/*.srt
