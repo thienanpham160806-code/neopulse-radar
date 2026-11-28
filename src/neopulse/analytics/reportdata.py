@@ -4,7 +4,8 @@ Chỉ đọc SQLite (mở bằng URI mode=ro). Mọi con số sinh từ CSDL ho�
 Đầu ra:
   sessions.csv        mỗi phiên: giờ, số bản ghi, độ phủ, khoảng trống lớn nhất, nối lại, tin lặp/loại/lạ
   alerts.csv          số cảnh báo theo phiên x quy tắc x mức (cùng hàm build_view với web)
-  validation.csv      IC trong/ngoài mẫu: mọi phiên và chỉ các phiên đủ
+  validation.csv      IC trong/ngoài mẫu: mọi phiên và chỉ các phiên đủ (cùng một cách chia phiên)
+  placebo.csv         IC placebo (xáo giữa các mã, tín hiệu cũ t-h) trên mọi phiên
   SUMMARY.md          bản tổng hợp để dán vào báo cáo
 Không xuất giá hay sổ lệnh từng tick.
 """
@@ -120,16 +121,28 @@ def alert_table(db: Storage, source: str, index_code: str = "VN30") -> pd.DataFr
     return out.rename(columns={"trading_date": "phiên", "rule": "quy tắc", "severity": "mức"})
 
 
-def validation_table(db: Storage, source: str, days: list[str] | None = None) -> tuple[pd.DataFrame, dict]:
+def _bars(db: Storage, source: str, days: list[str]) -> pd.DataFrame:
     from ..finance.microstructure import make_bars
+    parts = [make_bars(db.quotes(day, source=source), "1min") for day in days]  # từng phiên: không nạp mọi tick một lúc
+    parts = [p for p in parts if len(p)]
+    return pd.concat(parts, ignore_index=True) if parts else pd.DataFrame()
+
+
+def validation_table(db: Storage, source: str, days: list[str] | None = None,
+                     split: tuple[list[str], list[str]] | None = None) -> tuple[pd.DataFrame, dict]:
+    """`split` cố định trong mẫu/ngoài mẫu trên MỌI phiên để lọc phiên đủ không đổi vai trò của phiên nào (CX-017)."""
     from .validation import validate_signals
-    quotes = db.quotes(source=source)
-    if days is not None:
-        quotes = quotes[quotes["trading_date"].isin(days)]
-    if quotes.empty:
+    bars = _bars(db, source, days if days is not None else db.trading_dates(source))
+    if bars.empty:
         return pd.DataFrame(), {"train": [], "test": [], "note": "Không có phiên nào trong phạm vi này."}
-    res = validate_signals(make_bars(quotes, "1min"))
+    res = validate_signals(bars, split=split)
     return res["table"], {"train": res["train"], "test": res["test"], "note": res["note"]}
+
+
+def placebo(db: Storage, source: str) -> pd.DataFrame:
+    from .validation import placebo_table
+    bars = _bars(db, source, db.trading_dates(source))
+    return placebo_table(bars, signals=("obi3", "micro_dev_bps")) if len(bars) else pd.DataFrame()
 
 
 def count_tests(root: Path) -> dict[str, int | None]:
@@ -199,9 +212,12 @@ def build(db_path: str | Path, source: str, out_dir: str | Path, root: Path | No
         if sessions.empty:
             raise SystemExit(f"Chưa có phiên nào của nguồn '{source}' trong {db_path}.")
         alerts = alert_table(db, source, index_code)
-        val_all, meta_all = validation_table(db, source)
+        from .validation import time_split
+        split = time_split(sessions["phiên"].tolist())
+        val_all, meta_all = validation_table(db, source, split=split)
         full_days = sessions.loc[sessions["đủ"], "phiên"].tolist()
-        val_full, meta_full = validation_table(db, source, full_days)
+        val_full, meta_full = validation_table(db, source, full_days, split=split)
+        plac = placebo(db, source)
         span = _one(db, "SELECT MIN(ts), MAX(ts) FROM quotes WHERE source=?", (source,))
     finally:
         db.close()
@@ -212,6 +228,7 @@ def build(db_path: str | Path, source: str, out_dir: str | Path, root: Path | No
     vals = [t.assign(**{"phạm vi": scope}) for t, scope in
             ((val_all, "mọi phiên"), (val_full, "chỉ phiên đủ")) if len(t)]
     (pd.concat(vals, ignore_index=True) if vals else pd.DataFrame()).to_csv(out / "validation.csv", index=False, encoding="utf-8")
+    plac.to_csv(out / "placebo.csv", index=False, encoding="utf-8")
 
     n = len(sessions)
     lines = [
@@ -249,19 +266,33 @@ def build(db_path: str | Path, source: str, out_dir: str | Path, root: Path | No
         lines += [NA, ""]
     lines += ["Nhận xét tự động (chỉ đề xuất, chưa đổi ngưỡng):", "", *_rule_notes(alerts, n), ""]
 
-    lines += ["## Kiểm chứng tín hiệu (`validate`)", ""]
+    from .validation import FEE_BPS
+    lines += ["## Kiểm chứng tín hiệu (`validate`)", "",
+              "Cột: `t` coi các thanh độc lập (bị thổi phồng); `t NW` Newey-West, độ trễ L ghi ở cột `L`; "
+              "`t phiên` lấy IC trung bình từng phiên làm một quan sát (n = số phiên). `Q5-Q1` là chênh lợi suất giá "
+              "giữa, chưa trừ chi phí. `Q5-Q1 ròng` mua Q5 ở giá bán và bán ở giá mua sau h thanh, bán khống Q1 ở giá "
+              f"mua và mua lại ở giá bán, trừ phí GIẢ ĐỊNH {FEE_BPS / 100:.2f}%/chiều; `Q5 ròng` chỉ chân mua "
+              "(thị trường cơ sở không cho bán khống trong ngày). Đơn vị bps.", ""]
+    cols = {"ic_mean": "IC", "ic_tstat": "t", "ic_tstat_nw": "t NW", "nw_lag": "L", "ic_tstat_session": "t phiên",
+            "n_sessions": "số phiên", "hit_rate": "tỷ lệ đúng chiều", "spread_bps": "Q5-Q1", "q5q1_net_bps": "Q5-Q1 ròng",
+            "q5_long_net_bps": "Q5 ròng", "n_bars": "số thanh"}
     for title, table, meta in (("Mọi phiên", val_all, meta_all), ("Chỉ các phiên đủ", val_full, meta_full)):
         lines += [f"### {title}", "",
                   f"Trong mẫu: {len(meta['train'])} phiên ({', '.join(meta['train']) or NA}); "
-                  f"ngoài mẫu: {len(meta['test'])} phiên ({', '.join(meta['test']) or NA}).", ""]
+                  f"ngoài mẫu: {len(meta['test'])} phiên ({', '.join(meta['test']) or NA}). "
+                  "Cách chia cố định trên mọi phiên trước khi lọc phiên đủ.", ""]
         if len(table):
-            t = table.rename(columns={"ic_mean": "IC", "ic_tstat": "t", "hit_rate": "tỷ lệ đúng chiều",
-                                      "spread_bps": "Q5-Q1 (bps)", "n_bars": "số thanh"})
-            lines += _md(t[["tín hiệu", "tầm nhìn (thanh)", "mẫu", "IC", "t", "tỷ lệ đúng chiều", "Q5-Q1 (bps)", "số thanh"]])
+            t = table.rename(columns=cols)
+            lines += _md(t[["tín hiệu", "tầm nhìn (thanh)", "mẫu", *cols.values()]])
         else:
             lines.append(NA)
-        lines += ["", f"Độ tin cậy: {meta['note'] or 'đủ số phiên tối thiểu.'} t-stat bị thổi phồng do các thanh "
-                      "liền kề tự tương quan; ít phiên ngoài mẫu nên chưa đủ để kết luận tín hiệu có giá trị dự báo.", ""]
+        lines += ["", f"Độ tin cậy: {meta['note'] or 'đủ số phiên tối thiểu.'}", ""]
+    lines += ["### Placebo", "",
+              "IC khi phá vỡ liên hệ thật: xáo tín hiệu giữa các mã trong cùng thanh (trung bình và độ lệch chuẩn qua "
+              "các lần xáo), và dùng tín hiệu cũ của thanh t-h. Mọi phiên.", ""]
+    lines += (_md(plac.rename(columns={"ic_mean": "IC", "ic_sd": "độ lệch qua các lần xáo", "ic_tstat_nw": "t NW"}))
+              if len(plac) else [NA])
+    lines += [""]
 
     lines += ["## Kiểm thử", "",
               f"- Python (`pytest --co -q`): {tests.get('pytest') if tests.get('pytest') is not None else NA} ca",

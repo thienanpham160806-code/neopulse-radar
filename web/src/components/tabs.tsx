@@ -971,7 +971,10 @@ export function MethodTab({ p, sub, onSub }: { p: Payload; sub: MethodSub; onSub
 const VALIDATION_COLS: Record<string, [string, string]> = {
   "tín hiệu": ["Tín hiệu", "book"], "tầm nhìn (thanh)": ["Sau bao nhiêu thanh", "sample"], "mẫu": ["Nhóm phiên", "sample"],
   n_bars: ["Số thanh", "sample"], n_obs: ["Cặp quan sát", "sample"], ic_mean: ["IC trung bình", "ic"],
-  ic_tstat: ["t-stat của IC", "tstat"], hit_rate: ["Tỷ lệ cùng chiều (0–1)", "hit_rate"], spread_bps: ["Q5−Q1 (bps)", "hit_rate"],
+  ic_tstat: ["t-stat của IC", "tstat"], ic_tstat_nw: ["t Newey-West", "tstat"], nw_lag: ["Độ trễ NW", "tstat"],
+  n_sessions: ["Số phiên", "sample"], ic_tstat_session: ["t theo phiên", "tstat"],
+  hit_rate: ["Tỷ lệ cùng chiều (0–1)", "hit_rate"], spread_bps: ["Q5−Q1 trước chi phí (bps)", "hit_rate"],
+  q5q1_net_bps: ["Q5−Q1 sau chi phí (bps)", "hit_rate"], q5_long_net_bps: ["Chỉ mua Q5, sau chi phí (bps)", "hit_rate"],
 };
 const SIGNAL_TERMS: Record<string, string> = { obi3: "book", obi1: "obi1", obi_w: "obi_w", micro_dev_bps: "microprice" };
 export function Validation({ p }: { p: Payload }) {

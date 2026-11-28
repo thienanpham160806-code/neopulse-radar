@@ -73,3 +73,56 @@ def test_zscore_and_ranking(make_quote):
     r = rank_universe(latest)
     assert r.index[0] == "BEST" and r.index[-1] == "WORST" and list(r["rank"]) == [1, 2, 3, 4]
     assert r.loc["NOFOREIGN", "n_factors"] == 4 and not np.isnan(r.loc["NOFOREIGN", "score"])
+
+
+def test_forward_return_uses_mid_of_same_snapshot_as_signal(make_quote):
+    """A2: lợi suất t -> t+h tính từ giá giữa của CHÍNH ảnh chụp sinh tín hiệu tại t; thay đổi sau t không đổi tín hiệu t."""
+    from neopulse.finance.microstructure import make_bars
+    rows = [make_quote(ts="2026-11-12T10:00:20+07:00", bid1=9990.0, ask1=10010.0, bid_vol1=3000.0),
+            make_quote(ts="2026-11-12T10:00:50+07:00", bid1=10000.0, ask1=10020.0, bid_vol1=1000.0),  # ảnh cuối thanh 10:00
+            make_quote(ts="2026-11-12T10:01:40+07:00", bid1=10040.0, ask1=10060.0)]
+    b = validation.add_forward_returns(make_bars(pd.DataFrame(rows)), (1,))
+    first = b.iloc[0]
+    assert first["mid"] == 10010.0 and first["obi1"] == pytest.approx(0.0)   # cùng ảnh 10:00:50
+    assert first["fwd_1"] == pytest.approx((10050.0 / 10010.0 - 1) * 1e4)
+    later = rows[:2] + [make_quote(ts="2026-11-12T10:01:40+07:00", bid1=12000.0, ask1=12020.0, bid_vol1=9e6)]
+    b2 = validation.add_forward_returns(make_bars(pd.DataFrame(later)), (1,))
+    assert b2.iloc[0][["mid", "obi1", "obi3", "micro_dev_bps"]].equals(first[["mid", "obi1", "obi3", "micro_dev_bps"]])
+
+
+def test_net_returns_cross_the_spread_and_pay_assumed_fee():
+    b = synthetic_bars(0.0, n_days=1, n_sym=2, n_bars=3)
+    b["bid1"], b["ask1"] = b["mid"] - 5, b["mid"] + 5
+    d = validation.add_forward_returns(b, (1,))
+    r = d.iloc[0]
+    nxt = d.iloc[1]
+    assert r["long_1"] == pytest.approx((nxt["bid1"] / r["ask1"] - 1) * 1e4 - 2 * validation.FEE_BPS)
+    assert r["short_1"] == pytest.approx((1 - nxt["ask1"] / r["bid1"]) * 1e4 - 2 * validation.FEE_BPS)
+
+
+def test_newey_west_matches_hand_formula_and_session_t():
+    ic = pd.Series([0.1, 0.3, 0.2, 0.4, 0.0, 0.2])
+    day = pd.Series(["a", "a", "a", "b", "b", "b"])
+    e = ic - ic.mean()
+    g0, g1 = (e * e).sum() / 6, (e.iloc[1] * e.iloc[0] + e.iloc[2] * e.iloc[1] + e.iloc[4] * e.iloc[3] + e.iloc[5] * e.iloc[4]) / 6
+    want = ic.mean() / np.sqrt((g0 + 2 * 0.5 * g1) / 6)   # lag 1, Bartlett 1 - 1/2; không nối qua ranh giới phiên
+    assert validation.newey_west_t(ic, day, 1) == pytest.approx(want)
+    assert validation.nw_lag(100, 5) == 5 and validation.nw_lag(1000, 1) == 6
+    t = validation.validate_signals(synthetic_bars(0.001), horizons=(1,))["table"].set_index(["tín hiệu", "mẫu"])
+    row = t.loc[("obi3", "trong mẫu")]
+    assert row["n_sessions"] == 2 and row["ic_tstat_session"] > 0 and row["ic_tstat_nw"] > 0
+
+
+def test_placebo_ic_is_near_zero_when_signal_is_real():
+    p = validation.placebo_table(synthetic_bars(0.001), horizons=(1,)).set_index("kiểu")
+    assert p.loc["thật", "ic_mean"] > 0.3
+    assert abs(p.filter(like="xáo", axis=0)["ic_mean"].iloc[0]) < 0.05
+    assert abs(p.loc["tín hiệu cũ t-1", "ic_mean"]) < 0.05    # obi tổng hợp độc lập theo thời gian
+
+
+def test_fixed_split_keeps_session_roles():
+    b = synthetic_bars(0.001, n_days=4)
+    days = sorted(b["trading_date"].unique())
+    res = validation.validate_signals(b[b["trading_date"].isin(days[1:])], horizons=(1,), split=(days[:2], days[2:]))
+    assert res["train"] == [days[1]] and res["test"] == days[2:]
+
