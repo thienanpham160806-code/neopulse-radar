@@ -15,13 +15,15 @@ Radar nội phiên cho thị trường cổ phiếu Việt Nam: đo nhịp thị
 
 **[Bản web](https://neopulse-radar.vercel.app)** · **[Phương pháp](docs/methodology.md)** · **[Kiến trúc](docs/architecture.md)** · **[Số liệu báo cáo](report/data/SUMMARY.md)** · **[Dàn ý báo cáo](report/README.md)**
 
-![Bản web, tab Tổng quan với dữ liệu SSI thật phiên 25/11/2026](docs/img/web_overview_live_desktop.png)
-*Bản web với dữ liệu SSI FastConnect thật, lần cập nhật cuối 14:56 ngày 25/11/2026. Ảnh điện thoại: [Tổng quan](docs/img/web_overview_live_mobile.png), [Chi tiết mã](docs/img/web_book_live_mobile.png), [Hồ sơ doanh nghiệp](docs/img/web_company_live_mobile.png).*
+![Bản web, tab Tổng quan với dữ liệu SSI thật phiên 27/11/2026](docs/img/final/tong_quan_desktop.png)
+*Bản web production với dữ liệu SSI FastConnect thật, bản cuối phiên 27/11/2026. Các ảnh khác: [`docs/img/final/`](docs/img/final/README.md).*
 
 ## Kết quả chính
 
 - **Dữ liệu thật đã thu.** Bộ ghi SSI FastConnect ghi sổ lệnh 3 mức, khối ngoại và chỉ số của rổ VN30 vào SQLite từ 19/11/2026. Số phiên, số bản ghi, độ phủ và khoảng trống từng phiên **sinh tự động** bằng `neopulse report-data` vào [`report/data/SUMMARY.md`](report/data/SUMMARY.md); không ghi cứng ở đây để khỏi lệch khi có phiên mới.
-- **SSI thay NEO API, có chấp thuận của giảng viên.** Đăng nhập NEO `/auth/token` thành công, nhưng mọi API dữ liệu trả `NEOINP000401` vì NEO bắt buộc đăng ký IP cố định (IP whitelist); mạng ký túc xá dùng IP động. Tác giả đã xin ý kiến và giảng viên đồng ý dùng SSI FastConnect; đề bài cho phép dùng nguồn nào cũng được, miễn đáp ứng đủ các yêu cầu. Lớp NEO vẫn giữ làm nguồn dự phòng; chi tiết lần thử ở [`docs/neo_api_notes.md`](docs/neo_api_notes.md).
+- **SSI thay NEO API, có chấp thuận của giảng viên.** Đăng nhập NEO `/auth/token` thành công, nhưng mọi API dữ liệu trả `NEOINP000401` vì NEO bắt buộc đăng ký IP cố định (IP whitelist); mạng ký túc xá dùng IP động. Tác giả đã xin ý kiến và giảng viên đồng ý dùng SSI FastConnect (ngày chấp thuận: [ngày], hình thức: [hình thức]); đề bài cho phép dùng nguồn nào cũng được, miễn đáp ứng đủ các yêu cầu. Lớp NEO vẫn giữ làm nguồn dự phòng; chi tiết lần thử ở [`docs/neo_api_notes.md`](docs/neo_api_notes.md).
+- **Cảnh báo hiệu chỉnh trên dữ liệu thật, chống quá khớp.** Ngưỡng chọn chỉ trên 4 phiên trong mẫu theo ngân sách cảnh báo, ghi mọi lần thử kể cả phương án bị loại ([`docs/calibration_log.md`](docs/calibration_log.md)); kết quả ngoài mẫu báo nguyên, kể cả khi vượt ngân sách.
+- **Kiểm chứng trung thực.** Tín hiệu sổ lệnh có liên hệ thống kê với biến động giá giữa kế tiếp (IC, t Newey-West, placebo), nhưng **không còn dương sau độ chênh giá mua-bán và phí giả định**. Số và kết luận sinh tự động ở [`SUMMARY.md`](report/data/SUMMARY.md#kết-luận).
 - **Một sản phẩm, hai nguồn.** Khung tin SSI được `ssi/adapter.py` đổi về cùng lược đồ thô với NEO, nên chuẩn hóa, lưu trữ, logic tài chính và giao diện dùng chung. Đổi nguồn bằng một biến `NEOPULSE_SOURCE`.
 - **Kiểm thử.** Kiểm thử offline bằng pytest (công thức so với giá trị tính tay, không nhìn trước tương lai, dữ liệu bẩn, đăng nhập lại khi 401, WebSocket rớt hoặc treo, chặn endpoint giao dịch, che bí mật trong log, bot Telegram) và vitest cho web. Số ca đếm bằng lệnh thật, xem [`SUMMARY.md`](report/data/SUMMARY.md#kiểm-thử).
 - **Web công khai không lộ dữ liệu thô.** Bản web trên Vercel chỉ nhận JSON chỉ báo tổng hợp; khóa SSI/NEO và bảng giá từng tick ở lại máy ghi.
@@ -75,7 +77,9 @@ flowchart LR
 | Trượt giá | Đi qua 3 mức giá cho một lệnh giả định, so với giá giữa |
 | Khối ngoại ròng/tổng | (mua − bán) / (mua + bán) |
 | Basis | F − S; quy năm (F/S − 1)·365/số ngày tới đáo hạn |
-| Bất thường | z = 0,6745·(x − median)/MAD trên 60 thanh trước đó; ngưỡng 3,5 |
+| Bất thường | z = 0,6745·(x − median)/MAD trên 60 thanh trước đó (khối lượng khi chưa có RVOL, lợi suất); ngưỡng 3,5 |
+| Cảnh báo spread | số bước giá HOSE (đếm trên lưới giá) ≥ 3 và vượt phân vị 95% của chính mã trong phiên |
+| Cảnh báo khối ngoại | cửa sổ 3 thanh: ròng ≥ 30% giá trị khớp và vượt phân vị 99% của chính mã |
 | Điểm nhịp | 50 + 50·Σwᵢcᵢ: độ rộng 30%, động lượng 25%, sổ lệnh 20%, khối ngoại 15%, thanh khoản 10% |
 
 Nguyên tắc tính toán:
@@ -83,7 +87,7 @@ Nguyên tắc tính toán:
 - **Không nhìn trước tương lai.** Mọi thống kê nền (median, MAD, khối lượng kỳ vọng) chỉ dùng dữ liệu trước thời điểm đang xét.
 - **So với chính mã đó.** Ngưỡng bất thường đo theo phân phối trong phiên của từng mã, không dùng một ngưỡng chung cho cả rổ.
 - **Python tính, giao diện chỉ hiển thị.** Web và dashboard không tính lại công thức tài chính; thiếu dữ liệu thì hiện "chưa có", không bịa số.
-- **Kiểm chứng ngoài mẫu.** IC của tín hiệu được tách theo thời gian (trong mẫu và ngoài mẫu), báo cáo kể cả khi kết quả yếu.
+- **Kiểm chứng ngoài mẫu.** IC tách theo thời gian (19, 20, 23, 25/11 trong mẫu; 26, 27/11 ngoài mẫu), kèm t Newey-West, t theo phiên, placebo và Q5−Q1 sau chi phí; báo cáo kể cả khi kết quả bất lợi.
 
 Đầy đủ công thức, giả định, cơ sở ngưỡng và tài liệu tham khảo: [`docs/methodology.md`](docs/methodology.md).
 
@@ -125,6 +129,7 @@ python -m pytest -q                          # kiểm thử offline
 3. `neopulse check` để kiểm tra kết nối (chỉ in trạng thái đã/chưa điền bí mật).
 4. `neopulse record` trong giờ giao dịch (tự dừng 15:05). Trên Windows, giao cho Task Scheduler (xem "Lịch ghi tự động" bên dưới).
 5. Sau phiên: `neopulse briefing --source ssi`, `neopulse alerts --source ssi`, rồi `neopulse report-data --source ssi --out report/data/` để cập nhật số liệu báo cáo; `neopulse validate --source ssi` cho bảng IC chi tiết.
+6. Tái lập hiệu chỉnh ngưỡng: `python tools/calibrate_alerts.py <thư mục cache> prepare` rồi `... final` (baseline mã cũ: xem đầu tệp công cụ).
 
 Gói chuẩn bị cho bộ thu chạy độc lập trên cloud: [`deploy/collector/`](deploy/collector/README.md). **Chưa kích hoạt**: cần xác minh gói miễn phí không thẻ có đủ RAM và lưu trữ bền, chuyển dữ liệu/Secret sau xác nhận, rồi thử thu thật. Khi chưa nghiệm thu, laptop vẫn là nơi ghi dữ liệu.
 
@@ -239,7 +244,9 @@ Bộ mô phỏng · Dữ liệu MÔ PHỎNG · Không phải lời khuyên đầ
 
 ## Hạn chế
 
-- Số phiên thật còn ít và có phiên ghi thiếu (độ phủ từng phiên ở [`SUMMARY.md`](report/data/SUMMARY.md)); kiểm chứng ngoài mẫu cần ít nhất 5 phiên, nên IC hiện chỉ mang tính minh họa. Các hình và số có hậu tố `_sim` là mô phỏng.
+- 6 phiên thật, trong đó chỉ 3 phiên đủ (25–27/11); 19, 20, 23/11 ghi thiếu (máy bật muộn, mất mạng). Chỉ có 2 phiên ngoài mẫu nên mọi kết luận kiểm chứng còn yếu. Độ phủ từng phiên ở [`SUMMARY.md`](report/data/SUMMARY.md). Các hình và số có hậu tố `_sim` là mô phỏng.
+- **IC sau chi phí âm.** Liên hệ thống kê có thật trên dữ liệu đã thu, nhưng benchmark giả định chỉ mua nhóm tín hiệu cao (mua ở giá bán, bán ở giá mua, phí giả định 0,15%/chiều) âm ở mọi cặp tín hiệu × tầm nhìn: không phải tín hiệu giao dịch. Benchmark chưa mô hình khả năng khớp, tồn kho, thanh toán.
+- Cảnh báo ngoài mẫu vượt ngân sách (CAO 1,67 trên một mã một phiên so với mục tiêu 1); ngưỡng chọn trên 4 phiên có thể chưa ổn định khi thị trường sôi động hơn. Mô phỏng không kiểm được ngưỡng RVOL.
 - Không lấy được dữ liệu NEO API thật vì yêu cầu IP cố định; dùng SSI FastConnect thay thế; giảng viên đã đồng ý và đề bài cho phép dùng nguồn nào cũng được, miễn đáp ứng đủ yêu cầu.
 - Bộ ghi chạy trên laptop: máy tắt hoặc ngủ đông thì mất dữ liệu (phiên 23/11/2026 thiếu 09:00–10:16 vì máy khởi động lúc 10:09). Đã thêm chạy bù khi đăng nhập và cảnh báo sức khỏe qua Telegram, nhưng không thay được việc giữ máy bật.
 - RVOL dùng đường phân bổ khối lượng thực nghiệm chỉ khi có ít nhất 3 phiên ghi trọn giờ khớp lệnh (09:15–14:45); trước đó dùng giả định phân bổ đều theo phút, vốn bỏ qua hình chữ U của khối lượng trong ngày.
@@ -248,7 +255,6 @@ Bộ mô phỏng · Dữ liệu MÔ PHỎNG · Không phải lời khuyên đầ
 - Chỉ có 3 mức giá: OBI và độ sâu là xấp xỉ, trượt giá là cận dưới.
 - Khối ngoại và sổ lệnh tính trên rổ theo dõi, không phải toàn thị trường.
 - Trọng số điểm nhịp là lựa chọn thiết kế; điểm mô tả hiện trạng, không dự báo.
-- IC chưa trừ spread và phí; t-stat chưa hiệu chỉnh tự tương quan.
 - Chưa có lịch nghỉ lễ (bot và cảnh báo sức khỏe vẫn chạy vào ngày lễ trong tuần); SQLite phù hợp một máy, một bộ ghi.
 
 ## Bảo mật
@@ -274,7 +280,18 @@ Bộ mô phỏng · Dữ liệu MÔ PHỎNG · Không phải lời khuyên đầ
 
 **Phạm Ngọc Thiên An** (K244141653) · Trường Đại học Kinh tế - Luật, Đại học Quốc gia Thành phố Hồ Chí Minh.
 
-Giấy phép MIT ([`LICENSE`](LICENSE)). Thư viện chính: httpx, websockets, pandas, numpy, Streamlit, Plotly, Jinja2, Next.js, Recharts (giấy phép mã nguồn mở tương ứng). Có sử dụng trợ lý AI (Claude) hỗ trợ lập trình và biên tập; tác giả chịu trách nhiệm về toàn bộ mã nguồn và nội dung.
+Giấy phép MIT ([`LICENSE`](LICENSE)). Thư viện chính: httpx, websockets, pandas, numpy, Streamlit, Plotly, Jinja2, Next.js, Recharts (giấy phép mã nguồn mở tương ứng).
+
+## Sử dụng công cụ AI (Mục 13 của đề)
+
+- **Công cụ:** trợ lý lập trình Claude (Anthropic) qua Claude Code; Codex (OpenAI) làm người nghiệm thu độc lập trong giai đoạn hoàn thiện, ghi lỗi theo mã CX-xxx và đối chứng lại số liệu.
+- **Dùng vào việc:** viết và sửa mã theo đặc tả của tác giả, viết kiểm thử, rà soát lỗi phương pháp, biên tập tài liệu tiếng Việt.
+- **Tác giả quyết định:** chọn đề tài, nguồn dữ liệu, chỉ báo, ngân sách cảnh báo và việc duyệt ngưỡng; mọi thay đổi ngưỡng được tác giả duyệt trước khi áp dụng.
+- **Kiểm soát sai:** mọi con số trong báo cáo sinh bằng lệnh chạy thật trên CSDL (`report-data`, `calibrate_alerts.py`), không gõ tay; công thức có test đối chiếu tính tay; kết luận kiểm chứng sinh theo điều kiện trên số liệu, kể cả khi bất lợi.
+- **Diễn giải bằng mô hình ngôn ngữ trong sản phẩm** (tùy chọn, mặc định tắt): chỉ gửi bảng số; đầu ra có con số ngoài bảng hoặc ngôn ngữ khuyến nghị bị loại và quay về mẫu câu; giao diện ghi rõ nguồn diễn giải ([`analytics/explain.py`](src/neopulse/analytics/explain.py)).
+- Tác giả hiểu, giải thích được và chịu trách nhiệm hoàn toàn về mã nguồn, kết quả và nội dung nộp ([`report/defense_qa.md`](report/defense_qa.md)).
+
+## Tái sử dụng mã
 
 <details>
 <summary>Tái sử dụng từ dự án cũ của tác giả</summary>
