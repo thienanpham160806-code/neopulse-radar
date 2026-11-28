@@ -53,3 +53,27 @@ def test_report_data_reads_only_and_writes_summary(tmp_path, make_quote):
 def test_report_data_counts_pytest_in_quiet_mode():
     assert reportdata._largest_gap([]) == (270.0, 0.0)
     assert reportdata._minute_to_clock(150) == "11:30" and reportdata._minute_to_clock(151) == "13:01"
+
+
+def _ic_rows(ic, t, net, n=2):
+    rows = []
+    for k in range(n):
+        for mau in ("trong mẫu", "ngoài mẫu"):
+            rows.append({"tín hiệu": f"s{k}", "tầm nhìn (thanh)": 1, "mẫu": mau, "ic_mean": ic, "ic_tstat_nw": t,
+                         "spread_bps": 5.0, "q5_long_net_bps": net})
+    return pd.DataFrame(rows)
+
+
+def test_ic_conclusion_follows_the_numbers():
+    """CX-025: câu định tính đổi theo số; không khẳng định cứng."""
+    meta = {"test": ["2026-11-26", "2026-11-27"], "n_symbols": 30}
+    good_plac = pd.DataFrame({"kiểu": ["xáo giữa các mã (20 lần)", "tín hiệu cũ t-1"], "ic_mean": [0.001, 0.07]})
+    real = " ".join(reportdata.ic_conclusion(_ic_rows(0.2, 20.0, -50.0), good_plac, meta))
+    assert "Có liên hệ thống kê ở 2/2 cặp" in real and "cùng chiều dương" in real and "2026-11-26, 2026-11-27" in real
+    assert "Sau chi phí không còn dương" in real and "Giả thuyết" in real and "30 mã" in real
+    null = " ".join(reportdata.ic_conclusion(_ic_rows(0.0, 0.0, 60.0), pd.DataFrame(
+        {"kiểu": ["xáo giữa các mã (20 lần)"], "ic_mean": [0.8]}), meta))
+    assert "Không có bằng chứng liên hệ thống kê" in null and "Có liên hệ" not in null
+    assert "cần kiểm lại đường tính" in null and "dương ở mọi cặp" in null and "Giả thuyết" not in null
+    empty = reportdata.ic_conclusion(_ic_rows(float("nan"), float("nan"), float("nan")), pd.DataFrame(), meta)
+    assert "Chưa đủ dữ liệu" in empty[-1]

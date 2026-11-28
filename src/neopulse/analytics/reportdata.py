@@ -123,7 +123,9 @@ def alert_table(db: Storage, source: str, index_code: str = "VN30") -> pd.DataFr
 
 def _bars(db: Storage, source: str, days: list[str]) -> pd.DataFrame:
     from ..finance.microstructure import make_bars
-    parts = [make_bars(db.quotes(day, source=source), "1min") for day in days]  # từng phiên: không nạp mọi tick một lúc
+    from .validation import stocks_only
+    # từng phiên: không nạp mọi tick một lúc. Chỉ cổ phiếu: HĐTL có bước giá/chi phí khác (CX-023)
+    parts = [make_bars(stocks_only(db.quotes(day, source=source)), "1min") for day in days]
     parts = [p for p in parts if len(p)]
     return pd.concat(parts, ignore_index=True) if parts else pd.DataFrame()
 
@@ -136,7 +138,8 @@ def validation_table(db: Storage, source: str, days: list[str] | None = None,
     if bars.empty:
         return pd.DataFrame(), {"train": [], "test": [], "note": "Không có phiên nào trong phạm vi này."}
     res = validate_signals(bars, split=split)
-    return res["table"], {"train": res["train"], "test": res["test"], "note": res["note"]}
+    return res["table"], {"train": res["train"], "test": res["test"], "note": res["note"],
+                          "n_symbols": int(bars["symbol"].nunique())}
 
 
 def placebo(db: Storage, source: str) -> pd.DataFrame:
@@ -202,42 +205,74 @@ def _rule_notes(alerts: pd.DataFrame, n_sessions: int) -> list[str]:
     return notes or ["- Không quy tắc nào lệch hẳn (không quy tắc nào chiếm >= 50% hoặc bằng 0)."]
 
 
-def ic_conclusion(table: pd.DataFrame, plac: pd.DataFrame) -> list[str]:
-    """Kết luận sinh từ số liệu (không gõ tay): liên hệ thống kê ngoài mẫu và khả năng khai thác sau chi phí."""
+SHUFFLE_OK = 0.02  # |IC| placebo xáo giữa các mã dưới mức này: coi là gần 0
+
+
+def ic_conclusion(table: pd.DataFrame, plac: pd.DataFrame, meta: dict | None = None) -> list[str]:
+    """Kết luận sinh theo ĐIỀU KIỆN trên chính bảng số (CX-025): mỗi câu định tính đổi theo dấu/độ lớn của số.
+    Ngày, số phiên, số mã lấy từ `meta` (train/test/n_symbols), không viết cứng."""
     from .validation import FEE_BPS
+    meta = meta or {}
+    head = ["### Kết luận", ""]
     out = table[table["mẫu"] == "ngoài mẫu"] if len(table) else table
+    out = out[out["ic_mean"].notna()] if len(out) else out
     if out.empty:
-        return ["### Kết luận", "", NA]
-    nw = out["ic_tstat_nw"]
-    sig = int((nw.abs() > 2).sum())
-    shuf = plac[plac["kiểu"].str.startswith("xáo")]["ic_mean"].abs().max() if len(plac) else np.nan
-    stale = plac[plac["kiểu"].str.startswith("tín hiệu cũ")]["ic_mean"] if len(plac) else pd.Series(dtype=float)
-    lo = lambda c: (out[c].min(), out[c].max())  # noqa: E731
-    f = lambda x: f"{x:.2f}".replace(".", ",")  # noqa: E731
-    spread_only = out["q5_long_net_bps"] + 2 * FEE_BPS
-    pos = int((out["q5_long_net_bps"] > 0).sum())
+        return head + ["- Chưa đủ dữ liệu ngoài mẫu để kết luận (không có cặp tín hiệu × tầm nhìn nào tính được IC)."]
+    f = lambda x: NA if pd.isna(x) else f"{x:.2f}".replace(".", ",")  # noqa: E731
+    rng = lambda c: f"{f(out[c].min())} đến {f(out[c].max())}"  # noqa: E731
+    n, test = len(out), meta.get("test", [])
+    scope = (f"ngoài mẫu ({len(test)} phiên: {', '.join(test)}" if test else "ngoài mẫu (") + \
+        (f"; {meta['n_symbols']} mã)" if meta.get("n_symbols") else ")")
+    sig = out["ic_tstat_nw"].abs() > 2
+    pos_ic = sig & (out["ic_mean"] > 0)
+    neg_ic = sig & (out["ic_mean"] < 0)
+    if not sig.any():
+        stat = f"- **Không có bằng chứng liên hệ thống kê** {scope}: 0/{n} cặp có |t Newey-West| > 2."
+    else:
+        side = ("cùng chiều dương" if pos_ic.all() else "cùng chiều âm" if neg_ic.all() else
+                f"{int(pos_ic.sum())} cặp dương, {int(neg_ic.sum())} cặp âm")
+        stat = (f"- **Có liên hệ thống kê ở {int(sig.sum())}/{n} cặp** tín hiệu × tầm nhìn {scope}, {side} "
+                f"(|t Newey-West| > 2). IC từ {rng('ic_mean')}, t NW từ {rng('ic_tstat_nw')}.")
     key = ["tín hiệu", "tầm nhìn (thanh)"]
     ins = table[table["mẫu"] == "trong mẫu"].set_index(key)["ic_mean"]
-    gap = float((out.set_index(key)["ic_mean"] - ins).abs().max())
-    return [
-        "### Kết luận", "",
-        f"- **Có liên hệ thống kê.** Ngoài mẫu (26-27/11), {sig}/{len(out)} cặp tín hiệu × tầm nhìn có |t Newey-West| > 2. "
-        f"IC từ {f(lo('ic_mean')[0])} đến {f(lo('ic_mean')[1])}, t NW từ {f(lo('ic_tstat_nw')[0])} đến {f(lo('ic_tstat_nw')[1])}. "
-        f"Chênh IC lớn nhất giữa trong mẫu và ngoài mẫu (cùng tín hiệu, cùng tầm nhìn): {f(gap)}.",
-        f"- **Placebo xáo giữa các mã:** |IC| lớn nhất là {f(shuf)}, tức gần 0. Đường tính không tự tạo ra liên hệ. "
-        f"Tín hiệu cũ t-h vẫn cho IC {f(stale.min())}–{f(stale.max())}: phù hợp với việc OBI và microprice bền theo thời gian, "
-        "không phải dấu hiệu rò rỉ (tín hiệu thanh t-h vẫn tương quan với tín hiệu thanh t)." if len(stale) else "- Placebo: chưa có.",
-        f"- **Không khai thác được sau chi phí.** Q5-Q1 trước chi phí chỉ {f(lo('spread_bps')[0])} đến "
-        f"{f(lo('spread_bps')[1])} bps. Chỉ mua Q5 (thực hiện được) cho {f(lo('q5_long_net_bps')[0])} đến "
-        f"{f(lo('q5_long_net_bps')[1])} bps sau phí giả định; {pos}/{len(out)} cặp dương. Riêng độ chênh giá mua-bán, "
-        f"chưa tính phí, đã làm chân mua còn {f(spread_only.min())} đến {f(spread_only.max())} bps.",
-        "- **Vì sao IC cao mà không có lãi.** Lợi suất đo trên giá giữa. Khi một phía sổ lệnh mỏng (OBI, microprice lệch), "
-        "mức giá tốt nhất phía đó dễ bị ăn hết, nên giá giữa nhảy nửa bước giá về phía đó. Đây là hiệu ứng cơ học "
-        "của giá giữa và bước giá. Muốn ăn được nửa bước đó phải trả nguyên một bước (vào ở giá bán, ra ở giá mua) "
-        "cộng phí; một bước giá ở vùng giá 10.000-50.000 là 50 đồng, khoảng 10-50 bps.",
-        "- **Giới hạn.** Chỉ có 2 phiên ngoài mẫu, rổ 30 mã. Phí 0,15%/chiều là giả định; chưa tính thuế bán, trượt giá "
-        "khi lệnh lớn hơn mức 1, và quy định không bán khống.",
-    ]
+    gap = (out.set_index(key)["ic_mean"] - ins).abs().max()
+    stat += f" Chênh IC lớn nhất giữa trong mẫu và ngoài mẫu (cùng tín hiệu, cùng tầm nhìn): {f(gap)}."
+    lines = head + [stat]
+    if len(plac):
+        shuf = plac[plac["kiểu"].str.startswith("xáo")]["ic_mean"].abs().max()
+        stale = plac[plac["kiểu"].str.startswith("tín hiệu cũ")]["ic_mean"]
+        if pd.notna(shuf) and shuf < SHUFFLE_OK:
+            p = (f"- **Placebo xáo giữa các mã:** |IC| lớn nhất {f(shuf)} (< {f(SHUFFLE_OK)}). Kết quả kiểm soát này "
+                 "phù hợp với việc đường tính không tự tạo liên hệ; nó không chứng minh loại trừ mọi dạng rò rỉ.")
+        else:
+            p = (f"- **Placebo xáo giữa các mã cho |IC| {f(shuf)} (≥ {f(SHUFFLE_OK)})**: placebo không về gần 0, "
+                 "cần kiểm lại đường tính trước khi diễn giải IC.")
+        if len(stale):
+            p += (f" Tín hiệu cũ t-h cho IC {f(stale.min())} đến {f(stale.max())}; giá trị khác 0 có thể phản ánh "
+                  "tín hiệu bền theo thời gian.")
+        lines.append(p)
+    net = out["q5_long_net_bps"]
+    pos = int((net > 0).sum())
+    cost = (f"Q5-Q1 trước chi phí {rng('spread_bps')} bps. Benchmark giả định chỉ chân mua Q5 (mua ở giá bán tại t, "
+            f"bán ở giá mua tại t+h, phí giả định {f(FEE_BPS / 100)}%/chiều; chưa kiểm khả năng khớp, tồn kho, thanh toán) "
+            f"cho {rng('q5_long_net_bps')} bps, {pos}/{n} cặp dương.")
+    if pos == 0:
+        only = net + 2 * FEE_BPS
+        lines.append(f"- **Sau chi phí không còn dương.** {cost} Chỉ tính độ chênh giá mua-bán, chưa tính phí, "
+                     f"benchmark đã là {f(only.min())} đến {f(only.max())} bps.")
+    elif pos == n:
+        lines.append(f"- **Benchmark sau chi phí dương ở mọi cặp.** {cost} Đây là phép tính giả định trên ít phiên, "
+                     "không phải bằng chứng có chiến lược sinh lời.")
+    else:
+        lines.append(f"- **Sau chi phí không nhất quán.** {cost}")
+    if sig.any() and pos == 0:
+        lines.append("- **Giả thuyết (chưa kiểm riêng trong nghiên cứu này)** vì sao IC cao mà benchmark âm: lợi suất đo "
+                     "trên giá giữa; khi một phía sổ lệnh mỏng, mức giá tốt nhất phía đó dễ bị ăn hết và giá giữa nhích "
+                     "khoảng nửa bước giá. Muốn hưởng phần đó phải trả cả độ chênh mua-bán (thường 1 bước) cộng phí.")
+    lines.append(f"- **Giới hạn.** {len(test) or NA} phiên ngoài mẫu"
+                 + (f", {meta['n_symbols']} mã" if meta.get("n_symbols") else "")
+                 + f". Phí {f(FEE_BPS / 100)}%/chiều là giả định; chưa tính thuế bán, trượt giá khi lệnh lớn hơn mức 1.")
+    return lines
 
 
 def build(db_path: str | Path, source: str, out_dir: str | Path, root: Path | None = None,
@@ -330,7 +365,7 @@ def build(db_path: str | Path, source: str, out_dir: str | Path, root: Path | No
               "các lần xáo), và dùng tín hiệu cũ của thanh t-h. Mọi phiên.", ""]
     lines += (_md(plac.rename(columns={"ic_mean": "IC", "ic_sd": "độ lệch qua các lần xáo", "ic_tstat_nw": "t NW"}))
               if len(plac) else [NA])
-    lines += ["", *ic_conclusion(val_all, plac), ""]
+    lines += ["", *ic_conclusion(val_all, plac, meta_all), ""]
 
     lines += ["## Kiểm thử", "",
               f"- Python (`pytest --co -q`): {tests.get('pytest') if tests.get('pytest') is not None else NA} ca",
