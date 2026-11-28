@@ -1,6 +1,6 @@
 # Số liệu báo cáo NeoPulse Radar
 
-Sinh bằng `neopulse report-data --source ssi` lúc 12:15 28/11/2026 từ CSDL SQLite (chỉ đọc). Không chỉnh tay; chạy lại lệnh sau mỗi phiên mới. CSV chi tiết cùng thư mục.
+Sinh bằng `neopulse report-data --source ssi` lúc 12:26 28/11/2026 từ CSDL SQLite (chỉ đọc). Không chỉnh tay; chạy lại lệnh sau mỗi phiên mới. CSV chi tiết cùng thư mục.
 
 ## Tổng quan
 
@@ -126,13 +126,13 @@ IC khi phá vỡ liên hệ thật: xáo tín hiệu giữa các mã trong cùng
 
 ### Kết luận
 
-- **Có liên hệ thống kê.** Ngoài mẫu (26-27/11), 8/8 cặp tín hiệu × tầm nhìn có |t Newey-West| > 2. IC từ 0,17 đến 0,29, t NW từ 13,94 đến 30,57. Chênh IC lớn nhất giữa trong mẫu và ngoài mẫu (cùng tín hiệu, cùng tầm nhìn): 0,03.
-- **Placebo xáo giữa các mã:** |IC| lớn nhất là 0,00, tức gần 0. Đường tính không tự tạo ra liên hệ. Tín hiệu cũ t-h vẫn cho IC 0,04–0,09: phù hợp với việc OBI và microprice bền theo thời gian, không phải dấu hiệu rò rỉ (tín hiệu thanh t-h vẫn tương quan với tín hiệu thanh t).
-- **Không khai thác được sau chi phí.** Q5-Q1 trước chi phí chỉ 6,11 đến 16,35 bps. Chỉ mua Q5 (thực hiện được) cho -62,68 đến -48,44 bps sau phí giả định; 0/8 cặp dương. Riêng độ chênh giá mua-bán, chưa tính phí, đã làm chân mua còn -32,68 đến -18,44 bps.
-- **Vì sao IC cao mà không có lãi.** Lợi suất đo trên giá giữa. Khi một phía sổ lệnh mỏng (OBI, microprice lệch), mức giá tốt nhất phía đó dễ bị ăn hết, nên giá giữa nhảy nửa bước giá về phía đó. Đây là hiệu ứng cơ học của giá giữa và bước giá. Muốn ăn được nửa bước đó phải trả nguyên một bước (vào ở giá bán, ra ở giá mua) cộng phí; một bước giá ở vùng giá 10.000-50.000 là 50 đồng, khoảng 10-50 bps.
-- **Giới hạn.** Chỉ có 2 phiên ngoài mẫu, rổ 30 mã. Phí 0,15%/chiều là giả định; chưa tính thuế bán, trượt giá khi lệnh lớn hơn mức 1, và quy định không bán khống.
+- **Có liên hệ thống kê ở 8/8 cặp** tín hiệu × tầm nhìn ngoài mẫu (2 phiên: 2026-11-26, 2026-11-27; 30 mã), cùng chiều dương (|t Newey-West| > 2). IC từ 0,17 đến 0,29, t NW từ 13,94 đến 30,57. Chênh IC lớn nhất giữa trong mẫu và ngoài mẫu (cùng tín hiệu, cùng tầm nhìn): 0,03.
+- **Placebo xáo giữa các mã:** |IC| lớn nhất 0,00 (< 0,02). Kết quả kiểm soát này phù hợp với việc đường tính không tự tạo liên hệ; nó không chứng minh loại trừ mọi dạng rò rỉ. Tín hiệu cũ t-h cho IC 0,04 đến 0,09; giá trị khác 0 có thể phản ánh tín hiệu bền theo thời gian.
+- **Sau chi phí không còn dương.** Q5-Q1 trước chi phí 6,11 đến 16,35 bps. Benchmark giả định chỉ chân mua Q5 (mua ở giá bán tại t, bán ở giá mua tại t+h, phí giả định 0,15%/chiều; chưa kiểm khả năng khớp, tồn kho, thanh toán) cho -62,68 đến -48,44 bps, 0/8 cặp dương. Chỉ tính độ chênh giá mua-bán, chưa tính phí, benchmark đã là -32,68 đến -18,44 bps.
+- **Giả thuyết (chưa kiểm riêng trong nghiên cứu này)** vì sao IC cao mà benchmark âm: lợi suất đo trên giá giữa; khi một phía sổ lệnh mỏng, mức giá tốt nhất phía đó dễ bị ăn hết và giá giữa nhích khoảng nửa bước giá. Muốn hưởng phần đó phải trả cả độ chênh mua-bán (thường 1 bước) cộng phí.
+- **Giới hạn.** 2 phiên ngoài mẫu, 30 mã. Phí 0,15%/chiều là giả định; chưa tính thuế bán, trượt giá khi lệnh lớn hơn mức 1.
 
 ## Kiểm thử
 
-- Python (`pytest --co -q`): 292 ca
+- Python (`pytest --co -q`): 293 ca
 - Web (`vitest list`): 100 ca
