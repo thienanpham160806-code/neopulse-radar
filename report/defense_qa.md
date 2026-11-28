@@ -24,12 +24,13 @@ Mỗi câu trả lời dẫn tới chỗ trong mã. Số liệu lấy từ [repo
 - MAD tính quanh median của đúng cửa sổ đó. Bản trước 28/11 tính sai, đã sửa và có test đối chiếu tính tay (`test_robust_z_matches_hand_computed_modified_z`).
 
 **Vì sao median/MAD mà không phải trung bình/độ lệch chuẩn?**
-- Chính điểm bất thường làm phình độ lệch chuẩn, nên che lấp nhau. Median và MAD có điểm gãy 50%: tới một nửa số điểm là ngoại lai vẫn không bị kéo lệch.
+- Chính điểm bất thường làm phình độ lệch chuẩn, nên che lấp nhau.
+- Median và MAD ít nhạy với ngoại lai hơn nhiều so với trung bình và độ lệch chuẩn. Điểm gãy gần 50% nghĩa là phải làm hỏng gần một nửa số điểm mới kéo được ước lượng đi xa tùy ý. Không có nghĩa ước lượng bất biến khi có ngoại lai, và ở đúng mức 50% thì không còn bảo đảm.
 
 **Sao spread và khối ngoại không dùng z?**
 - Trên dữ liệu thật, 79% thanh có spread đúng 1 bước giá, và 42% thanh có khối ngoại ròng bằng 0. Khi đó MAD ≈ 0, z bão hòa ở trần 50 và mất ý nghĩa.
 - Spread nay đo bằng **số bước giá HOSE**, đếm trên lưới giá kể cả khi vắt qua mốc 10.000/50.000. Báo khi ≥ 3 bước và vượt phân vị 95% của chính mã.
-- Khối ngoại xét trên cửa sổ 3 thanh. Lý do: dữ liệu room khối ngoại về theo cục khoảng 1 lần/phút, nên 12% thanh đơn lẻ có giá trị ròng lớn hơn giá trị khớp của chính thanh đó.
+- Khối ngoại xét trên 3 thanh có dữ liệu gần nhất. Khi mất tin, cửa sổ này có thể dài hơn 3 phút. Lý do: dữ liệu room khối ngoại về theo cục khoảng 1 lần/phút, nên 12% thanh đơn lẻ có giá trị ròng lớn hơn giá trị khớp của chính thanh đó.
 - Ngưỡng chọn chỉ trên 4 phiên trong mẫu, theo ngân sách cảnh báo ([docs/calibration_log.md](../docs/calibration_log.md)).
 
 **Chọn ngưỡng như vậy có quá khớp không?**
@@ -39,7 +40,8 @@ Mỗi câu trả lời dẫn tới chỗ trong mã. Số liệu lấy từ [repo
 ## Điểm nhịp
 
 **Điểm nhịp tính thế nào, vì sao trọng số là thiết kế?**
-- Điểm = 50 + 50·Σwᵢcᵢ, cᵢ ∈ [−1, 1]. Trọng số: độ rộng 30%, động lượng 25%, sổ lệnh 20%, khối ngoại 15%, thanh khoản 10% ([finance/pulse.py](../src/neopulse/finance/pulse.py)).
+- Điểm = 50 + 50·(Σ wᵢcᵢ)/(Σ wᵢ), cả hai tổng chỉ lấy trên các thành phần có dữ liệu; cᵢ ∈ [−1, 1] ([finance/pulse.py](../src/neopulse/finance/pulse.py)). Đủ 5 thành phần thì mẫu số bằng 1.
+- Trọng số gốc: độ rộng 30%, động lượng 25%, sổ lệnh 20%, khối ngoại 15%, thanh khoản 10%.
 - Dưới 50% trọng số có dữ liệu thì không kết luận.
 - Trọng số **không ước lượng từ dữ liệu**. Với vài phiên mà ước lượng thì chắc chắn quá khớp, và điểm này mô tả hiện trạng chứ không nhằm dự báo.
 - `sensitivity()` xáo mỗi trọng số ±50% và báo khoảng điểm cùng tỷ lệ giữ nguyên nhãn, hiển thị trên giao diện.
@@ -81,13 +83,14 @@ Mỗi câu trả lời dẫn tới chỗ trong mã. Số liệu lấy từ [repo
 - Tin lặp nguyên văn bị bỏ (`n_duplicates`). Khóa duy nhất (mã, ts, nguồn) trong SQLite.
 - Tin đến muộn hoặc sai thứ tự: khối lượng lũy kế giảm trong cùng phiên thì bị loại và ghi `late_or_out_of_order` vào `quality_log`.
 - Nhiều khung tin cùng mili-giây (trade/quote/room) thì bản sau thay bản trước.
-- Mất kết nối: không có tin quá 45 giây thì coi là treo. Nối lại theo cấp số nhân có nhiễu, tối đa 60 giây. Lịch Windows chạy lại bộ ghi sau 30 giây nếu tiến trình chết.
+- Mất kết nối: không nhận khung tin quá 60 giây (SSI; lớp NEO là 45 giây) thì coi là treo. Nối lại theo cấp số nhân có nhiễu, tối đa 60 giây.
+- `scripts/run_record_session.ps1` (do lịch Windows khởi động) chạy lại tiến trình Python của bộ ghi sau 30 giây nếu nó dừng sớm trong giờ phiên. Task Scheduler không tự khởi động lại chính script này.
 - Ngày 20/11 có 121 lần nối lại, 96 trong số đó là lỗi DNS/kết nối từ 12:46 đến 13:58, nghi do mạng cục bộ ([docs/data_quality.md](../docs/data_quality.md)).
 - Web báo độ trễ khi dữ liệu dừng. Worker cloud nhắn chủ dự án khi 09:05 chưa có dữ liệu hoặc im lặng quá 5 phút.
 
 **Vì sao đổi NEO sang SSI?**
 - NEO đăng nhập `/auth/token` được, nhưng mọi API dữ liệu trả `NEOINP000401` vì cần đăng ký IP cố định. Mạng ký túc xá dùng IP động ([docs/neo_api_notes.md](../docs/neo_api_notes.md)).
-- Giảng viên đồng ý dùng SSI FastConnect. Đề cho phép dùng nguồn nào cũng được, miễn đáp ứng đủ yêu cầu.
+- Giảng viên đồng ý dùng SSI FastConnect. Theo hướng dẫn của giảng viên, dùng nguồn nào cũng được miễn đáp ứng đủ yêu cầu của đề.
 - `ssi/adapter.py` đổi khung tin SSI về cùng lược đồ với NEO, nên phần còn lại dùng chung. Lớp NEO vẫn có, kiểm thử bằng máy chủ giả.
 
 **Dữ liệu thiếu thì sao?**

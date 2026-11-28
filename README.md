@@ -21,7 +21,7 @@ Radar nội phiên cho thị trường cổ phiếu Việt Nam: đo nhịp thị
 ## Kết quả chính
 
 - **Dữ liệu thật đã thu.** Bộ ghi SSI FastConnect ghi sổ lệnh 3 mức, khối ngoại và chỉ số của rổ VN30 vào SQLite từ 19/11/2026. Số phiên, số bản ghi, độ phủ và khoảng trống từng phiên **sinh tự động** bằng `neopulse report-data` vào [`report/data/SUMMARY.md`](report/data/SUMMARY.md); không ghi cứng ở đây để khỏi lệch khi có phiên mới.
-- **SSI thay NEO API, có chấp thuận của giảng viên.** Đăng nhập NEO `/auth/token` thành công, nhưng mọi API dữ liệu trả `NEOINP000401` vì NEO bắt buộc đăng ký IP cố định (IP whitelist); mạng ký túc xá dùng IP động. Tác giả đã xin ý kiến và giảng viên đồng ý dùng SSI FastConnect (ngày chấp thuận: [ngày], hình thức: [hình thức]); đề bài cho phép dùng nguồn nào cũng được, miễn đáp ứng đủ các yêu cầu. Lớp NEO vẫn giữ làm nguồn dự phòng; chi tiết lần thử ở [`docs/neo_api_notes.md`](docs/neo_api_notes.md).
+- **SSI thay NEO API, có chấp thuận của giảng viên.** Đăng nhập NEO `/auth/token` thành công, nhưng mọi API dữ liệu trả `NEOINP000401` vì NEO bắt buộc đăng ký IP cố định (IP whitelist); mạng ký túc xá dùng IP động. Tác giả đã xin ý kiến và giảng viên đồng ý dùng SSI FastConnect (ngày chấp thuận: [ngày], hình thức: [hình thức]); theo hướng dẫn của giảng viên, dùng nguồn nào cũng được miễn đáp ứng đủ yêu cầu của đề. Lớp NEO vẫn giữ làm nguồn dự phòng; chi tiết lần thử ở [`docs/neo_api_notes.md`](docs/neo_api_notes.md).
 - **Cảnh báo hiệu chỉnh trên dữ liệu thật, chống quá khớp.** Ngưỡng chọn chỉ trên 4 phiên trong mẫu theo ngân sách cảnh báo, ghi mọi lần thử kể cả phương án bị loại ([`docs/calibration_log.md`](docs/calibration_log.md)); kết quả ngoài mẫu báo nguyên, kể cả khi vượt ngân sách.
 - **Kiểm chứng trung thực.** Tín hiệu sổ lệnh có liên hệ thống kê với biến động giá giữa kế tiếp (IC, t Newey-West, placebo), nhưng **không còn dương sau độ chênh giá mua-bán và phí giả định**. Số và kết luận sinh tự động ở [`SUMMARY.md`](report/data/SUMMARY.md#kết-luận).
 - **Một sản phẩm, hai nguồn.** Khung tin SSI được `ssi/adapter.py` đổi về cùng lược đồ thô với NEO, nên chuẩn hóa, lưu trữ, logic tài chính và giao diện dùng chung. Đổi nguồn bằng một biến `NEOPULSE_SOURCE`.
@@ -79,7 +79,7 @@ flowchart LR
 | Basis | F − S; quy năm (F/S − 1)·365/số ngày tới đáo hạn |
 | Bất thường | z = 0,6745·(x − median)/MAD trên 60 thanh trước đó (khối lượng khi chưa có RVOL, lợi suất); ngưỡng 3,5 |
 | Cảnh báo spread | số bước giá HOSE (đếm trên lưới giá) ≥ 3 và vượt phân vị 95% của chính mã trong phiên |
-| Cảnh báo khối ngoại | cửa sổ 3 thanh: ròng ≥ 30% giá trị khớp và vượt phân vị 99% của chính mã |
+| Cảnh báo khối ngoại | 3 thanh có dữ liệu gần nhất: ròng ≥ 30% giá trị khớp và vượt phân vị 99% của chính mã |
 | Điểm nhịp | 50 + 50·Σwᵢcᵢ: độ rộng 30%, động lượng 25%, sổ lệnh 20%, khối ngoại 15%, thanh khoản 10% |
 
 Nguyên tắc tính toán:
@@ -247,7 +247,7 @@ Bộ mô phỏng · Dữ liệu MÔ PHỎNG · Không phải lời khuyên đầ
 - 6 phiên thật, trong đó chỉ 3 phiên đủ (25–27/11); 19, 20, 23/11 ghi thiếu (máy bật muộn, mất mạng). Chỉ có 2 phiên ngoài mẫu nên mọi kết luận kiểm chứng còn yếu. Độ phủ từng phiên ở [`SUMMARY.md`](report/data/SUMMARY.md). Các hình và số có hậu tố `_sim` là mô phỏng.
 - **IC sau chi phí âm.** Liên hệ thống kê có thật trên dữ liệu đã thu, nhưng benchmark giả định chỉ mua nhóm tín hiệu cao (mua ở giá bán, bán ở giá mua, phí giả định 0,15%/chiều) âm ở mọi cặp tín hiệu × tầm nhìn: không phải tín hiệu giao dịch. Benchmark chưa mô hình khả năng khớp, tồn kho, thanh toán.
 - Cảnh báo ngoài mẫu vượt ngân sách (CAO 1,67 trên một mã một phiên so với mục tiêu 1); ngưỡng chọn trên 4 phiên có thể chưa ổn định khi thị trường sôi động hơn. Mô phỏng không kiểm được ngưỡng RVOL.
-- Không lấy được dữ liệu NEO API thật vì yêu cầu IP cố định; dùng SSI FastConnect thay thế; giảng viên đã đồng ý và đề bài cho phép dùng nguồn nào cũng được, miễn đáp ứng đủ yêu cầu.
+- Không lấy được dữ liệu NEO API thật vì yêu cầu IP cố định; dùng SSI FastConnect thay thế với sự đồng ý của giảng viên.
 - Bộ ghi chạy trên laptop: máy tắt hoặc ngủ đông thì mất dữ liệu (phiên 23/11/2026 thiếu 09:00–10:16 vì máy khởi động lúc 10:09). Đã thêm chạy bù khi đăng nhập và cảnh báo sức khỏe qua Telegram, nhưng không thay được việc giữ máy bật.
 - RVOL dùng đường phân bổ khối lượng thực nghiệm chỉ khi có ít nhất 3 phiên ghi trọn giờ khớp lệnh (09:15–14:45); trước đó dùng giả định phân bổ đều theo phút, vốn bỏ qua hình chữ U của khối lượng trong ngày.
 - SSI: giao thức streaming lấy từ mã nguồn SDK chính thức vì tài liệu web không mô tả; các điểm chưa kiểm chứng ở [`docs/ssi_notes.md`](docs/ssi_notes.md).
